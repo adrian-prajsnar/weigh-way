@@ -132,5 +132,43 @@ export function createAuthStyles({ colors, scheme }: StyleContext) {
       fontSize: 14,
       fontFamily: fontFamily.semibold,
     },
+    oauthButton: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surfaceMuted,
+      borderRadius: radius.md,
+      paddingVertical: 15,
+      paddingHorizontal: spacing.xl,
+      borderWidth: 1,
+      borderColor: colors.border,
+      minHeight: 52,
+    },
+    oauthButtonContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+    },
+    oauthButtonText: {
+      color: colors.text,
+      fontSize: 16,
+      fontFamily: fontFamily.semibold,
+    },
+    authOrDivider: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+    },
+    authOrDividerLine: {
+      flex: 1,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+    },
+    authOrDividerText: {
+      fontSize: 11,
+      color: colors.textMuted,
+      fontFamily: fontFamily.regular,
+      textTransform: 'uppercase',
+    },
   };
 }

@@ -47,7 +47,7 @@ supabase/migration-template.sql
 
 **Never delete or break existing user data.** Entries belong to real users.
 
-Before touching production: follow **Production safety checklist** in [`README.md`](README.md). Local dev uses the same Supabase project as the APK; use a `+dev` email for sign-in in development (`src/dev-auth-guard.ts` enforces this when `__DEV__` is true). That guard is a **dev UX guard only** — not a security boundary. Do not describe or extend it as access control.
+Before touching production: follow **Production safety checklist** in [`README.md`](README.md). Local dev uses the same Supabase project as the APK; use a `+dev` email for sign-in in development (`src/dev-auth-guard.ts` enforces this by default; set `EXPO_PUBLIC_DEV=false` to disable). That guard is a **dev UX guard only** — not a security boundary. Do not describe or extend it as access control.
 
 - **New Supabase project:** run `supabase/schema.sql` once.
 - **Project with data (you and friends):** add `supabase/migrations/YYYY-MM-DD-description.sql` (copy `supabase/migration-template.sql`). **Do not** re-run `schema.sql` on production to apply changes.

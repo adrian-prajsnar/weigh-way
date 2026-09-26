@@ -6,13 +6,22 @@ import {
   formatDeleteAccountError,
   formatResetPasswordError,
   formatResendConfirmationError,
+  formatGoogleSignInError,
   formatSignInError,
   formatSignOutError,
   formatSignUpError,
   formatUpdatePasswordError,
 } from '../auth-errors';
-import { createSessionFromUrl, getAuthRedirectUrl, isPasswordRecoveryUrl } from '../auth-redirect';
-import { assertDevAllowedEmail, isDevAllowedSession } from '../dev-auth-guard';
+import { isOAuthCallbackUrl } from '../auth-oauth-callback';
+import {
+  createSessionFromUrl,
+  getAuthRedirectUrl,
+  isOAuthFlowActive,
+  isPasswordRecoveryUrl,
+  performOAuthSignIn,
+  resetOAuthRedirectState,
+} from '../auth-redirect';
+import { assertDevAllowedEmail, assertDevAllowedSession, isDevAllowedSession } from '../dev-auth-guard';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 
@@ -25,10 +34,12 @@ type SupabaseAuthContextValue = {
   isAuthenticated: boolean;
   isPasswordRecovery: boolean;
   isLoading: boolean;
+  isCompletingOAuth: boolean;
   isConfigured: boolean;
   authLinkError: string | null;
   clearAuthLinkError: () => void;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<boolean>;
   signUp: (email: string, password: string) => Promise<SignUpResult>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
@@ -42,6 +53,7 @@ const SupabaseAuthContext = createContext<SupabaseAuthContextValue | null>(null)
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCompletingOAuth, setIsCompletingOAuth] = useState(false);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [authLinkError, setAuthLinkError] = useState<string | null>(null);
   const completingSignUpRef = useRef(false);
@@ -53,6 +65,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleAuthUrl = useCallback(async (url: string) => {
+    if (isOAuthFlowActive() && isOAuthCallbackUrl(url)) {
+      return;
+    }
+
     const isRecovery = isPasswordRecoveryUrl(url);
     try {
       await createSessionFromUrl(url);
@@ -130,6 +146,43 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const signInWithGoogle = useCallback(async (): Promise<boolean> => {
+    setIsCompletingOAuth(true);
+    try {
+      const result = await performOAuthSignIn('google');
+      if (result === 'cancelled') {
+        return false;
+      }
+
+      const {
+        data: { session: activeSession },
+      } = await supabase.auth.getSession();
+
+      if (!activeSession) {
+        throw new Error('missing_oauth_session');
+      }
+
+      try {
+        assertDevAllowedSession(activeSession);
+      } catch (devError) {
+        await supabase.auth.signOut();
+        throw devError;
+      }
+
+      const resolvedSession = await acceptSession(activeSession);
+      if (!resolvedSession) {
+        throw new Error('missing_oauth_session');
+      }
+
+      setSession(resolvedSession);
+      return true;
+    } catch (error) {
+      throw new Error(formatGoogleSignInError(error));
+    } finally {
+      setIsCompletingOAuth(false);
+    }
+  }, [acceptSession]);
+
   const signUp = useCallback(async (email: string, password: string): Promise<SignUpResult> => {
     assertDevAllowedEmail(email);
     completingSignUpRef.current = true;
@@ -161,6 +214,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw new Error(formatSignOutError(error));
     }
+
+    resetOAuthRedirectState();
   }, []);
 
   const deleteAccount = useCallback(async () => {
@@ -212,10 +267,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isPasswordRecovery,
         isLoading,
+        isCompletingOAuth,
         isConfigured: isSupabaseConfigured(),
         authLinkError,
         clearAuthLinkError,
         signIn,
+        signInWithGoogle,
         signUp,
         signOut,
         deleteAccount,

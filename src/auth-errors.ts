@@ -68,6 +68,37 @@ function isInvalidResetLinkError(error: unknown): boolean {
   );
 }
 
+function getAuthErrorMessage(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = String((error as { message: unknown }).message).trim();
+    return message.length > 0 ? message : null;
+  }
+
+  return null;
+}
+
+export function formatGoogleSignInError(error: unknown): string {
+  const message = getAuthErrorMessage(error);
+  if (message === t('auth.devEmailRequired')) {
+    return message;
+  }
+
+  const network = mapNetworkError(error);
+  if (network) {
+    return network;
+  }
+
+  if (isRateLimitError(error)) {
+    return t('auth.rateLimited');
+  }
+
+  if (__DEV__ && message) {
+    return message;
+  }
+
+  return t('auth.googleSignInFailed');
+}
+
 export function formatSignInError(error: unknown): string {
   const network = mapNetworkError(error);
   if (network) {

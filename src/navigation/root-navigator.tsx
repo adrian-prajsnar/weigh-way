@@ -10,9 +10,10 @@ import { useAppStyles } from '../theme/styles';
 export function RootNavigator() {
   const styles = useAppStyles();
   const { t } = useTranslation();
-  const { isAuthenticated, isPasswordRecovery, isLoading, isConfigured } = useSupabaseAuth();
+  const { isAuthenticated, isPasswordRecovery, isLoading, isCompletingOAuth, isConfigured } =
+    useSupabaseAuth();
 
-  if (isLoading) {
+  if (isLoading || isCompletingOAuth) {
     return null;
   }
 

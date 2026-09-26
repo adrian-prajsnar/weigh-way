@@ -110,7 +110,7 @@ On the free tier you typically have **one** live Supabase project shared by loca
 
 ### What this protects
 
-- **Dev-only sign-in** — in development (`npx expo start`, Expo Go, web dev), only emails containing `+dev` can sign in or stay signed in (e.g. `you+dev@gmail.com`). Production APKs are not affected.
+- **Dev-only sign-in** — in development (`npx expo start`, Expo Go, web dev), only emails containing `+dev` can sign in or stay signed in (e.g. `you+dev@gmail.com`). Set `EXPO_PUBLIC_DEV=false` in `.env` to use any email locally. Production APKs are not affected.
 - **Row-level security** — each user only sees their own weight, height, and profile. Your dev account cannot read friends’ rows through the app.
 - **Fake data** — log test weights on the dev account; friends’ entries stay untouched.
 

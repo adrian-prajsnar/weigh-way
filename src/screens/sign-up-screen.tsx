@@ -2,7 +2,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { AuthLayout } from '../components/auth-layout';
+import { AuthOrDivider } from '../components/auth-or-divider';
 import { EmailField } from '../components/email-field';
+import { GoogleSignInButton } from '../components/google-sign-in-button';
 import { useSupabaseAuth } from '../context/supabase-auth-context';
 import { PasswordField } from '../components/password-field';
 import { useToast } from '../context/toast-context';
@@ -24,6 +26,7 @@ export function SignUpScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const [isGoogleBusy, setIsGoogleBusy] = useState(false);
 
   const handleSignUp = async () => {
     if (!email.trim() || !password) {
@@ -95,11 +98,11 @@ export function SignUpScreen({ navigation }: Props) {
       <Pressable
         style={({ pressed }) => [
           styles.primaryButton,
-          isBusy && styles.buttonDisabled,
+          (isBusy || isGoogleBusy) && styles.buttonDisabled,
           pressed && styles.buttonPressed,
         ]}
         onPress={() => void handleSignUp()}
-        disabled={isBusy}
+        disabled={isBusy || isGoogleBusy}
       >
         {isBusy ? (
           <ActivityIndicator color={colors.onAccent} />
@@ -107,6 +110,10 @@ export function SignUpScreen({ navigation }: Props) {
           <Text style={styles.primaryButtonText}>{t('auth.createAccount')}</Text>
         )}
       </Pressable>
+
+      <AuthOrDivider />
+
+      <GoogleSignInButton disabled={isBusy} onBusyChange={setIsGoogleBusy} />
     </AuthLayout>
   );
 }
