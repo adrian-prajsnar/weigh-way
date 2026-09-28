@@ -1,0 +1,48 @@
+---
+import { parseLegalBody } from '../lib/legal-body';
+import { isEmailOnly } from '../lib/legal-text';
+import LegalText from './legal-text.astro';
+
+type Props = { body: string };
+const { body } = Astro.props;
+---
+
+<div class="legal-body">
+  {
+    parseLegalBody(body).map((block) =>
+      block.kind === 'paragraph' ? (
+        <p class={isEmailOnly(block.text) ? 'legal-email' : undefined}>
+          <LegalText text={block.text} />
+        </p>
+      ) : block.kind === 'note' ? (
+        <div class="legal-note">
+          <p class={block.lines.length === 1 && isEmailOnly(block.lines[0]) ? 'legal-email' : undefined}>
+            <LegalText text={block.lines.join(', ')} />
+          </p>
+        </div>
+      ) : block.kind === 'definition' ? (
+        <p class="legal-definition">
+          <span class="legal-definition-term">{block.term}</span>
+          <LegalText text={block.detail} />
+        </p>
+      ) : block.kind === 'subheading' ? (
+        <h3 class="legal-subheading">{block.text}</h3>
+      ) : (
+        <div class="legal-list-block">
+          {block.intro ? (
+            <p>
+              <LegalText text={block.intro} />
+            </p>
+          ) : null}
+          <ul class="legal-list">
+            {block.items.map((item) => (
+              <li>
+                <LegalText text={item} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ),
+    )
+  }
+</div>

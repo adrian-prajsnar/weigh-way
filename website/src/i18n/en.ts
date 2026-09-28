@@ -8,13 +8,14 @@ export type SiteMessages = {
     releasesDescription: string;
     privacyTitle: string;
     privacyDescription: string;
+    termsTitle: string;
+    termsDescription: string;
   };
   brand: string;
   skip: string;
   nav: {
     home: string;
     releases: string;
-    privacy: string;
     menu: string;
     close: string;
   };
@@ -83,13 +84,30 @@ export type SiteMessages = {
   };
   privacy: {
     title: string;
-    updated: string;
+    updatedLabel: string;
+    updatedDate: string;
+    lead: string;
     sections: { title: string; body: string }[];
+  };
+  terms: {
+    title: string;
+    updatedLabel: string;
+    updatedDate: string;
+    lead: string;
+    sections: { title: string; body: string }[];
+  };
+  legal: {
+    tocLabel: string;
+    minRead: string;
+    backToTop: string;
+    alsoRead: string;
   };
   footer: {
     tagline: string;
-    home: string;
-    privacy: string;
+    legalNav: string;
+    privacyPolicy: string;
+    termsOfService: string;
+    questions: string;
     copyrightName: string;
   };
 };
@@ -101,15 +119,17 @@ const en: SiteMessages = {
       'Your weight, your progress. A free Android app for daily weigh-ins, BMI from your height history, and clear comparisons over time — with cloud sync in English and Polish.',
     releasesTitle: 'Releases — WeighWay',
     releasesDescription: 'Latest versions, user-facing release notes, and Android APK downloads.',
-    privacyTitle: 'Privacy — WeighWay',
-    privacyDescription: 'How WeighWay stores weight, height, and account data.',
+    privacyTitle: 'Privacy Policy — WeighWay',
+    privacyDescription:
+      'How WeighWay collects, uses, stores, and deletes your account, weight, and height data.',
+    termsTitle: 'Terms of Service — WeighWay',
+    termsDescription: 'Terms and conditions for using the WeighWay Android app and this website.',
   },
   brand: 'WeighWay',
   skip: 'Skip to content',
   nav: {
     home: 'Home',
     releases: 'Releases',
-    privacy: 'Privacy',
     menu: 'Open menu',
     close: 'Close menu',
   },
@@ -287,35 +307,184 @@ const en: SiteMessages = {
     noApk: 'APK not published for this version',
   },
   privacy: {
-    title: 'Privacy',
-    updated: 'This page describes how the app handles your data today.',
+    title: 'Privacy Policy',
+    updatedLabel: 'Last update',
+    updatedDate: 'September 28, 2026',
+    lead:
+      'This Privacy Policy explains how personal data is processed in connection with the WeighWay Android application and this website (together, the “Service”).',
     sections: [
       {
-        title: 'What we store',
-        body: 'Your account email, password (handled by the auth provider), daily weight entries, height history, and optional profile details such as birth date and sex. Preferences like theme, language, and units stay on the device.',
+        title: '1. Who we are',
+        body:
+          'The data controller responsible for your personal data is Adrian Prajsnar DEV (“we”, “us” or “the Controller”).\n\nFor privacy and data protection questions, you can contact us at:\n\nadrian.prajsnar.dev@outlook.com\n\nController’s address:\n\nOsiedle Tysiąclecia 1/114, 31-603 Kraków',
       },
       {
-        title: 'Where your data is stored',
-        body: 'Weight, height, and profile rows are stored in a cloud database. Each row is tied to your user id. Other people cannot read your entries through the app.',
+        title: '2. What data we process',
+        body:
+          'Depending on how you use the Service, we may process the following categories of data.\n\n### Account data\n\nThis may include:\n\n• your email address;\n• your user ID;\n• information required to authenticate and manage your account.\n\nPasswords are handled by our authentication provider. We do not store passwords in plain text.\n\n### Data you enter into the app\n\nYou may voluntarily enter:\n\n• weight measurements;\n• height history;\n• date of birth;\n• sex;\n• other information included in your profile, where the app allows you to provide it.\n\nWeight and height information, as well as information derived from it, such as BMI, may constitute data concerning health under applicable data protection laws depending on the context in which they are processed. We treat such data with appropriate safeguards.\n\n### Device and website preferences\n\nPreferences such as language, units and theme may be stored locally on your device.\n\nThis website may store similar display preferences, such as language and theme, in your browser. These preferences are used solely to provide the requested functionality and remember your settings.',
       },
       {
-        title: 'What we don\'t do',
-        body: 'We do not sell your data, show ads, or share weigh-ins with other accounts. There are no social features, and your measurements are never public.',
+        title: '3. How we use your data',
+        body:
+          'We process your data for the following purposes:\n\n• creating and managing your account;\n• authenticating you;\n• synchronizing your data between devices;\n• storing and displaying your weight measurements and height history;\n• calculating and displaying BMI when the required information is available;\n• allowing you to edit and delete your data;\n• allowing you to delete your account;\n• maintaining the security and proper operation of the Service;\n• responding to support requests and communications;\n• complying with applicable legal obligations.\n\nWe do not use your weight, height, BMI or profile data for advertising, advertising profiling, selling personal data, or sharing data with data brokers.',
       },
       {
-        title: 'You’re in control',
-        body: 'You can edit or delete individual weigh-ins and height records. You can delete your account from Profile, which removes your app data.',
+        title: '4. Legal bases for processing',
+        body:
+          '### Account data and provision of the Service\n\nWhere necessary to provide the Service you have requested, we process account data on the basis that the processing is necessary for the performance of our contract with you.\n\nWhere applicable, we may also process certain data where necessary to comply with a legal obligation or for our legitimate interests, provided that such processing is permitted by applicable law.\n\n### Health-related data\n\nWhere data processed through WeighWay constitutes data concerning health or other special category data under applicable data protection law, we rely on an appropriate legal basis under Article 6 and an applicable additional condition under Article 9.\n\nWhere explicit consent is the applicable condition, we will obtain your explicit consent before processing the relevant data for the specified purpose.\n\nYou may withdraw your consent at any time. Withdrawal of consent does not affect the lawfulness of processing carried out before withdrawal.\n\nIf you withdraw consent, some features of the Service that require the relevant data may no longer be available.\n\nFor users in the UK, special category data requires both a lawful basis under Article 6 of the UK GDPR and an additional condition under Article 9. Explicit consent is one possible Article 9 condition.\n\n### Optional profile information\n\nInformation such as date of birth or sex is optional unless explicitly stated otherwise in the app.\n\nWhere such information is not necessary for the core functionality of the Service, you may choose whether to provide it. Depending on the specific information and how it is used, we process it on the applicable legal basis under data protection law, including consent where required.',
       },
       {
-        title: 'Distribution',
-        body: 'The Android app is currently distributed as an APK from this website. Install only from this official download link.',
+        title: '5. Where your data is stored',
+        body:
+          'Account data and data entered into the application are stored using cloud infrastructure provided by Supabase, including its database and authentication services.\n\nUser data is associated with the relevant account identifier. We use access controls designed to ensure that users can access only data associated with their own accounts.\n\nSupabase allows customers to select the region in which their project is hosted. The WeighWay project is hosted in the region selected for the Service.\n\nSupabase provides data protection documentation and a Data Processing Agreement for customers.',
+      },
+      {
+        title: '6. Service providers and recipients',
+        body:
+          'We use third-party service providers to operate and maintain WeighWay.\n\nIn particular:\n\nSupabase — provides cloud infrastructure, database and authentication services.\n\nThese providers may process personal data on our behalf only to the extent necessary to provide their services.\n\nWe do not sell personal data and do not share it with advertisers or data brokers.\n\nWe may disclose personal data where required by applicable law, a legally binding request from a competent authority, or where necessary to protect our legal rights, users or the security of the Service.',
+      },
+      {
+        title: '7. International transfers',
+        body:
+          'Depending on the infrastructure and services used, your personal data may be processed in countries outside the European Economic Area (EEA) or the United Kingdom.\n\nWhere personal data is transferred internationally, we use an appropriate transfer mechanism and safeguards required by applicable data protection law, such as an adequacy decision or appropriate contractual safeguards where applicable.',
+      },
+      {
+        title: '8. How long we keep your data',
+        body:
+          'We retain your personal data for as long as necessary to provide the Service and maintain your active account, unless a longer retention period is required by law.\n\nYou can:\n\n• edit your data;\n• delete individual weight measurements;\n• delete height records;\n• delete your account.\n\nWhen you delete your account, your application data is deleted from our active systems, subject to limited retention in backups or disaster-recovery systems.\n\nBackup copies may remain for a limited period until they are overwritten or securely deleted in accordance with the applicable backup retention cycle.',
+      },
+      {
+        title: '9. Your rights',
+        body:
+          'Depending on your location and the applicable data protection law, you may have the right to:\n\n• access your personal data;\n• obtain a copy of your personal data;\n• correct inaccurate or incomplete data;\n• request deletion of your personal data;\n• request restriction of processing;\n• receive your personal data in a portable format;\n• object to certain processing;\n• withdraw consent where processing is based on consent.\n\nWithdrawal of consent does not affect the lawfulness of processing carried out before withdrawal.\n\nYou may also have the right to lodge a complaint with the relevant data protection supervisory authority.\n\nFor users in Poland, the relevant supervisory authority is the President of the Personal Data Protection Office (UODO).\n\nFor users in the UK, the relevant supervisory authority is the Information Commissioner’s Office (ICO).\n\nTo exercise your rights, contact us at:\n\nadrian.prajsnar.dev@outlook.com\n\nWe may request information reasonably necessary to verify your identity before fulfilling a request.\n\nWe will respond to valid requests within the time period required by applicable law.',
+      },
+      {
+        title: '10. Security',
+        body:
+          'We use appropriate technical and organizational measures designed to protect personal data against unauthorized access, loss, destruction, alteration or disclosure.\n\nThese measures include, where applicable:\n\n• encrypted HTTPS/TLS connections;\n• user authentication;\n• access controls;\n• database Row Level Security (RLS);\n• restricting access to data according to the principle of least privilege.\n\nNo method of transmitting or storing data can be guaranteed to be completely secure.\n\nYou should also use a strong and unique password for your account and keep your login credentials confidential.',
+      },
+      {
+        title: '11. Children',
+        body:
+          'WeighWay is intended for users aged 16 or older.\n\nIf you are under 16, you may use the Service only with the consent or authorization of a parent or legal guardian where required by applicable law.\n\nFor users in the EEA, the GDPR generally sets the age of consent for information society services at 16, although individual EU Member States may provide for a lower age, but not below 13.\n\nIf we learn that we have processed personal data from a child without the required consent or authorization, we will take appropriate steps to delete the data.',
+      },
+      {
+        title: '12. Automated decision-making and profiling',
+        body:
+          'We do not use personal data to make decisions based solely on automated processing that produce legal effects or similarly significant effects on you.\n\nWe do not use your data for advertising profiling.',
+      },
+      {
+        title: '13. Cookies and browser storage',
+        body:
+          'This website may use browser local storage or similar technologies to remember user preferences such as language or theme.\n\nWe do not use these mechanisms for advertising tracking or advertising profiling.\n\nIf we introduce additional cookies or tracking technologies that require consent under applicable law, this Privacy Policy and the relevant consent mechanisms will be updated before those technologies are used.',
+      },
+      {
+        title: '14. Changes to this Privacy Policy',
+        body:
+          'We may update this Privacy Policy from time to time, for example when the Service, our data processing practices or applicable laws change.\n\nThe “Last updated” date at the bottom of this page will be updated whenever this Privacy Policy changes.\n\nIf we make material changes, we may notify you through the application, this website, or another appropriate method where required by applicable law.',
+      },
+      {
+        title: '15. App distribution',
+        body:
+          'The Android application is distributed as an APK through this website.\n\nFor security reasons, we recommend installing WeighWay only from the official download links provided on this website.',
+      },
+      {
+        title: '16. Contact',
+        body:
+          'If you have any questions about this Privacy Policy or how we process personal data, please contact:\n\nAdrian Prajsnar DEV\nadrian.prajsnar.dev@outlook.com',
       },
     ],
   },
+  terms: {
+    title: 'Terms of Service',
+    updatedLabel: 'Last update',
+    updatedDate: 'September 28, 2026',
+    lead: 'By using WeighWay, you agree to these Terms of Service.',
+    sections: [
+      {
+        title: '1. General',
+        body:
+          'These Terms of Service (“Terms”) govern your use of the WeighWay Android application and this website (together, the “Service”), operated by Adrian Prajsnar DEV.\n\nIf you do not agree to these Terms, please do not use the Service.',
+      },
+      {
+        title: '2. The Service',
+        body:
+          'WeighWay is a personal weight-tracking application. It allows you to record weight measurements, view history, trends and comparisons, and manage optional height history and profile settings.\n\nThe Service is provided free of charge and does not contain advertisements.',
+      },
+      {
+        title: '3. Eligibility and accounts',
+        body:
+          'You must be at least 16 years old to use the Service. If you are under 16, you may use the Service only with the consent or authorization of a parent or legal guardian where required by applicable law.\n\nAn account is required to use the application.\n\nYou are responsible for keeping your login credentials confidential and for activity carried out through your account.',
+      },
+      {
+        title: '4. Acceptable use',
+        body:
+          'You agree to use the Service lawfully and in a manner that does not infringe the rights of others or interfere with the operation of the Service.\n\nIn particular, you must not:\n\n• access or attempt to access another user’s account, data or systems without authorization;\n• reverse engineer, decompile or otherwise attempt to obtain the source code of the application, except where expressly permitted by applicable law;\n• interfere with or disrupt the Service or the infrastructure on which it operates;\n• upload malware, viruses or other harmful code or content;\n• use the Service for unlawful purposes.\n\nWe may suspend or terminate access to an account if you materially breach these Terms or applicable law, to the extent permitted by law.',
+      },
+      {
+        title: '5. Health and medical disclaimer',
+        body:
+          'WeighWay is provided for personal informational purposes only and is not a substitute for professional medical advice.\n\nThe Service is not a medical device and does not provide medical diagnosis, treatment or individualized medical recommendations.\n\nBMI, trends and other information presented by the Service are estimates or informational calculations and should not be treated as medical advice or as a basis for making decisions about your health or treatment.\n\nAlways consult a doctor or other appropriately qualified healthcare professional regarding medical or health-related decisions.',
+      },
+      {
+        title: '6. Your data',
+        body:
+          'You retain your rights to the data you enter into the Service, including your weight, height and profile data.\n\nYou grant us the limited right to store and process this data only to the extent necessary to provide and operate the Service for you, in accordance with these Terms and our Privacy Policy.\n\nInformation about how we process personal data, including the purposes and legal bases for processing, retention periods and your privacy rights, is described in our Privacy Policy.',
+      },
+      {
+        title: '7. Intellectual property',
+        body:
+          'The WeighWay name, logo and branding, application, software, and website content, excluding data provided by users, are owned by Adrian Prajsnar DEV or its licensors.\n\nExcept as permitted by applicable law or expressly authorized by us, you may not copy, modify, distribute, reproduce or redistribute the application or its components outside the official distribution channels provided by us.',
+      },
+      {
+        title: '8. Availability and operation of the Service',
+        body:
+          'We make reasonable efforts to keep the Service operational and available, but we do not guarantee uninterrupted availability.\n\nThe Service may occasionally be unavailable due to maintenance, updates, technical issues, failures, or issues affecting third-party services or infrastructure.\n\nWe do not guarantee that stored data will never be lost. If you have data that is important to you, we recommend keeping your own copy or record where appropriate.\n\nNothing in these Terms limits any mandatory consumer rights you may have under applicable law, including rights relating to the conformity of digital services.',
+      },
+      {
+        title: '9. Digital service conformity and consumer rights',
+        body:
+          'If you are a consumer, you may have mandatory rights under applicable consumer protection laws concerning the conformity of digital services with the contract.\n\nThese Terms do not exclude or limit any consumer rights that cannot lawfully be excluded or limited.\n\nIf the Service does not conform to the contract, you may be entitled to the remedies provided by applicable law.\n\nWhere applicable, these rights may apply even though the Service is provided free of charge and you provide personal data instead of paying a monetary price.',
+      },
+      {
+        title: '10. Liability',
+        body:
+          'To the fullest extent permitted by applicable law, we are not liable for indirect, incidental, special or consequential damages, or for loss of data, profits or other economic loss arising from your use of, or inability to use, the Service.\n\nWe are not responsible for interruptions or failures caused by circumstances outside our reasonable control, including failures of third-party services, infrastructure or networks.\n\nNothing in these Terms excludes or limits liability where such exclusion or limitation is prohibited by applicable law, including mandatory consumer protection rights.',
+      },
+      {
+        title: '11. Termination',
+        body:
+          'You may stop using the Service at any time and delete your account using the account deletion feature available in the Profile section of the application.\n\nWe may suspend or terminate your access to the Service if you breach these Terms or applicable law, to the extent permitted by law.\n\nWe may also discontinue the Service or make significant changes to it, taking into account any rights you may have under applicable law.\n\nProvisions that by their nature should survive termination, including provisions concerning intellectual property, liability and the health and medical disclaimer, will survive termination.',
+      },
+      {
+        title: '12. Changes to these Terms',
+        body:
+          'We may update these Terms from time to time, for example when the Service, our practices or applicable laws change.\n\nThe “Last updated” date at the bottom of this page will be updated whenever these Terms are changed.\n\nFor material changes, we may notify you through the Service, on this website, or by another appropriate means where required by applicable law.\n\nIf a change materially affects your rights or use of the Service, we will provide notice in advance where required by applicable law.\n\nYour continued use of the Service after the changes take effect constitutes acceptance of the updated Terms, subject to any rights you may have under applicable law.',
+      },
+      {
+        title: '13. Governing law',
+        body:
+          'These Terms are governed by the laws of Poland.\n\nIf you are a consumer, nothing in these Terms deprives you of the protection provided by mandatory consumer protection laws of the country in which you reside.',
+      },
+      {
+        title: '14. Contact',
+        body:
+          'If you have any questions about these Terms, please contact:\n\nAdrian Prajsnar DEV\nadrian.prajsnar.dev@outlook.com',
+      },
+    ],
+  },
+  legal: {
+    tocLabel: 'On this page',
+    minRead: 'min read',
+    backToTop: 'Back to top',
+    alsoRead: 'Also read',
+  },
   footer: {
     tagline: 'Your weight, your progress.',
-    home: 'Home',
-    privacy: 'Privacy',
+    legalNav: 'Legal',
+    privacyPolicy: 'Privacy Policy',
+    termsOfService: 'Terms of Service',
+    questions: 'Questions?',
     copyrightName: 'Adrian Prajsnar DEV',
   },
 };

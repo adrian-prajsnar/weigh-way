@@ -1,0 +1,443 @@
+---
+import { getMessages, localePath, type SiteLocale, type SitePage } from '../i18n';
+import { legalSectionId } from '../lib/legal-slug';
+import { withBase } from '../lib/paths';
+import LegalSectionBody from './legal-section-body.astro';
+
+type LegalContent = {
+  title: string;
+  updatedLabel: string;
+  updatedDate: string;
+  lead: string;
+  sections: { title: string; body: string }[];
+};
+
+type Props = {
+  locale: SiteLocale;
+  page: Extract<SitePage, 'privacy' | 'terms'>;
+  content: LegalContent;
+};
+
+const { locale, page, content } = Astro.props;
+const t = getMessages(locale);
+
+const sections = content.sections.map((section) => {
+  const match = /^(\d+)\.\s+([\s\S]+)$/.exec(section.title);
+  return {
+    ...section,
+    id: legalSectionId(section.title),
+    index: match?.[1] ?? '',
+    label: match?.[2] ?? section.title,
+  };
+});
+
+const words = [content.lead, ...content.sections.flatMap((section) => [section.title, section.body])]
+  .join(' ')
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean).length;
+const minutes = Math.max(1, Math.round(words / 220));
+
+const privacyHref = withBase(localePath(locale, 'privacy'));
+const termsHref = withBase(localePath(locale, 'terms'));
+const otherHref = page === 'privacy' ? termsHref : privacyHref;
+const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.privacyPolicy;
+---
+
+<div class="section-inner legal-shell">
+  <header class="legal-hero">
+    <nav class="legal-switch" aria-label={t.footer.legalNav}>
+      {
+        page === 'privacy' ? (
+          <span aria-current="page">{t.footer.privacyPolicy}</span>
+        ) : (
+          <a href={privacyHref}>{t.footer.privacyPolicy}</a>
+        )
+      }
+      {
+        page === 'terms' ? (
+          <span aria-current="page">{t.footer.termsOfService}</span>
+        ) : (
+          <a href={termsHref}>{t.footer.termsOfService}</a>
+        )
+      }
+    </nav>
+    <h1>{content.title}</h1>
+    <p class="legal-lead">{content.lead}</p>
+    <p class="legal-meta">
+      <span>{content.updatedLabel}</span>
+      <span class="legal-meta-date">{content.updatedDate}</span>
+      <span class="legal-meta-sep" aria-hidden="true"></span>
+      <span>
+        {minutes} {t.legal.minRead}
+      </span>
+    </p>
+  </header>
+
+  <div class="legal-reading">
+    <nav class="legal-toc" aria-label={t.legal.tocLabel}>
+      <p class="legal-toc-label">{t.legal.tocLabel}</p>
+      <div class="legal-toc-slider">
+        <ol class="legal-toc-list">
+          {
+            sections.map((section) => (
+              <li>
+                <a class="legal-toc-link" href={`#${section.id}`} data-toc-target={section.id}>
+                  {section.index ? <span class="legal-toc-index">{section.index}</span> : null}
+                  <span class="legal-toc-text">{section.label}</span>
+                </a>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+    </nav>
+
+    <div class="legal-sections legal-document">
+      {
+        sections.map((section) => (
+          <section id={section.id} class="legal-section" data-legal-section>
+            <header class="legal-section-head">
+              {section.index ? (
+                <span class="legal-index" aria-hidden="true">
+                  {section.index}
+                </span>
+              ) : null}
+              <h2 class="legal-section-title">{section.label}</h2>
+              <a class="legal-section-anchor" href={`#${section.id}`} aria-label={section.label}>
+                <span aria-hidden="true">#</span>
+              </a>
+            </header>
+            <LegalSectionBody body={section.body} />
+          </section>
+        ))
+      }
+    </div>
+
+    <footer class="legal-end">
+      <p class="legal-end-meta">
+        <span>{content.updatedLabel}</span>
+        <span class="legal-meta-date">{content.updatedDate}</span>
+      </p>
+      <a class="legal-next" href={otherHref}>
+        <span>
+          <span class="legal-next-kicker">{t.legal.alsoRead}</span>
+          <span class="legal-next-title">{otherLabel}</span>
+        </span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h14"></path>
+          <path d="M13 6l6 6-6 6"></path>
+        </svg>
+      </a>
+    </footer>
+  </div>
+</div>
+
+<button class="legal-top" type="button" data-legal-top hidden aria-label={t.legal.backToTop}>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M12 19V5"></path>
+    <path d="M6 11l6-6 6 6"></path>
+  </svg>
+</button>
+
+<script>
+  (function () {
+    var sections = document.querySelectorAll('[data-legal-section]');
+    var links = document.querySelectorAll('[data-toc-target]');
+    var list = document.querySelector('.legal-toc-list');
+    var slider = document.querySelector('.legal-toc-slider');
+    var top = document.querySelector('[data-legal-top]');
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var sliderQuery = window.matchMedia('(max-width: 980px)');
+
+    function isSliderMode() {
+      return sliderQuery.matches;
+    }
+
+    function clearSelection() {
+      var selection = window.getSelection();
+      if (selection && !selection.isCollapsed) selection.removeAllRanges();
+    }
+
+    function updateFogEdges() {
+      if (!list || !slider) return;
+      if (!isSliderMode()) {
+        slider.classList.remove('has-fog-start', 'has-fog-end');
+        return;
+      }
+      var overflow = list.scrollWidth > list.clientWidth + 1;
+      if (!overflow) {
+        slider.classList.remove('has-fog-start', 'has-fog-end');
+        return;
+      }
+      slider.classList.toggle('has-fog-start', list.scrollLeft > 2);
+      slider.classList.toggle('has-fog-end', list.scrollLeft < list.scrollWidth - list.clientWidth - 2);
+    }
+
+    if (list) {
+      list.addEventListener('scroll', updateFogEdges, { passive: true });
+      window.addEventListener('resize', updateFogEdges);
+      updateFogEdges();
+
+      var dragPointerId = null;
+      var dragStartX = 0;
+      var dragStartScroll = 0;
+      var dragMoved = false;
+      var suppressClick = false;
+
+      list.addEventListener('selectstart', function (event) {
+        if (isSliderMode()) event.preventDefault();
+      });
+
+      list.addEventListener('dragstart', function (event) {
+        if (isSliderMode()) event.preventDefault();
+      });
+
+      list.addEventListener(
+        'touchstart',
+        function () {
+          if (isSliderMode()) clearSelection();
+        },
+        { passive: true },
+      );
+
+      list.addEventListener('pointerdown', function (event) {
+        if (!isSliderMode() || event.button !== 0) return;
+        clearSelection();
+        dragPointerId = event.pointerId;
+        dragStartX = event.clientX;
+        dragStartScroll = list.scrollLeft;
+        dragMoved = false;
+      });
+
+      list.addEventListener('pointermove', function (event) {
+        if (dragPointerId !== event.pointerId) return;
+        var delta = event.clientX - dragStartX;
+        if (!dragMoved && Math.abs(delta) < 8) return;
+        if (!dragMoved) {
+          dragMoved = true;
+          clearSelection();
+          list.classList.add('is-dragging');
+          list.setPointerCapture(event.pointerId);
+        }
+        event.preventDefault();
+        list.scrollLeft = dragStartScroll - delta;
+      });
+
+      function endDrag(event) {
+        if (dragPointerId !== event.pointerId) return;
+        suppressClick = dragMoved;
+        dragPointerId = null;
+        dragMoved = false;
+        list.classList.remove('is-dragging');
+        if (list.hasPointerCapture(event.pointerId)) {
+          list.releasePointerCapture(event.pointerId);
+        }
+        updateFogEdges();
+      }
+
+      list.addEventListener('pointerup', endDrag);
+      list.addEventListener('pointercancel', endDrag);
+
+      list.addEventListener(
+        'click',
+        function (event) {
+          if (!suppressClick) return;
+          suppressClick = false;
+          event.preventDefault();
+          event.stopPropagation();
+        },
+        true,
+      );
+    }
+
+    if (top) {
+      var onScroll = function () {
+        top.hidden = window.scrollY < 480;
+      };
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+      top.addEventListener('click', function () {
+        var behavior = reduce ? 'auto' : 'smooth';
+        window.scrollTo({ top: 0, behavior: behavior });
+      });
+    }
+
+    if (!sections.length || !links.length) return;
+
+    var activeId = '';
+    var navLockUntil = 0;
+    var scrollSyncPending = false;
+    var siteHeader = document.querySelector('.site-header');
+    var legalToc = document.querySelector('.legal-toc');
+
+    function getStickyInset() {
+      var inset = 0;
+
+      if (siteHeader) {
+        inset = Math.max(inset, siteHeader.getBoundingClientRect().bottom);
+      }
+
+      if (isSliderMode() && legalToc) {
+        var tocRect = legalToc.getBoundingClientRect();
+        var headerBottom = siteHeader ? siteHeader.getBoundingClientRect().bottom : 0;
+        if (tocRect.top <= headerBottom + 8) {
+          inset = Math.max(inset, tocRect.bottom);
+        }
+      }
+
+      return inset;
+    }
+
+    function getSpyLine() {
+      var inset = getStickyInset();
+      var visible = Math.max(220, window.innerHeight - inset);
+      var offset = Math.min(112, Math.max(32, visible * 0.22));
+      return inset + offset;
+    }
+
+    function resolveActiveSection() {
+      if (window.scrollY <= 4) return sections[0].id;
+
+      if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 24) {
+        return sections[sections.length - 1].id;
+      }
+
+      var line = getSpyLine();
+      var containingId = '';
+      var passedId = sections[0].id;
+
+      sections.forEach(function (section) {
+        var rect = section.getBoundingClientRect();
+        if (rect.top <= line) passedId = section.id;
+        if (rect.top <= line && rect.bottom > line) containingId = section.id;
+      });
+
+      return containingId || passedId;
+    }
+
+    function scrollActiveIntoView() {
+      if (!list || !isSliderMode()) return;
+
+      requestAnimationFrame(function () {
+        var active = list.querySelector('.legal-toc-link.is-active');
+        if (!active) return;
+
+        var listRect = list.getBoundingClientRect();
+        var activeRect = active.getBoundingClientRect();
+        var target =
+          list.scrollLeft +
+          (activeRect.left - listRect.left) -
+          (listRect.width - activeRect.width) / 2;
+        target = Math.max(0, Math.min(target, list.scrollWidth - list.clientWidth));
+
+        list.scrollTo({
+          left: target,
+          behavior: reduce ? 'auto' : 'smooth',
+        });
+      });
+    }
+
+    function setActive(id, force) {
+      if (!id || (!force && id === activeId)) return;
+      activeId = id;
+      links.forEach(function (link) {
+        var on = link.getAttribute('data-toc-target') === id;
+        link.classList.toggle('is-active', on);
+        if (on) link.setAttribute('aria-current', 'location');
+        else link.removeAttribute('aria-current');
+      });
+      sections.forEach(function (section) {
+        section.classList.toggle('is-current', section.id === id);
+      });
+      scrollActiveIntoView();
+      updateFogEdges();
+    }
+
+    function syncActiveFromScroll() {
+      if (Date.now() < navLockUntil) return;
+      setActive(resolveActiveSection());
+    }
+
+    function lockNav(ms) {
+      navLockUntil = Date.now() + ms;
+    }
+
+    function scrollSectionToSpy(id) {
+      var section = document.getElementById(id);
+      if (!section) return;
+
+      var target = section.querySelector('.legal-section-head') || section;
+      var line = getSpyLine();
+      var rect = target.getBoundingClientRect();
+      var maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      var targetY = Math.max(0, Math.min(window.scrollY + rect.top - line, maxScroll));
+
+      window.scrollTo({
+        top: targetY,
+        behavior: reduce ? 'auto' : 'smooth',
+      });
+    }
+
+    function navigateToSection(id, updateHash) {
+      if (!document.getElementById(id)) return false;
+
+      lockNav(reduce ? 120 : 1200);
+      setActive(id, true);
+      if (updateHash && location.hash !== '#' + id) {
+        history.pushState(null, '', '#' + id);
+      }
+      scrollSectionToSpy(id);
+      return true;
+    }
+
+    function activateFromHash() {
+      var id = location.hash ? location.hash.slice(1) : '';
+      if (!id) return false;
+      return navigateToSection(id, false);
+    }
+
+    function initActive() {
+      if (!activateFromHash() && sections[0]) {
+        setActive(sections[0].id);
+      }
+    }
+
+    links.forEach(function (link) {
+      link.addEventListener('click', function (event) {
+        var id = link.getAttribute('data-toc-target');
+        if (!id) return;
+        event.preventDefault();
+        navigateToSection(id, true);
+      });
+    });
+
+    window.addEventListener('hashchange', activateFromHash);
+
+    window.addEventListener(
+      'scroll',
+      function () {
+        if (scrollSyncPending) return;
+        scrollSyncPending = true;
+        requestAnimationFrame(function () {
+          scrollSyncPending = false;
+          syncActiveFromScroll();
+        });
+      },
+      { passive: true },
+    );
+
+    if (document.readyState === 'complete') {
+      requestAnimationFrame(initActive);
+    } else {
+      window.addEventListener('load', function () {
+        requestAnimationFrame(initActive);
+      });
+    }
+
+    window.addEventListener('resize', function () {
+      if (activeId) scrollActiveIntoView();
+      syncActiveFromScroll();
+    });
+  })();
+</script>

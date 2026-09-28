@@ -1,0 +1,17 @@
+---
+import { splitLegalText } from '../lib/legal-text';
+
+type Props = { text: string };
+const { text } = Astro.props;
+const parts = splitLegalText(text);
+---
+
+{
+  parts.map((part) =>
+    part.kind === 'email' ? (
+      <a class="legal-link" href={`mailto:${part.value}`}>{part.value}</a>
+    ) : (
+      part.value
+    ),
+  )
+}

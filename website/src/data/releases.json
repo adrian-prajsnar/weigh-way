@@ -1,16 +1,23 @@
 [
   {
+    "version": "1.2.0",
+    "date": "2026-09-21",
+    "notesEn": "### Bug fixes\r\n\r\n* Address pre-release audit findings.\r\n* Clarify email rate limit message.\r\n* Align SDK 57 config and dependency versions.\r\n* Center footer on narrow viewports.\r\n* Polish mobile hero slider and header UX.\r\n* Refine homepage screens layout and marketing copy.\r\n\r\n### What's new\r\n\r\n* Rebrand app to WeighWay.\r\n* Roll out WeighWay mark and refresh auth experience.\r\n* Trend lists and custom compare modes.\r\n* BMI badges to weight highlights [wei#in](https://github.com/wei/issues/in).\r\n* Profile: smooth language and theme preference changes.\r\n* Improved history and compare date UX.\r\n* Locale and theme aware app screenshots.\r\n\r\n### Performance Improvements\r\n\r\n* Speed up startup and tab navigation.",
+    "notesPl": "### Poprawki błędów\r\n\r\n* Uwzględnienie uwag z audytu przedpremierowego.\r\n* Wyjaśnienie komunikatu o limicie wysyłania wiadomości e-mail.\r\n* Dostosowanie wersji konfiguracji i zależności SDK 57.\r\n* Wyśrodkowanie stopki w wąskich oknach przeglądarki.\r\n* Udoskonalenie interfejsu użytkownika suwaka głównego i nagłówka w aplikacji mobilnej.\r\n* Dopracowanie układu ekranów strony głównej i tekstów marketingowych.\r\n\r\n### Co nowego\r\n\r\n* Zmiana nazwy aplikacji na WeighWay.\r\n* Wprowadzenie znaku WeighWay i odświeżenie procesu uwierzytelniania.\r\n* Listy trendów i niestandardowe tryby porównywania.\r\n* Odznaki BMI do wyróżniania wagi [wei#in](https://github.com/wei/issues/in).\r\n* Profil: płynna zmiana języka i motywu.\r\n* Ulepszony interfejs historii i porównywania dat.\r\n* Zrzuty ekranu aplikacji dostosowane do ustawień regionalnych i motywu.\r\n\r\n### Poprawa wydajności\r\n\r\n* Przyspieszenie uruchamiania i nawigacji między zakładkami.",
+    "apkUrl": null
+  },
+  {
     "version": "1.1.1",
     "date": "2026-09-05",
-    "notesEn": "### Bug fixes\n\n* Editing a weigh-in stays visible above the keyboard.",
-    "notesPl": "### Poprawki\n\n* Podczas edycji ważenia pole pozostaje widoczne nad klawiaturą.",
+    "notesEn": "### Bug fixes\r\n\r\n* Editing a weigh-in stays visible above the keyboard.",
+    "notesPl": "### Poprawki\r\n\r\n* Podczas edycji ważenia pole pozostaje widoczne nad klawiaturą.",
     "apkUrl": null
   },
   {
     "version": "1.1.0",
     "date": "2026-09-04",
-    "notesEn": "### What's new\n\n* Clear message when the app is offline.\n* Easier date filtering and scrolling in History.\n* Profile now shows the app version.",
-    "notesPl": "### Co nowego\n\n* Jasny komunikat, gdy brak internetu.\n* Wygodniejsze filtrowanie dat i przewijanie w Historii.\n* Na ekranie Profilu widać teraz wersję aplikacji.",
+    "notesEn": "### What's new\r\n\r\n* Clear message when the app is offline.\r\n* Easier date filtering and scrolling in History.\r\n* Profile now shows the app version.",
+    "notesPl": "### Co nowego\r\n\r\n* Jasny komunikat, gdy brak internetu.\r\n* Wygodniejsze filtrowanie dat i przewijanie w Historii.\r\n* Na ekranie Profilu widać teraz wersję aplikacji.",
     "apkUrl": null
   }
 ]

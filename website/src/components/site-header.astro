@@ -14,11 +14,14 @@ const t = getMessages(locale);
 const links = [
   { page: 'home' as const, href: withBase(localePath(locale, 'home')), label: t.nav.home },
   { page: 'releases' as const, href: withBase(localePath(locale, 'releases')), label: t.nav.releases },
-  { page: 'privacy' as const, href: withBase(localePath(locale, 'privacy')), label: t.nav.privacy },
 ];
 ---
 
-<header class="site-header">
+<header
+  class="site-header"
+  data-page-locale={locale}
+  data-base-url={import.meta.env.BASE_URL}
+>
   <div class="header-bar">
     <div class="header-shell">
       <div class="header-inner">
@@ -58,11 +61,23 @@ const links = [
           }
         </nav>
         <div class="header-controls">
-          <div class="icon-toggle" role="group" aria-label={t.language.label} data-language-toggle>
-            <button type="button" data-language="en" aria-pressed="false">ENG</button>
-            <button type="button" data-language="pl" aria-pressed="false">PL</button>
+          <div class="icon-toggle icon-toggle--icons" role="group" aria-label={t.language.label} data-language-toggle>
+            <button type="button" data-language="system" aria-label={t.language.system} aria-pressed="false">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+            </button>
+            <button type="button" data-language="en" aria-label={t.language.english} aria-pressed="false">ENG</button>
+            <button type="button" data-language="pl" aria-label={t.language.polish} aria-pressed="false">PL</button>
           </div>
           <div class="icon-toggle icon-toggle--icons" role="group" aria-label={t.theme.label} data-theme-toggle>
+            <button type="button" data-theme="system" aria-label={t.theme.system} aria-pressed="false">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                <path d="M8 21h8M12 17v4"></path>
+              </svg>
+            </button>
             <button type="button" data-theme="light" aria-label={t.theme.light} aria-pressed="false">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                 <circle cx="12" cy="12" r="4"></circle>
@@ -92,328 +107,8 @@ const links = [
   </div>
 </div>
 
-<script is:inline define:vars={{ pageLocale: locale, baseUrl: import.meta.env.BASE_URL }}>
-  (function () {
-    var languageKey = 'weigh-way-site/language';
-    var scrollKey = 'weigh-way-site/preserve-scroll';
-    var themeKey = 'weigh-way-site/theme';
+<script>
+  import { initSiteHeader } from '../scripts/site-header';
 
-    function normalizeLanguage(value) {
-      return value === 'pl' || value === 'en' ? value : pageLocale;
-    }
-
-    function normalizeTheme(value) {
-      return value === 'light' || value === 'dark' ? value : 'light';
-    }
-
-    function markToggle(selector, attr, value) {
-      document.querySelectorAll(selector + ' button').forEach(function (button) {
-        button.setAttribute('aria-pressed', button.getAttribute(attr) === value ? 'true' : 'false');
-      });
-    }
-
-    function applyTheme(theme) {
-      document.documentElement.setAttribute('data-theme', theme);
-      var themeMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeMeta) {
-        themeMeta.setAttribute('content', theme === 'dark' ? '#080B12' : '#F4F5F8');
-      }
-    }
-
-    function getScreenshotIds() {
-      var ids = [];
-      document.querySelectorAll('[data-screenshot]').forEach(function (img) {
-        var id = img.getAttribute('data-screenshot');
-        if (id && ids.indexOf(id) === -1) ids.push(id);
-      });
-      return ids;
-    }
-
-    function screenshotUrl(id, theme) {
-      var locale = document.documentElement.getAttribute('data-screenshot-locale') || 'en';
-      var base = String(baseUrl).replace(/\/$/, '');
-      return base + '/screenshots/' + id + '-' + theme + '-' + locale + '.webp';
-    }
-
-    function preloadScreenshot(id, theme) {
-      return new Promise(function (resolve) {
-        var img = new Image();
-        img.decoding = 'async';
-        img.onload = function () {
-          if (typeof img.decode === 'function') {
-            img.decode().then(resolve).catch(resolve);
-            return;
-          }
-          resolve();
-        };
-        img.onerror = function () {
-          resolve();
-        };
-        img.src = screenshotUrl(id, theme);
-      });
-    }
-
-    function preloadThemeScreenshots(theme) {
-      var ids = getScreenshotIds();
-      if (!ids.length) return Promise.resolve();
-      return Promise.all(ids.map(function (id) {
-        return preloadScreenshot(id, theme);
-      }));
-    }
-
-    function decodeDomScreenshots() {
-      var tasks = [];
-      document.querySelectorAll('[data-screenshot]').forEach(function (img) {
-        if (typeof img.decode !== 'function') return;
-        tasks.push(img.decode().catch(function () {}));
-      });
-      return tasks.length ? Promise.all(tasks) : Promise.resolve();
-    }
-
-    function wait(ms) {
-      return new Promise(function (resolve) {
-        window.setTimeout(resolve, ms);
-      });
-    }
-
-    function fadeSplash(overlay, from, to, duration) {
-      return overlay.animate([{ opacity: from }, { opacity: to }], {
-        duration: duration,
-        easing: 'cubic-bezier(0.22, 1, 0.28, 1)',
-        fill: 'forwards',
-      }).finished;
-    }
-
-    function runDesktopFlashTransition(next, commit) {
-      var overlay = document.querySelector('[data-theme-splash]');
-      if (!overlay) {
-        commit();
-        return Promise.resolve();
-      }
-
-      var assets = preloadThemeScreenshots(next);
-      overlay.setAttribute('data-mode', next);
-      overlay.classList.add('is-on');
-      overlay.classList.remove('is-ready');
-      document.documentElement.classList.add('theme-animating');
-
-      window.requestAnimationFrame(function () {
-        overlay.classList.add('is-ready');
-      });
-
-      return fadeSplash(overlay, 0, 1, 280)
-        .then(function () {
-          return Promise.all([assets, wait(420)]);
-        })
-        .then(function () {
-          commit();
-          return decodeDomScreenshots();
-        })
-        .then(function () {
-          return wait(520);
-        })
-        .then(function () {
-          return fadeSplash(overlay, 1, 0, 380);
-        })
-        .finally(function () {
-          overlay.classList.remove('is-on', 'is-ready');
-          overlay.removeAttribute('data-mode');
-          document.documentElement.classList.remove('theme-animating');
-          preloadThemeScreenshots(next === 'dark' ? 'light' : 'dark');
-        });
-    }
-
-    var languagePref = normalizeLanguage(localStorage.getItem(languageKey));
-    var themePref = normalizeTheme(localStorage.getItem(themeKey));
-
-    markToggle('[data-language-toggle]', 'data-language', languagePref);
-    markToggle('[data-theme-toggle]', 'data-theme', themePref);
-    applyTheme(themePref);
-    preloadThemeScreenshots(themePref === 'dark' ? 'light' : 'dark');
-
-    document.querySelectorAll('[data-language-toggle] button').forEach(function (button) {
-      button.addEventListener('click', function () {
-        var next = button.getAttribute('data-language');
-        if (next !== 'pl' && next !== 'en') return;
-        localStorage.setItem(languageKey, next);
-        markToggle('[data-language-toggle]', 'data-language', next);
-        if (next === pageLocale) return;
-        var base = String(baseUrl).replace(/\/$/, '');
-        var rest = location.pathname.slice(base.length) || '/';
-        if (rest.indexOf('/pl/') === 0 || rest === '/pl') {
-          rest = rest.replace(/^\/pl/, '') || '/';
-        }
-        if (rest.charAt(0) !== '/') rest = '/' + rest;
-        var href = base + (next === 'pl' ? '/pl' : '') + rest;
-        if (href.slice(-1) !== '/') href += '/';
-        sessionStorage.setItem(scrollKey, String(window.scrollY));
-        location.assign(href);
-      });
-    });
-
-    document.querySelectorAll('[data-theme-toggle] button').forEach(function (button) {
-      button.addEventListener('click', function (event) {
-        var next = button.getAttribute('data-theme');
-        if (next !== 'light' && next !== 'dark') return;
-        if (next === themePref) return;
-
-        function commit() {
-          themePref = next;
-          localStorage.setItem(themeKey, next);
-          applyTheme(next);
-          markToggle('[data-theme-toggle]', 'data-theme', next);
-          if (window.syncScreenshotImages) {
-            window.syncScreenshotImages();
-          }
-        }
-
-        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-        if (!reduce) {
-          runDesktopFlashTransition(next, commit);
-          return;
-        }
-
-        commit();
-      });
-    });
-
-    var header = document.querySelector('.site-header');
-    var menuToggle = document.querySelector('[data-menu-toggle]');
-    var menuOverlay = document.querySelector('[data-menu-overlay]');
-    var mobileMenu = document.getElementById('site-menu');
-    var menuMq = window.matchMedia('(max-width: 900px)');
-
-    function syncMenuA11y(open) {
-      if (!mobileMenu) return;
-      if (menuMq.matches) {
-        mobileMenu.setAttribute('aria-hidden', open ? 'false' : 'true');
-      } else {
-        mobileMenu.removeAttribute('aria-hidden');
-      }
-    }
-
-    var closeTimer;
-
-    function syncMenuToggle(open) {
-      menuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-      if (menuOverlay) menuOverlay.setAttribute('aria-hidden', open ? 'false' : 'true');
-      syncMenuA11y(open);
-      var label = menuToggle.getAttribute(open ? 'data-label-close' : 'data-label-open');
-      if (label) menuToggle.setAttribute('aria-label', label);
-    }
-
-    function clearMenuMotionState() {
-      window.clearTimeout(closeTimer);
-      header.classList.remove('is-closing', 'is-opening');
-      document.documentElement.classList.remove('menu-instant');
-    }
-
-    function finishMenuClose() {
-      clearMenuMotionState();
-      syncMenuToggle(false);
-    }
-
-    function setMenuOpen(open, instant) {
-      if (!header || !menuToggle) return;
-
-      if (open) {
-        clearMenuMotionState();
-        header.classList.add('is-open', 'is-opening');
-        document.documentElement.classList.add('menu-open');
-        syncMenuToggle(true);
-        window.requestAnimationFrame(function () {
-          window.requestAnimationFrame(function () {
-            header.classList.remove('is-opening');
-          });
-        });
-        return;
-      }
-
-      if (!header.classList.contains('is-open')) {
-        finishMenuClose();
-        return;
-      }
-
-      header.classList.remove('is-open');
-      document.documentElement.classList.remove('menu-open');
-
-      if (instant) {
-        document.documentElement.classList.add('menu-instant');
-        finishMenuClose();
-        window.requestAnimationFrame(function () {
-          document.documentElement.classList.remove('menu-instant');
-        });
-        return;
-      }
-
-      header.classList.add('is-closing');
-      syncMenuToggle(false);
-      window.clearTimeout(closeTimer);
-      closeTimer = window.setTimeout(finishMenuClose, 380);
-    }
-
-    if (mobileMenu) {
-      mobileMenu.addEventListener('transitionend', function (event) {
-        if (!header.classList.contains('is-closing')) return;
-        if (event.target !== mobileMenu) return;
-        finishMenuClose();
-      });
-    }
-
-    syncMenuA11y(false);
-
-    if (menuToggle) {
-      menuToggle.addEventListener('click', function () {
-        setMenuOpen(!header.classList.contains('is-open'));
-      });
-    }
-
-    if (menuOverlay) {
-      menuOverlay.addEventListener('click', function () {
-        setMenuOpen(false);
-      });
-    }
-
-    document.querySelectorAll('.header-nav .nav-link').forEach(function (link) {
-      link.addEventListener('click', function () {
-        setMenuOpen(false, true);
-      });
-    });
-
-    header.querySelectorAll('.brand').forEach(function (link) {
-      link.addEventListener('click', function (event) {
-        if (
-          event.defaultPrevented ||
-          event.button !== 0 ||
-          event.metaKey ||
-          event.ctrlKey ||
-          event.shiftKey ||
-          event.altKey
-        ) {
-          return;
-        }
-        event.preventDefault();
-        if (header.classList.contains('is-open')) setMenuOpen(false, true);
-        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
-      });
-    });
-
-    document.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') setMenuOpen(false);
-    });
-
-    if (typeof menuMq.addEventListener === 'function') {
-      menuMq.addEventListener('change', function (event) {
-        if (!event.matches) setMenuOpen(false);
-        syncMenuA11y(header.classList.contains('is-open'));
-      });
-    } else if (typeof menuMq.addListener === 'function') {
-      menuMq.addListener(function (event) {
-        if (!event.matches) setMenuOpen(false);
-        syncMenuA11y(header.classList.contains('is-open'));
-      });
-    }
-  })();
+  initSiteHeader();
 </script>

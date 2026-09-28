@@ -9,7 +9,7 @@ export function getMessages(locale: SiteLocale): SiteMessages {
   return messages[locale];
 }
 
-export type SitePage = 'home' | 'releases' | 'privacy';
+export type SitePage = 'home' | 'releases' | 'privacy' | 'terms';
 
 export function localePath(locale: SiteLocale, page: SitePage): string {
   const suffix = page === 'home' ? '/' : `/${page}/`;

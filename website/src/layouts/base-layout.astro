@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import { getMessages, localePath, type SiteLocale, type SitePage } from '../i18n';
 import { withBase, absoluteUrl } from '../lib/paths';
+import { buildLanguageRedirectScript, buildThemeBootstrapScript } from '../lib/site-preferences';
 
 type Props = {
   locale: SiteLocale;
@@ -41,36 +42,11 @@ const plUrl = absoluteUrl(localePath('pl', page));
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <script is:inline>
-      (function () {
-        var themeKey = 'weigh-way-site/theme';
-        var pref = localStorage.getItem(themeKey);
-        var theme = pref === 'light' || pref === 'dark' ? pref : 'light';
-        document.documentElement.classList.add('js');
-        document.documentElement.setAttribute('data-theme', theme);
-        var meta = document.createElement('meta');
-        meta.name = 'theme-color';
-        meta.content = theme === 'dark' ? '#080B12' : '#F4F5F8';
-        document.head.appendChild(meta);
-      })();
-    </script>
-    <script is:inline define:vars={{ pageLocale: locale, baseUrl: import.meta.env.BASE_URL }}>
-      (function () {
-        var key = 'weigh-way-site/language';
-        var pref = localStorage.getItem(key);
-        if (pref !== 'pl' && pref !== 'en') return;
-        if (pref === pageLocale) return;
-        var base = String(baseUrl).replace(/\/$/, '');
-        var rest = location.pathname.slice(base.length) || '/';
-        if (rest.indexOf('/pl/') === 0 || rest === '/pl') {
-          rest = rest.replace(/^\/pl/, '') || '/';
-        }
-        if (rest.charAt(0) !== '/') rest = '/' + rest;
-        var next = base + (pref === 'pl' ? '/pl' : '') + rest;
-        if (next.slice(-1) !== '/') next += '/';
-        location.replace(next);
-      })();
-    </script>
+    <script is:inline set:html={buildThemeBootstrapScript()} />
+    <script
+      is:inline
+      set:html={buildLanguageRedirectScript(locale, import.meta.env.BASE_URL)}
+    />
   </head>
   <body>
     <script is:inline>
@@ -174,7 +150,7 @@ const plUrl = absoluteUrl(localePath('pl', page));
 
         var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
         if (finePointer) {
-          document.querySelectorAll('.card, .release-card, .faq-item, .cta-band').forEach(function (card) {
+          document.querySelectorAll('.card, .release-card, .faq-item, .cta-band, .legal-document').forEach(function (card) {
             card.addEventListener('pointermove', function (event) {
               var rect = card.getBoundingClientRect();
               card.style.setProperty('--spot-x', event.clientX - rect.left + 'px');

@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../../layouts/base-layout.astro';
+import SiteHeader from '../../components/site-header.astro';
+import SiteFooter from '../../components/site-footer.astro';
+import TermsPage from '../../components/terms-page.astro';
+import { getMessages } from '../../i18n';
+
+const locale = 'pl' as const;
+const t = getMessages(locale);
+---
+
+<BaseLayout
+  locale={locale}
+  page="terms"
+  title={t.meta.termsTitle}
+  description={t.meta.termsDescription}
+>
+  <SiteHeader locale={locale} page="terms" />
+  <main id="content">
+    <TermsPage locale={locale} />
+  </main>
+  <SiteFooter locale={locale} />
+</BaseLayout>
