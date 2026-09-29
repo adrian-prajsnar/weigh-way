@@ -1,4 +1,5 @@
 ---
+import PlatformDownloads from './platform-downloads.astro';
 import { getMessages, type SiteLocale } from '../i18n';
 import { getLatestRelease } from '../lib/releases';
 import { absoluteUrl, withBase } from '../lib/paths';
@@ -8,12 +9,13 @@ type Props = { locale: SiteLocale };
 const { locale } = Astro.props;
 const t = getMessages(locale);
 const latest = getLatestRelease();
-const downloadUrl = latest?.apkUrl ?? null;
+const apkUrl = latest?.apkUrl ?? null;
+const ipaUrl = latest?.ipaUrl ?? null;
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
   name: t.brand,
-  operatingSystem: 'Android',
+  operatingSystem: 'Android, iOS',
   applicationCategory: 'HealthApplication',
   offers: {
     '@type': 'Offer',
@@ -21,7 +23,6 @@ const jsonLd = {
     priceCurrency: 'USD',
   },
   description: t.meta.description,
-  downloadUrl: downloadUrl ?? undefined,
   softwareVersion: latest?.version,
   url: absoluteUrl(locale === 'pl' ? '/pl/' : '/'),
 };
@@ -74,24 +75,18 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
       <p class="hero-sub">{t.home.subhead}</p>
       <div class="chip-row">
         <span class="chip">{t.home.freeBadge}</span>
-        <span class="chip">{t.home.androidBadge}</span>
+        <span class="chip">{t.home.platformsBadge}</span>
         <span class="chip">{t.home.privateBadge}</span>
       </div>
       <div class="hero-actions">
-        {
-          downloadUrl ? (
-            <a class="btn btn-primary" href={downloadUrl}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path>
-              </svg>
-              <span>{t.home.download}</span>
-            </a>
-          ) : (
-            <span class="btn btn-primary is-disabled" aria-disabled="true">
-              <span>{t.home.downloadUnavailable}</span>
-            </span>
-          )
-        }
+        <PlatformDownloads
+          apkUrl={apkUrl}
+          ipaUrl={ipaUrl}
+          downloadAndroid={t.home.downloadAndroid}
+          downloadIos={t.home.downloadIos}
+          unavailableAndroid={t.home.downloadUnavailableAndroid}
+          unavailableIos={t.home.downloadUnavailableIos}
+        />
         {
           latest && (
             <span class="version-chip version-chip--live">
@@ -327,20 +322,14 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
         </h2>
         <p class="section-lead">{t.home.ctaBody}</p>
       </div>
-      {
-        downloadUrl ? (
-          <a class="btn btn-primary" href={downloadUrl}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path>
-            </svg>
-            <span>{t.home.download}</span>
-          </a>
-        ) : (
-          <span class="btn btn-primary is-disabled" aria-disabled="true">
-            <span>{t.home.downloadUnavailable}</span>
-          </span>
-        )
-      }
+      <PlatformDownloads
+        apkUrl={apkUrl}
+        ipaUrl={ipaUrl}
+        downloadAndroid={t.home.downloadAndroid}
+        downloadIos={t.home.downloadIos}
+        unavailableAndroid={t.home.downloadUnavailableAndroid}
+        unavailableIos={t.home.downloadUnavailableIos}
+      />
     </div>
   </div>
 </section>

@@ -705,6 +705,17 @@ html[data-theme='dark'] .page-fx-noise {
   margin-top: 36px;
 }
 
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+}
+
+.release-head .download-actions {
+  justify-content: flex-end;
+}
+
 .version-chip {
   display: inline-flex;
   align-items: center;

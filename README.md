@@ -1,6 +1,6 @@
 # WeighWay
 
-Your weight, your progress — a minimal Android app for logging daily body weight, with metric (kg) or imperial (lb) display and data stored in Supabase.
+Your weight, your progress — a minimal mobile app for iOS and Android for logging daily body weight, with metric (kg) or imperial (lb) display and data stored in Supabase.
 
 ## Features
 
@@ -243,21 +243,30 @@ npm run dev
 
 The dev server is at `http://localhost:4321/weigh-way/`. English is `/`, Polish is `/pl/`. Appearance and language follow **System / Light / Dark** and **System / English / Polski**, same idea as Profile in the app.
 
-### Release notes and Android download
+### Release notes and app downloads
 
 English notes come from semantic-release (`CHANGELOG.md`), then are rewritten for customers: internal changes (`ci`, `dev`, etc.) are dropped, scopes are removed, and sections become **What's new** / **Bug fixes**. CI writes `website/content/releases/{version}.en.md` and translates that copy with DeepL into `{version}.pl.md`. Existing `.en.md` or `.pl.md` files are never overwritten (edit them to fix wording).
 
-The production APK is built with EAS after a version bump and uploaded to that GitHub Release as `weigh-way.apk`. Latest download:
+After a version bump, CI builds both mobile artifacts and uploads them to the GitHub Release:
+
+- **Android** — `weigh-way.apk` (EAS cloud build)
+- **iOS** — `weigh-way.ipa` (unsigned build on macOS; install with SideStore)
+
+Latest downloads:
 
 `https://github.com/adrian-prajsnar/weigh-way/releases/latest/download/weigh-way.apk`
 
-Website-only commits still deploy the site; they do not start an EAS build.
+`https://github.com/adrian-prajsnar/weigh-way/releases/latest/download/weigh-way.ipa`
+
+Website-only commits still deploy the site; they do not start mobile builds.
 
 ### One-time GitHub setup
 
 1. Repo **Settings → Pages → Source: GitHub Actions**
 2. **Settings → Secrets and variables → Actions** — add:
    - `EXPO_TOKEN` — Expo access token for EAS cloud builds
+   - `EXPO_PUBLIC_SUPABASE_URL` — same value as in your local `.env` (required for automated IPA builds)
+   - `EXPO_PUBLIC_SUPABASE_ANON_KEY` — same value as in your local `.env` (required for automated IPA builds)
    - `DEEPL_API_KEY` — DeepL Free API key (English → Polish notes)
 
 EAS Free includes 15 Android builds per month. Two production releases a week fits; unused quota does not roll over.

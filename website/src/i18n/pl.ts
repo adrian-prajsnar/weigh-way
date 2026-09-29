@@ -4,15 +4,16 @@ const pl: SiteMessages = {
   meta: {
     title: 'WeighWay',
     description:
-      'Twoja waga, Twój progres. Spokojna aplikacja na Androida do codziennego ważenia, obliczania BMI na podstawie historii wzrostu oraz przejrzystego porównywania wyników w czasie. Bezpłatna, z synchronizacją w chmurze, dostępna po polsku i angielsku.',
+      'Twoja waga, Twój progres. Bezpłatna aplikacja mobilna — codzienne ważenie, BMI na podstawie historii wzrostu i przejrzyste porównania w czasie, z synchronizacją w chmurze po polsku i angielsku.',
     releasesTitle: 'Aktualizacje — WeighWay',
     releasesDescription:
-      'Najnowsze wersje, informacje o zmianach widoczne dla użytkownika oraz pliki APK na Androida.',
+      'Najnowsze wersje, informacje o zmianach widoczne dla użytkownika oraz pliki do pobrania aplikacji mobilnej.',
     privacyTitle: 'Polityka prywatności — WeighWay',
     privacyDescription:
       'Jak WeighWay zbiera, wykorzystuje, przechowuje i usuwa dane konta, wagi oraz wzrostu.',
     termsTitle: 'Regulamin — WeighWay',
-    termsDescription: 'Warunki korzystania z aplikacji WeighWay na Androida i tej strony internetowej.',
+    termsDescription:
+      'Warunki korzystania z aplikacji mobilnej WeighWay oraz tej strony internetowej.',
   },
   brand: 'WeighWay',
   skip: 'Przejdź do treści',
@@ -38,12 +39,14 @@ const pl: SiteMessages = {
     eyebrow: 'Twoja waga, Twój progres.',
     headline: 'Zapisuj swoją wagę.\nObserwuj trend.\nTrzymaj się planu.',
     subhead:
-      'Prosta i przejrzysta aplikacja na Androida do codziennego zapisywania wagi, śledzenia BMI na podstawie historii wzrostu oraz porównywania wyników na przestrzeni dni, tygodni, miesięcy i lat.\nBezpłatna dla każdego — bez reklam, bez rozpraszaczy, bez zbędnych dodatków.',
-    download: 'Pobierz na Androida',
-    downloadUnavailable: 'APK pojawi się w kolejnym wydaniu',
+      'Prosta aplikacja mobilna do codziennego zapisywania wagi, śledzenia BMI na podstawie historii wzrostu oraz porównywania wyników na przestrzeni dni, tygodni, miesięcy i lat. Bezpłatna dla każdego — bez reklam, bez rozpraszaczy, bez zbędnych dodatków.',
+    downloadAndroid: 'Pobierz na Androida',
+    downloadIos: 'Pobierz na iOS',
+    downloadUnavailableAndroid: 'Wersja na Androida pojawi się w kolejnym wydaniu',
+    downloadUnavailableIos: 'Wersja na iOS pojawi się w kolejnym wydaniu',
     versionLabel: 'Najnowsza wersja',
     freeBadge: 'Bezpłatna',
-    androidBadge: 'Android APK',
+    platformsBadge: 'Android & iOS',
     privateBadge: 'Prywatna z założenia',
     heroSliderNext: 'Pokaż podgląd aplikacji',
     heroSliderPrev: 'Wróć do opisu',
@@ -69,7 +72,7 @@ const pl: SiteMessages = {
       },
       {
         title: 'Twoje dane w chmurze',
-        body: 'Wszystkie dane pozostają zsynchronizowane z Twoim kontem. Zainstaluj aplikację na innym telefonie z Androidem i kontynuuj tam, gdzie skończyłeś.',
+        body: 'Wszystkie dane pozostają zsynchronizowane z Twoim kontem. Zainstaluj aplikację na innym telefonie i kontynuuj tam, gdzie skończyłeś.',
       },
     ],
     featuresTitle: 'Co otrzymujesz',
@@ -149,7 +152,7 @@ const pl: SiteMessages = {
       },
       {
         title: 'Obserwuj zmiany',
-        body: 'Obserwuj postępy korzystając z aplikacji na dowolnym urządzeniu z Androidem. Twoje dane są zapisywane w chmurze.',
+        body: 'Obserwuj postępy korzystając z aplikacji na dowolnym urządzeniu. Twoje dane są zapisywane w chmurze.',
       },
     ],
     faqTitle: 'Najczęściej zadawane pytania',
@@ -183,29 +186,31 @@ const pl: SiteMessages = {
       {
         question: 'Gdzie mogę pobrać aplikację?',
         answer:
-          'Aplikację na Androida możesz pobrać jako plik APK z tej strony. Dla bezpieczeństwa korzystaj wyłącznie z oficjalnych źródeł podanych na tej stronie.',
+          'Android: pobierz plik APK z tej strony. iOS: pobierz plik IPA z tej strony i zainstaluj go przez SideStore (bezpłatne Apple ID; odświeżanie około co 7 dni). Dla bezpieczeństwa korzystaj wyłącznie z oficjalnych linków na tej stronie.',
       },
     ],
     ctaTitle: 'Gotowy na pierwsze wRażenie?',
     ctaTitlePlayLetter: 'R',
     ctaBody:
-      'Pobierz bezpłatną aplikację na Androida, utwórz konto i zacznij monitorować swoje postępy!',
+      'Pobierz bezpłatną aplikację na swój system, utwórz konto i zacznij monitorować swoje postępy!',
   },
   releases: {
     title: 'Aktualizacje',
     subtitle:
-      'Zobacz, co zmieniło się w kolejnych wersjach aplikacji. Najnowsza wersja aplikacji powinna być dostępna do pobrania zaraz po opublikowaniu.',
+      'Zobacz, co zmieniło się w kolejnych wersjach aplikacji. Najnowsza wersja aplikacji mobilnej jest dostępna do pobrania zaraz po opublikowaniu.',
     latest: 'Najnowsza',
-    download: 'Pobierz APK',
+    downloadAndroid: 'Pobierz APK',
+    downloadIos: 'Pobierz IPA',
     empty: 'Nie opublikowano jeszcze żadnych wydań.',
-    noApk: 'APK nie został opublikowany dla tej wersji',
+    noAndroidBuild: 'Wersja na Androida nie została opublikowana dla tej wersji',
+    noIosBuild: 'Wersja na iOS nie została opublikowana dla tej wersji',
   },
   privacy: {
     title: 'Polityka prywatności',
     updatedLabel: 'Ostatnia aktualizacja',
     updatedDate: '28 września 2026 r.',
     lead:
-      'Niniejsza Polityka prywatności opisuje zasady przetwarzania danych osobowych w związku z korzystaniem z aplikacji WeighWay na Androida oraz niniejszej strony internetowej (łącznie „Usługa”).',
+      'Niniejsza Polityka prywatności opisuje zasady przetwarzania danych osobowych w związku z korzystaniem z aplikacji mobilnej WeighWay oraz niniejszej strony internetowej (łącznie „Usługa”).',
     sections: [
       {
         title: '1. Administrator danych',
@@ -278,7 +283,12 @@ const pl: SiteMessages = {
           'Możemy okresowo aktualizować niniejszą Politykę prywatności, na przykład w przypadku zmian w Usłudze, sposobie przetwarzania danych lub obowiązujących przepisach prawa.\n\nData „Ostatnia aktualizacja” na dole strony zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować Cię za pośrednictwem aplikacji, strony internetowej lub w inny odpowiedni sposób, jeżeli wymagają tego obowiązujące przepisy.',
       },
       {
-        title: '15. Kontakt',
+        title: '15. Dystrybucja aplikacji',
+        body:
+          'Aplikacja mobilna jest dystrybuowana za pośrednictwem tej strony internetowej:\n\n• Android — jako plik APK;\n• iOS — jako plik IPA (instalacja przez SideStore lub podobne narzędzie).\n\nZe względów bezpieczeństwa zalecamy instalowanie WeighWay wyłącznie z oficjalnych linków podanych na tej stronie.',
+      },
+      {
+        title: '16. Kontakt',
         body:
           'W przypadku pytań dotyczących prywatności lub przetwarzania danych osobowych skontaktuj się z nami:\n\nAdrian Prajsnar DEV\nadrian.prajsnar.dev@outlook.com',
       },
@@ -293,7 +303,7 @@ const pl: SiteMessages = {
       {
         title: '1. Postanowienia ogólne',
         body:
-          'Niniejszy Regulamin („Regulamin”) określa zasady korzystania z aplikacji WeighWay na urządzenia z systemem Android oraz niniejszej strony internetowej (łącznie „Usługa”), których właścicielem i operatorem jest Adrian Prajsnar DEV.\n\nJeśli nie akceptujesz Regulaminu, nie korzystaj z Usługi.',
+          'Niniejszy Regulamin („Regulamin”) określa zasady korzystania z aplikacji mobilnej WeighWay oraz niniejszej strony internetowej (łącznie „Usługa”), których właścicielem i operatorem jest Adrian Prajsnar DEV.\n\nJeśli nie akceptujesz Regulaminu, nie korzystaj z Usługi.',
       },
       {
         title: '2. Usługa',

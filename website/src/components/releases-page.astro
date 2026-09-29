@@ -1,4 +1,5 @@
 ---
+import PlatformDownloads from './platform-downloads.astro';
 import { marked } from 'marked';
 import { dateLocale, getMessages, type SiteLocale } from '../i18n';
 import { getReleases, notesFor } from '../lib/releases';
@@ -51,15 +52,15 @@ function formatDate(value: string) {
                     </h2>
                     <p class="release-date">{formatDate(release.date)}</p>
                   </div>
-                  {isLatest && release.apkUrl ? (
-                    <a class="btn btn-primary" href={release.apkUrl}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path>
-                      </svg>
-                      <span>{t.releases.download}</span>
-                    </a>
-                  ) : isLatest ? (
-                    <p class="version-chip">{t.releases.noApk}</p>
+                  {isLatest ? (
+                    <PlatformDownloads
+                      apkUrl={release.apkUrl}
+                      ipaUrl={release.ipaUrl}
+                      downloadAndroid={t.releases.downloadAndroid}
+                      downloadIos={t.releases.downloadIos}
+                      unavailableAndroid={t.releases.noAndroidBuild}
+                      unavailableIos={t.releases.noIosBuild}
+                    />
                   ) : null}
                 </div>
                 <div class="release-notes" set:html={html} />

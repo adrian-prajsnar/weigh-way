@@ -35,11 +35,13 @@ export type SiteMessages = {
     eyebrow: string;
     headline: string;
     subhead: string;
-    download: string;
-    downloadUnavailable: string;
+    downloadAndroid: string;
+    downloadIos: string;
+    downloadUnavailableAndroid: string;
+    downloadUnavailableIos: string;
     versionLabel: string;
     freeBadge: string;
-    androidBadge: string;
+    platformsBadge: string;
     privateBadge: string;
     heroSliderNext: string;
     heroSliderPrev: string;
@@ -78,9 +80,11 @@ export type SiteMessages = {
     title: string;
     subtitle: string;
     latest: string;
-    download: string;
+    downloadAndroid: string;
+    downloadIos: string;
     empty: string;
-    noApk: string;
+    noAndroidBuild: string;
+    noIosBuild: string;
   };
   privacy: {
     title: string;
@@ -116,14 +120,16 @@ const en: SiteMessages = {
   meta: {
     title: 'WeighWay',
     description:
-      'Your weight, your progress. A free Android app for daily weigh-ins, BMI from your height history, and clear comparisons over time — with cloud sync in English and Polish.',
+      'Your weight, your progress. A free mobile app — daily weigh-ins, BMI from your height history, and clear comparisons over time, with cloud sync in English and Polish.',
     releasesTitle: 'Releases — WeighWay',
-    releasesDescription: 'Latest versions, user-facing release notes, and Android APK downloads.',
+    releasesDescription:
+      'Latest versions, user-facing release notes, and mobile app downloads.',
     privacyTitle: 'Privacy Policy — WeighWay',
     privacyDescription:
       'How WeighWay collects, uses, stores, and deletes your account, weight, and height data.',
     termsTitle: 'Terms of Service — WeighWay',
-    termsDescription: 'Terms and conditions for using the WeighWay Android app and this website.',
+    termsDescription:
+      'Terms and conditions for using the WeighWay mobile app and this website.',
   },
   brand: 'WeighWay',
   skip: 'Skip to content',
@@ -149,12 +155,14 @@ const en: SiteMessages = {
     eyebrow: 'Your weight, your progress.',
     headline: 'Log your weight.\nSee the trend.\nStay consistent.',
     subhead:
-      'A simple Android app for daily weigh-ins, BMI tracking based on your height history, and clear comparisons across weeks, months, and years. Free for everyone — no ads, no feed, no noise.',
-    download: 'Download for Android',
-    downloadUnavailable: 'APK coming with the next release',
+      'A simple mobile app for daily weigh-ins, BMI tracking based on your height history, and clear comparisons across weeks, months, and years. Free for everyone — no ads, no feed, no noise.',
+    downloadAndroid: 'Download for Android',
+    downloadIos: 'Download for iOS',
+    downloadUnavailableAndroid: 'Android build coming with the next release',
+    downloadUnavailableIos: 'iOS build coming with the next release',
     versionLabel: 'Latest',
     freeBadge: 'Free',
-    androidBadge: 'Android APK',
+    platformsBadge: 'Android & iOS',
     privateBadge: 'Private by design',
     heroSliderNext: 'Show app preview',
     heroSliderPrev: 'Back to intro',
@@ -180,7 +188,7 @@ const en: SiteMessages = {
       },
       {
         title: 'Your data in the cloud',
-        body: 'All your data stays in sync. Install the app on another Android phone and pick up where you left off.',
+        body: 'All your data stays in sync. Install the app on another phone and pick up where you left off.',
       },
     ],
     featuresTitle: 'What you get',
@@ -257,7 +265,7 @@ const en: SiteMessages = {
       },
       {
         title: 'See your progress take shape',
-        body: 'Your data stays in sync across all screens. Install the app on another Android device and pick up where you left off.',
+        body: 'Your data stays in sync across all screens. Install the app on any device and pick up where you left off.',
       },
     ],
     faqTitle: 'Common questions',
@@ -291,27 +299,29 @@ const en: SiteMessages = {
       {
         question: 'Where do I download it?',
         answer:
-          'The Android app is distributed as an APK from this website. Install only from the official download on this site.',
+          'Android: download the APK from this website. iOS: download the IPA from this website and install it with SideStore (free Apple ID; refresh about every 7 days). Install only from the official download links on this site.',
       },
     ],
     ctaTitle: 'Ready for the first weigh-in?',
-    ctaBody: 'Download the free Android APK, create an account, and log your first weigh-in.',
+    ctaBody: 'Download the free app for your platform, create an account, and log your first weigh-in.',
   },
   releases: {
     title: 'Releases',
     subtitle:
-      'What changed in each version. The latest Android build is attached when a production APK is available.',
+      'What changed in each version. The latest mobile app build is attached when a production release is available.',
     latest: 'Latest',
-    download: 'Download APK',
+    downloadAndroid: 'Download APK',
+    downloadIos: 'Download IPA',
     empty: 'No releases published yet.',
-    noApk: 'APK not published for this version',
+    noAndroidBuild: 'Android build not published for this version',
+    noIosBuild: 'iOS build not published for this version',
   },
   privacy: {
     title: 'Privacy Policy',
     updatedLabel: 'Last update',
     updatedDate: 'September 28, 2026',
     lead:
-      'This Privacy Policy explains how personal data is processed in connection with the WeighWay Android application and this website (together, the “Service”).',
+      'This Privacy Policy explains how personal data is processed in connection with the WeighWay mobile app and this website (together, the “Service”).',
     sections: [
       {
         title: '1. Who we are',
@@ -386,7 +396,7 @@ const en: SiteMessages = {
       {
         title: '15. App distribution',
         body:
-          'The Android application is distributed as an APK through this website.\n\nFor security reasons, we recommend installing WeighWay only from the official download links provided on this website.',
+          'The mobile application is distributed through this website:\n\n• Android — as an APK file;\n• iOS — as an IPA file (install with SideStore or a similar tool).\n\nFor security reasons, we recommend installing WeighWay only from the official download links provided on this website.',
       },
       {
         title: '16. Contact',
@@ -404,7 +414,7 @@ const en: SiteMessages = {
       {
         title: '1. General',
         body:
-          'These Terms of Service (“Terms”) govern your use of the WeighWay Android application and this website (together, the “Service”), operated by Adrian Prajsnar DEV.\n\nIf you do not agree to these Terms, please do not use the Service.',
+          'These Terms of Service (“Terms”) govern your use of the WeighWay mobile app and this website (together, the “Service”), operated by Adrian Prajsnar DEV.\n\nIf you do not agree to these Terms, please do not use the Service.',
       },
       {
         title: '2. The Service',

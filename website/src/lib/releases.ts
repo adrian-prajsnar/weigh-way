@@ -6,6 +6,7 @@ export type Release = {
   notesEn: string;
   notesPl: string;
   apkUrl: string | null;
+  ipaUrl: string | null;
 };
 
 import rawReleases from '../data/releases.json';
