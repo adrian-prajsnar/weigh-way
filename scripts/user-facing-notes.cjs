@@ -19,6 +19,7 @@ const INTERNAL_SCOPES = new Set([
   'commitlint',
   'workflow',
   'github',
+  'website',
 ]);
 
 const SECTION_TITLES = {

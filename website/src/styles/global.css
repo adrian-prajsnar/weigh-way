@@ -712,6 +712,11 @@ html[data-theme='dark'] .page-fx-noise {
   align-items: center;
 }
 
+html.js[data-download-platform='android'] .download-action--ios,
+html.js[data-download-platform='ios'] .download-action--android {
+  display: none;
+}
+
 .release-head .download-actions {
   justify-content: flex-end;
 }

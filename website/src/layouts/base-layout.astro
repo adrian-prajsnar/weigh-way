@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import { getMessages, localePath, type SiteLocale, type SitePage } from '../i18n';
 import { withBase, absoluteUrl } from '../lib/paths';
+import { buildDownloadPlatformBootstrapScript } from '../lib/download-platform';
 import { buildLanguageRedirectScript, buildThemeBootstrapScript } from '../lib/site-preferences';
 
 type Props = {
@@ -43,6 +44,7 @@ const plUrl = absoluteUrl(localePath('pl', page));
       rel="stylesheet"
     />
     <script is:inline set:html={buildThemeBootstrapScript()} />
+    <script is:inline set:html={buildDownloadPlatformBootstrapScript()} />
     <script
       is:inline
       set:html={buildLanguageRedirectScript(locale, import.meta.env.BASE_URL)}

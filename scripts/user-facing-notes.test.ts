@@ -63,4 +63,23 @@ describe('user-facing notes', () => {
     expect(isInternalBullet('dev', 'add prominent development mode banner')).toBe(true);
     expect(isInternalBullet('history', 'improve date filtering')).toBe(false);
   });
+
+  it('drops website-scoped changelog entries from customer notes', () => {
+    const notes = toCustomerFacingNotes(`### Bug Fixes
+
+* **website:** center footer on narrow viewports
+* **entry-form:** keep edit weight modal above keyboard
+
+### Features
+
+* **website:** add locale and theme aware app screenshots
+* **dashboard:** add BMI badges to weight highlights
+`);
+
+    expect(notes).toContain('Editing a weigh-in stays visible above the keyboard.');
+    expect(notes).toContain('BMI badges');
+    expect(notes).not.toContain('footer');
+    expect(notes).not.toContain('screenshots');
+    expect(notes).not.toContain('**website:**');
+  });
 });
