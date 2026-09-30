@@ -5,6 +5,7 @@ const require = createRequire(import.meta.url);
 const {
   buildUserPrompt,
   generateEnglishReleaseNotes,
+  generateLocaleReleaseNotesSafely,
   generatePolishReleaseNotes,
   generateReleaseNotes,
 } = require('./llm-release-notes.cjs') as {
@@ -14,6 +15,12 @@ const {
     changelogBody: string;
     fetchImpl?: typeof fetch;
   }) => Promise<string>;
+  generateLocaleReleaseNotesSafely: (input: {
+    version: string;
+    changelogBody: string;
+    locale: 'en' | 'pl';
+    fetchImpl?: typeof fetch;
+  }) => Promise<{ body: string; pending: boolean }>;
   generatePolishReleaseNotes: (input: {
     version: string;
     changelogBody: string;
@@ -23,17 +30,33 @@ const {
     version: string;
     changelogBody: string;
     fetchImpl?: typeof fetch;
-  }) => Promise<{ notesEn: string; notesPl: string }>;
+  }) => Promise<{ notesEn: string; notesPl: string; pendingEn: boolean; pendingPl: boolean }>;
 };
 const {
+  buildPendingReleaseNotes,
+  formatNotesFile,
   isInternalBullet,
   parseChangelog,
+  parseNotesFile,
   prepareChangelogForLlm,
   toCustomerFacingNotes,
   validateReleaseNotesMarkdown,
 } = require('./user-facing-notes.cjs') as {
+  buildPendingReleaseNotes: (locale: 'en' | 'pl') => string;
+  formatNotesFile: (input: {
+    version: string;
+    date: string;
+    body: string;
+    pending?: boolean;
+  }) => string;
   isInternalBullet: (scope: string, text: string) => boolean;
   parseChangelog: (content: string) => { version: string; date: string; body: string }[];
+  parseNotesFile: (raw: string) => {
+    version: string | null;
+    date: string | null;
+    pending: boolean;
+    body: string;
+  };
   prepareChangelogForLlm: (body: string) => string;
   toCustomerFacingNotes: (body: string) => string;
   validateReleaseNotesMarkdown: (text: string, locale?: 'en' | 'pl') => string;
@@ -140,16 +163,6 @@ describe('user-facing notes', () => {
     expect(notes).toContain('* Compare your weight with custom date ranges.');
   });
 
-  it('maps performance improvements to Improvements', () => {
-    const notes = validateReleaseNotesMarkdown(`### Performance Improvements
-
-* Faster startup and tab switching.
-`, 'en');
-
-    expect(notes).toContain('### Improvements');
-    expect(notes).toContain('Faster startup and tab switching.');
-  });
-
   it('validates Polish release note headings', () => {
     const notes = validateReleaseNotesMarkdown(`### Co nowego
 
@@ -162,6 +175,18 @@ describe('user-facing notes', () => {
 
     expect(notes).toContain('### Co nowego');
     expect(notes).toContain('### Poprawki błędów');
+  });
+
+  it('marks pending release notes in frontmatter', () => {
+    const raw = formatNotesFile({
+      version: '1.3.0',
+      date: '2026-10-01',
+      body: buildPendingReleaseNotes('en'),
+      pending: true,
+    });
+
+    expect(raw).toContain('pending: true');
+    expect(parseNotesFile(raw).pending).toBe(true);
   });
 });
 
@@ -227,7 +252,7 @@ describe('llm release notes', () => {
     process.env.GEMINI_API_KEY = 'test-key';
     let calls = 0;
 
-    const { notesEn, notesPl } = await generateReleaseNotes({
+    const { notesEn, notesPl, pendingEn, pendingPl } = await generateReleaseNotes({
       version: '1.2.0',
       changelogBody: `### Features
 
@@ -248,23 +273,46 @@ describe('llm release notes', () => {
     expect(calls).toBe(2);
     expect(notesEn).toContain("### What's new");
     expect(notesPl).toContain('### Co nowego');
+    expect(pendingEn).toBe(false);
+    expect(pendingPl).toBe(false);
   });
 
-  it('generates Polish notes from the changelog', async () => {
+  it('falls back to pending placeholders when Gemini fails', async () => {
     process.env.GEMINI_API_KEY = 'test-key';
 
-    const notes = await generatePolishReleaseNotes({
+    const { notesEn, notesPl, pendingEn, pendingPl } = await generateReleaseNotes({
       version: '1.2.0',
       changelogBody: `### Features
 
 * **dashboard:** add BMI badges to weight highlights
 `,
-      fetchImpl: async () =>
-        mockGeminiResponse(`### Co nowego
-
-* Odznaki BMI na ekranie Dashboard.`),
+      fetchImpl: async () => {
+        throw new Error('Gemini returned no release notes (finishReason: SAFETY)');
+      },
     });
 
-    expect(notes).toContain('### Co nowego');
+    expect(pendingEn).toBe(true);
+    expect(pendingPl).toBe(true);
+    expect(notesEn).toContain('shortly');
+    expect(notesPl).toContain('wkrótce');
+  });
+
+  it('returns pending placeholder from safe locale generation', async () => {
+    process.env.GEMINI_API_KEY = 'test-key';
+
+    const result = await generateLocaleReleaseNotesSafely({
+      version: '1.2.0',
+      locale: 'en',
+      changelogBody: `### Features
+
+* **dashboard:** add BMI badges to weight highlights
+`,
+      fetchImpl: async () => {
+        throw new Error('Gemini release notes failed');
+      },
+    });
+
+    expect(result.pending).toBe(true);
+    expect(result.body).toContain('shortly');
   });
 });

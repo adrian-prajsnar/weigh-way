@@ -245,7 +245,7 @@ The dev server is at `http://localhost:4321/weigh-way/`. English is `/`, Polish 
 
 ### Release notes and app downloads
 
-English and Polish notes come from semantic-release (`CHANGELOG.md`): internal changes (`ci`, `dev`, `website`, `expo`, etc.) are filtered out, then **Google Gemini** (free tier via [Google AI Studio](https://aistudio.google.com/apikey)) writes customer-facing release notes in both languages. CI writes `website/content/releases/{version}.en.md` and `{version}.pl.md`. If Gemini fails, the release fails. Existing `.en.md` or `.pl.md` files are never overwritten (edit them to fix wording).
+English and Polish notes come from semantic-release (`CHANGELOG.md`): internal changes (`ci`, `dev`, `website`, `expo`, etc.) are filtered out, then **Google Gemini** (free tier via [Google AI Studio](https://aistudio.google.com/apikey)) writes customer-facing release notes in both languages. CI writes `website/content/releases/{version}.en.md` and `{version}.pl.md`. If Gemini fails, the release still completes and the site shows a “coming soon” message with a contact email until notes are regenerated. Existing `.en.md` or `.pl.md` files are never overwritten (edit them to fix wording, or re-run with `--force`).
 
 After a version bump, CI builds both mobile artifacts and uploads them to the GitHub Release:
 

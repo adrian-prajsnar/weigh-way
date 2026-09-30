@@ -193,6 +193,31 @@ async function generateLocaleReleaseNotes({
   return validateReleaseNotesMarkdown(raw, locale);
 }
 
+async function generateLocaleReleaseNotesSafely({
+  version,
+  changelogBody,
+  locale,
+  fetchImpl = fetch,
+}) {
+  try {
+    const body = await generateLocaleReleaseNotes({
+      version,
+      changelogBody,
+      locale,
+      fetchImpl,
+    });
+    return { body, pending: false };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Release notes (${locale}) for ${version} failed: ${message}`);
+    console.warn(`Using pending placeholder for ${version} (${locale}).`);
+    return {
+      body: require('./user-facing-notes.cjs').buildPendingReleaseNotes(locale),
+      pending: true,
+    };
+  }
+}
+
 async function generateEnglishReleaseNotes({ version, changelogBody, fetchImpl = fetch }) {
   return generateLocaleReleaseNotes({ version, changelogBody, locale: 'en', fetchImpl });
 }
@@ -202,14 +227,17 @@ async function generatePolishReleaseNotes({ version, changelogBody, fetchImpl = 
 }
 
 async function generateReleaseNotes({ version, changelogBody, fetchImpl = fetch }) {
-  getFilteredInput(version, changelogBody);
-
-  const [notesEn, notesPl] = await Promise.all([
-    generateEnglishReleaseNotes({ version, changelogBody, fetchImpl }),
-    generatePolishReleaseNotes({ version, changelogBody, fetchImpl }),
+  const [english, polish] = await Promise.all([
+    generateLocaleReleaseNotesSafely({ version, changelogBody, locale: 'en', fetchImpl }),
+    generateLocaleReleaseNotesSafely({ version, changelogBody, locale: 'pl', fetchImpl }),
   ]);
 
-  return { notesEn, notesPl };
+  return {
+    notesEn: english.body,
+    pendingEn: english.pending,
+    notesPl: polish.body,
+    pendingPl: polish.pending,
+  };
 }
 
 module.exports = {
@@ -219,6 +247,7 @@ module.exports = {
   buildUserPrompt,
   callGemini,
   generateEnglishReleaseNotes,
+  generateLocaleReleaseNotesSafely,
   generatePolishReleaseNotes,
   generateReleaseNotes,
   getGeminiApiKey,

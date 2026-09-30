@@ -2,7 +2,9 @@
 import PlatformDownloads from './platform-downloads.astro';
 import { marked } from 'marked';
 import { dateLocale, getMessages, type SiteLocale } from '../i18n';
-import { getReleases, notesFor } from '../lib/releases';
+import { getReleases, isNotesPending, notesFor } from '../lib/releases';
+
+const CONTACT_EMAIL = 'adrian.prajsnar.dev@outlook.com';
 
 type Props = { locale: SiteLocale };
 const { locale } = Astro.props;
@@ -37,7 +39,13 @@ function formatDate(value: string) {
         <div class="release-list">
           {releases.map((release, index) => {
             const isLatest = index === 0;
-            const html = marked.parse(notesFor(release, locale), { async: false }) as string;
+            const notesPending = isNotesPending(release, locale);
+            const html = notesPending
+              ? ''
+              : (marked.parse(notesFor(release, locale), { async: false }) as string);
+            const contactSubject = encodeURIComponent(
+              `WeighWay release notes for ${release.version}`,
+            );
             return (
               <article
                 class:list={['release-card', isLatest && 'is-latest']}
@@ -63,7 +71,20 @@ function formatDate(value: string) {
                     />
                   ) : null}
                 </div>
-                <div class="release-notes" set:html={html} />
+                {notesPending ? (
+                  <div class="release-notes-pending">
+                    <p class="release-notes-pending-title">{t.releases.pendingTitle}</p>
+                    <p>{t.releases.pendingBody}</p>
+                    <p>
+                      {t.releases.pendingContact}{' '}
+                      <a href={`mailto:${CONTACT_EMAIL}?subject=${contactSubject}`}>
+                        {CONTACT_EMAIL}
+                      </a>
+                    </p>
+                  </div>
+                ) : (
+                  <div class="release-notes" set:html={html} />
+                )}
               </article>
             );
           })}

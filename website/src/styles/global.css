@@ -1336,6 +1336,37 @@ html.js[data-download-platform='ios'] .download-action--android {
   color: var(--text);
 }
 
+.release-notes-pending {
+  margin-top: 20px;
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.release-notes-pending-title {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.release-notes-pending p {
+  margin: 0 0 10px;
+}
+
+.release-notes-pending p:last-child {
+  margin-bottom: 0;
+}
+
+.release-notes-pending a {
+  color: var(--accent);
+  font-weight: 600;
+  word-break: break-all;
+}
+
 .release-notes h3 {
   font-size: 0.82rem;
   text-transform: uppercase;

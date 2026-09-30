@@ -5,6 +5,8 @@ export type Release = {
   date: string;
   notesEn: string;
   notesPl: string;
+  pendingEn?: boolean;
+  pendingPl?: boolean;
   apkUrl: string | null;
   ipaUrl: string | null;
 };
@@ -23,4 +25,8 @@ export function getLatestRelease(): Release | null {
 
 export function notesFor(release: Release, locale: SiteLocale): string {
   return locale === 'pl' ? release.notesPl : release.notesEn;
+}
+
+export function isNotesPending(release: Release, locale: SiteLocale): boolean {
+  return locale === 'pl' ? Boolean(release.pendingPl) : Boolean(release.pendingEn);
 }

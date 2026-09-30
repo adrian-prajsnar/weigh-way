@@ -3,8 +3,7 @@ require('./load-env.cjs').loadEnv();
 const fs = require('fs');
 const path = require('path');
 const {
-  generateEnglishReleaseNotes,
-  generatePolishReleaseNotes,
+  generateLocaleReleaseNotesSafely,
   generateReleaseNotes,
 } = require('./llm-release-notes.cjs');
 const {
@@ -13,6 +12,35 @@ const {
   loadChangelogVersions,
   notesPath,
 } = require('./user-facing-notes.cjs');
+
+function writeNotesFile({ entry, locale, body, pending }) {
+  fs.writeFileSync(
+    notesPath(entry.version, locale),
+    formatNotesFile({
+      version: entry.version,
+      date: entry.date,
+      body,
+      pending,
+    }),
+    'utf8',
+  );
+}
+
+async function snapshotLocale(entry, locale) {
+  const { body, pending } = await generateLocaleReleaseNotesSafely({
+    version: entry.version,
+    changelogBody: entry.body,
+    locale,
+  });
+  writeNotesFile({ entry, locale, body, pending });
+
+  const label = locale === 'en' ? 'English' : 'Polish';
+  if (pending) {
+    console.warn(`Wrote pending ${label} release notes placeholder for ${entry.version}`);
+  } else {
+    console.log(`Wrote LLM ${label} release notes for ${entry.version}`);
+  }
+}
 
 async function snapshotVersion(entry) {
   fs.mkdirSync(NOTES_DIR, { recursive: true });
@@ -28,48 +56,29 @@ async function snapshotVersion(entry) {
   }
 
   if (needsEn && needsPl) {
-    const { notesEn, notesPl } = await generateReleaseNotes({
+    const { notesEn, notesPl, pendingEn, pendingPl } = await generateReleaseNotes({
       version: entry.version,
       changelogBody: entry.body,
     });
-    fs.writeFileSync(
-      englishPath,
-      formatNotesFile({ version: entry.version, date: entry.date, body: notesEn }),
-      'utf8',
-    );
-    fs.writeFileSync(
-      polishPath,
-      formatNotesFile({ version: entry.version, date: entry.date, body: notesPl }),
-      'utf8',
-    );
-    console.log(`Wrote LLM English and Polish release notes for ${entry.version}`);
+    writeNotesFile({ entry, locale: 'en', body: notesEn, pending: pendingEn });
+    writeNotesFile({ entry, locale: 'pl', body: notesPl, pending: pendingPl });
+
+    if (pendingEn || pendingPl) {
+      console.warn(
+        `Wrote release notes for ${entry.version} with pending placeholder(s): en=${pendingEn}, pl=${pendingPl}`,
+      );
+    } else {
+      console.log(`Wrote LLM English and Polish release notes for ${entry.version}`);
+    }
     return;
   }
 
   if (needsEn) {
-    const notesEn = await generateEnglishReleaseNotes({
-      version: entry.version,
-      changelogBody: entry.body,
-    });
-    fs.writeFileSync(
-      englishPath,
-      formatNotesFile({ version: entry.version, date: entry.date, body: notesEn }),
-      'utf8',
-    );
-    console.log(`Wrote LLM English release notes for ${entry.version}`);
+    await snapshotLocale(entry, 'en');
   }
 
   if (needsPl) {
-    const notesPl = await generatePolishReleaseNotes({
-      version: entry.version,
-      changelogBody: entry.body,
-    });
-    fs.writeFileSync(
-      polishPath,
-      formatNotesFile({ version: entry.version, date: entry.date, body: notesPl }),
-      'utf8',
-    );
-    console.log(`Wrote LLM Polish release notes for ${entry.version}`);
+    await snapshotLocale(entry, 'pl');
   }
 }
 

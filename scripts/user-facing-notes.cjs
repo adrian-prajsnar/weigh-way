@@ -4,6 +4,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const CHANGELOG_PATH = path.join(ROOT, 'CHANGELOG.md');
 const NOTES_DIR = path.join(ROOT, 'website', 'content', 'releases');
+const RELEASE_CONTACT_EMAIL = 'adrian.prajsnar.dev@outlook.com';
 
 const INTERNAL_SCOPES = new Set([
   'ci',
@@ -282,8 +283,9 @@ function toUserFacingNotes(body) {
   return stripTechnicalArtifacts(body);
 }
 
-function formatNotesFile({ version, date, body }) {
-  return `---\nversion: ${version}\ndate: ${date}\n---\n\n${body}\n`;
+function formatNotesFile({ version, date, body, pending = false }) {
+  const pendingLine = pending ? 'pending: true\n' : '';
+  return `---\nversion: ${version}\ndate: ${date}\n${pendingLine}---\n\n${body}\n`;
 }
 
 function notesPath(version, locale) {
@@ -305,8 +307,16 @@ function parseNotesFile(raw) {
   return {
     version: frontmatter.version ?? null,
     date: frontmatter.date ?? null,
+    pending: frontmatter.pending === 'true',
     body: match[2].trim(),
   };
+}
+
+function buildPendingReleaseNotes(locale) {
+  if (locale === 'pl') {
+    return 'Szczegółowe informacje o tym wydaniu pojawią się wkrótce na tej stronie.';
+  }
+  return 'Detailed release notes for this version will appear here shortly.';
 }
 
 function loadChangelogVersions() {
@@ -318,8 +328,10 @@ module.exports = {
   CHANGELOG_PATH,
   INTERNAL_SCOPES,
   NOTES_DIR,
+  RELEASE_CONTACT_EMAIL,
   ROOT,
   ALLOWED_RELEASE_SECTIONS,
+  buildPendingReleaseNotes,
   formatNotesFile,
   filterChangelogSections,
   humanizeBullet,

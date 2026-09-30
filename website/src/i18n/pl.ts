@@ -204,6 +204,10 @@ const pl: SiteMessages = {
     empty: 'Nie opublikowano jeszcze żadnych wydań.',
     noAndroidBuild: 'Wersja na Androida nie została opublikowana dla tej wersji',
     noIosBuild: 'Wersja na iOS nie została opublikowana dla tej wersji',
+    pendingTitle: 'Informacje o wydaniu wkrótce',
+    pendingBody:
+      'Przygotowujemy szczegółowe informacje o tej wersji i wkrótce opublikujemy je na tej stronie. W międzyczasie możesz pobrać aplikację powyżej.',
+    pendingContact: 'Jeśli po kilku dniach nadal ich tu nie ma, daj nam znać.',
   },
   privacy: {
     title: 'Polityka prywatności',

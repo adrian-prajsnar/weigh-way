@@ -85,6 +85,9 @@ export type SiteMessages = {
     empty: string;
     noAndroidBuild: string;
     noIosBuild: string;
+    pendingTitle: string;
+    pendingBody: string;
+    pendingContact: string;
   };
   privacy: {
     title: string;
@@ -315,6 +318,10 @@ const en: SiteMessages = {
     empty: 'No releases published yet.',
     noAndroidBuild: 'Android build not published for this version',
     noIosBuild: 'iOS build not published for this version',
+    pendingTitle: 'Release notes coming soon',
+    pendingBody:
+      'We are preparing the detailed notes for this version and will publish them here shortly. You can download the app above in the meantime.',
+    pendingContact: 'If they are still missing after a couple of days, let us know.',
   },
   privacy: {
     title: 'Privacy Policy',

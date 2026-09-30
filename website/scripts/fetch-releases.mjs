@@ -26,6 +26,7 @@ function parseNotesFile(raw) {
   return {
     version: frontmatter.version ?? null,
     date: frontmatter.date ?? null,
+    pending: frontmatter.pending === 'true',
     body: match[2].trim(),
   };
 }
@@ -90,9 +91,12 @@ for (const fileName of files) {
   const english = parseNotesFile(englishRaw);
   const polishFile = path.join(NOTES_DIR, `${version}.pl.md`);
   let notesPl;
+  let pendingPl = false;
   try {
     const polishRaw = await readFile(polishFile, 'utf8');
-    notesPl = parseNotesFile(polishRaw).body;
+    const polish = parseNotesFile(polishRaw);
+    notesPl = polish.body;
+    pendingPl = polish.pending;
   } catch {
     throw new Error(
       `Missing Polish release notes for ${version} (${path.basename(polishFile)}). Add the file or run: node scripts/snapshot-release-notes.cjs ${version}`,
@@ -105,6 +109,8 @@ for (const fileName of files) {
     date: english.date ?? '',
     notesEn: english.body,
     notesPl,
+    pendingEn: english.pending,
+    pendingPl,
     apkUrl: assets.apkUrl,
     ipaUrl: assets.ipaUrl,
   });
