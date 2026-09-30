@@ -1,51 +1,76 @@
+require('./load-env.cjs').loadEnv();
+
 const fs = require('fs');
 const path = require('path');
+const {
+  generateEnglishReleaseNotes,
+  generatePolishReleaseNotes,
+  generateReleaseNotes,
+} = require('./llm-release-notes.cjs');
 const {
   NOTES_DIR,
   formatNotesFile,
   loadChangelogVersions,
   notesPath,
-  translateToPolish,
 } = require('./user-facing-notes.cjs');
 
-async function snapshotVersion(entry, { translate }) {
+async function snapshotVersion(entry) {
   fs.mkdirSync(NOTES_DIR, { recursive: true });
 
   const englishPath = notesPath(entry.version, 'en');
-  if (fs.existsSync(englishPath)) {
-    console.log(`Kept existing English notes for ${entry.version}`);
-  } else {
-    fs.writeFileSync(
-      englishPath,
-      formatNotesFile({ version: entry.version, date: entry.date, body: entry.body }),
-      'utf8',
-    );
-    console.log(`Wrote customer-facing English notes for ${entry.version}`);
-  }
-
   const polishPath = notesPath(entry.version, 'pl');
-  if (fs.existsSync(polishPath)) {
-    console.log(`Kept existing Polish notes for ${entry.version}`);
+  const needsEn = !fs.existsSync(englishPath);
+  const needsPl = !fs.existsSync(polishPath);
+
+  if (!needsEn && !needsPl) {
+    console.log(`Kept existing English and Polish notes for ${entry.version}`);
     return;
   }
 
-  if (!translate) {
-    throw new Error(
-      `Missing Polish notes for ${entry.version} (${path.basename(polishPath)}). Re-run with DeepL or add an override file.`,
+  if (needsEn && needsPl) {
+    const { notesEn, notesPl } = await generateReleaseNotes({
+      version: entry.version,
+      changelogBody: entry.body,
+    });
+    fs.writeFileSync(
+      englishPath,
+      formatNotesFile({ version: entry.version, date: entry.date, body: notesEn }),
+      'utf8',
     );
+    fs.writeFileSync(
+      polishPath,
+      formatNotesFile({ version: entry.version, date: entry.date, body: notesPl }),
+      'utf8',
+    );
+    console.log(`Wrote LLM English and Polish release notes for ${entry.version}`);
+    return;
   }
 
-  const englishBody = fs.existsSync(englishPath)
-    ? require('./user-facing-notes.cjs').parseNotesFile(fs.readFileSync(englishPath, 'utf8')).body
-    : entry.body;
+  if (needsEn) {
+    const notesEn = await generateEnglishReleaseNotes({
+      version: entry.version,
+      changelogBody: entry.body,
+    });
+    fs.writeFileSync(
+      englishPath,
+      formatNotesFile({ version: entry.version, date: entry.date, body: notesEn }),
+      'utf8',
+    );
+    console.log(`Wrote LLM English release notes for ${entry.version}`);
+  }
 
-  const translated = await translateToPolish(englishBody);
-  fs.writeFileSync(
-    polishPath,
-    formatNotesFile({ version: entry.version, date: entry.date, body: translated }),
-    'utf8',
-  );
-  console.log(`Wrote Polish notes for ${entry.version}`);
+  if (needsPl) {
+    const notesPl = await generatePolishReleaseNotes({
+      version: entry.version,
+      changelogBody: entry.body,
+    });
+    fs.writeFileSync(
+      polishPath,
+      formatNotesFile({ version: entry.version, date: entry.date, body: notesPl }),
+      'utf8',
+    );
+    console.log(`Wrote LLM Polish release notes for ${entry.version}`);
+  }
 }
 
 async function main() {
@@ -85,11 +110,11 @@ async function main() {
   }
 
   for (const entry of selected) {
-    await snapshotVersion(entry, { translate: true });
+    await snapshotVersion(entry);
   }
 }
 
 main().catch((error) => {
   console.error(error.message || error);
-  process.exit(1);
+  process.exitCode = 1;
 });

@@ -20,14 +20,32 @@ const INTERNAL_SCOPES = new Set([
   'workflow',
   'github',
   'website',
+  'expo',
 ]);
 
+const ALLOWED_RELEASE_SECTIONS = {
+  en: new Set(["what's new", 'bug fixes', 'improvements', 'breaking changes']),
+  pl: new Set(['co nowego', 'poprawki błędów', 'poprawki', 'ulepszenia', 'istotne zmiany']),
+};
+
 const SECTION_TITLES = {
-  'bug fixes': 'Bug fixes',
-  features: "What's new",
-  'breaking changes': 'Breaking changes',
-  performance: 'Improvements',
-  improvements: 'Improvements',
+  en: {
+    'bug fixes': 'Bug fixes',
+    features: "What's new",
+    'breaking changes': 'Breaking changes',
+    performance: 'Improvements',
+    improvements: 'Improvements',
+    'performance improvements': 'Improvements',
+  },
+  pl: {
+    'bug fixes': 'Poprawki błędów',
+    poprawki: 'Poprawki błędów',
+    features: 'Co nowego',
+    'breaking changes': 'Istotne zmiany',
+    performance: 'Ulepszenia',
+    improvements: 'Ulepszenia',
+    'performance improvements': 'Ulepszenia',
+  },
 };
 
 const BULLET_REWRITES = [
@@ -60,9 +78,12 @@ function parseChangelog(content) {
 }
 
 function stripTechnicalArtifacts(body) {
-  return body
+  let cleaned = body
     .replace(/\s*\(\[([a-f0-9]{7,40})\]\([^)]+\)\)/gi, '')
-    .replace(/,?\s*closes\s+\[[^\]]+\]\([^)]+\)/gi, '')
+    .replace(/,?\s*closes(?:\s+\[[^\]]+\]\([^)]+\))+/gi, '')
+    .replace(/\[[^\]]+\]\([^)]+\)/g, '');
+
+  return cleaned
     .replace(/[ \t]+$/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -141,9 +162,9 @@ function humanizeBullet(scope, text) {
   return line;
 }
 
-function mapSectionTitle(title) {
+function mapSectionTitle(title, locale = 'en') {
   const key = title.trim().toLowerCase();
-  return SECTION_TITLES[key] ?? title;
+  return SECTION_TITLES[locale][key] ?? title;
 }
 
 function serializeSections(sections) {
@@ -153,6 +174,88 @@ function serializeSections(sections) {
       return `### ${section.title}\n\n${bullets}`;
     })
     .join('\n\n');
+}
+
+function filterChangelogSections(body) {
+  const cleaned = stripTechnicalArtifacts(body);
+  return parseSections(cleaned)
+    .map((section) => {
+      const bullets = section.bullets
+        .map((raw) => parseBullet(raw))
+        .filter(({ scope, text }) => !isInternalBullet(scope, text))
+        .map(({ scope, text }) => {
+          if (scope) {
+            return `[${scope}] ${text}`;
+          }
+          return text;
+        });
+
+      return {
+        title: section.title.trim(),
+        bullets,
+      };
+    })
+    .filter((section) => section.bullets.length > 0);
+}
+
+function prepareChangelogForLlm(body) {
+  const sections = filterChangelogSections(body);
+  if (sections.length === 0) {
+    return '';
+  }
+
+  return sections
+    .map((section) => {
+      const bullets = section.bullets.map((bullet) => `- ${bullet}`).join('\n');
+      return `## ${section.title}\n${bullets}`;
+    })
+    .join('\n\n');
+}
+
+function stripMarkdownCodeFence(text) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:markdown|md)?\s*\r?\n([\s\S]*?)\r?\n```$/i);
+  return (fenced ? fenced[1] : trimmed).trim();
+}
+
+function normalizeReleaseNotesHeadings(text) {
+  return text.replace(/^#{1,2}\s+/gm, '### ');
+}
+
+function validateReleaseNotesMarkdown(text, locale = 'en') {
+  const body = normalizeReleaseNotesHeadings(stripMarkdownCodeFence(text));
+  const sections = parseSections(body.replace(/\r\n/g, '\n'));
+  const allowedSections = ALLOWED_RELEASE_SECTIONS[locale];
+
+  if (sections.length === 0) {
+    throw new Error(`LLM release notes must include at least one section heading (### …) for ${locale}`);
+  }
+
+  for (const section of sections) {
+    const normalizedTitle = mapSectionTitle(section.title, locale);
+    const key = normalizedTitle.trim().toLowerCase();
+    if (!allowedSections.has(key)) {
+      throw new Error(
+        `LLM release notes used unsupported section heading for ${locale}: ${section.title}`,
+      );
+    }
+    if (section.bullets.length === 0) {
+      throw new Error(`LLM release notes section "${section.title}" has no bullets`);
+    }
+    section.title = normalizedTitle;
+  }
+
+  const totalBullets = sections.reduce((count, section) => count + section.bullets.length, 0);
+  if (totalBullets === 0) {
+    throw new Error('LLM release notes must include at least one bullet');
+  }
+
+  return serializeSections(
+    sections.map((section) => ({
+      title: section.title,
+      bullets: section.bullets,
+    })),
+  );
 }
 
 function toCustomerFacingNotes(body) {
@@ -165,7 +268,7 @@ function toCustomerFacingNotes(body) {
         .map(({ scope, text }) => humanizeBullet(scope, text));
 
       return {
-        title: mapSectionTitle(section.title),
+        title: mapSectionTitle(section.title, 'en'),
         bullets,
       };
     })
@@ -206,51 +309,9 @@ function parseNotesFile(raw) {
   };
 }
 
-async function translateToPolish(text) {
-  const key = process.env.DEEPL_API_KEY;
-  if (!key) {
-    throw new Error('DEEPL_API_KEY is required to generate Polish release notes');
-  }
-
-  const endpoint = process.env.DEEPL_API_URL || 'https://api-free.deepl.com/v2/translate';
-  const params = new URLSearchParams();
-  params.set('text', text);
-  params.set('source_lang', 'EN');
-  params.set('target_lang', 'PL');
-  params.set('preserve_formatting', '1');
-  params.set(
-    'context',
-    'Mobile app release notes for end users. Keep section headings and bullet lists. Use natural Polish.',
-  );
-
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `DeepL-Auth-Key ${key}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: params,
-  });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`DeepL translation failed (${response.status}): ${err}`);
-  }
-
-  const data = await response.json();
-  const translated = data.translations?.[0]?.text;
-  if (!translated) {
-    throw new Error('DeepL returned no translation');
-  }
-  return translated.trim();
-}
-
 function loadChangelogVersions() {
   const changelog = fs.readFileSync(CHANGELOG_PATH, 'utf8');
-  return parseChangelog(changelog).map((entry) => ({
-    ...entry,
-    body: toCustomerFacingNotes(entry.body),
-  }));
+  return parseChangelog(changelog);
 }
 
 module.exports = {
@@ -258,7 +319,9 @@ module.exports = {
   INTERNAL_SCOPES,
   NOTES_DIR,
   ROOT,
+  ALLOWED_RELEASE_SECTIONS,
   formatNotesFile,
+  filterChangelogSections,
   humanizeBullet,
   isInternalBullet,
   loadChangelogVersions,
@@ -267,8 +330,9 @@ module.exports = {
   parseChangelog,
   parseNotesFile,
   parseSections,
+  prepareChangelogForLlm,
   stripTechnicalArtifacts,
   toCustomerFacingNotes,
   toUserFacingNotes,
-  translateToPolish,
+  validateReleaseNotesMarkdown,
 };

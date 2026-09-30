@@ -245,7 +245,7 @@ The dev server is at `http://localhost:4321/weigh-way/`. English is `/`, Polish 
 
 ### Release notes and app downloads
 
-English notes come from semantic-release (`CHANGELOG.md`), then are rewritten for customers: internal changes (`ci`, `dev`, etc.) are dropped, scopes are removed, and sections become **What's new** / **Bug fixes**. CI writes `website/content/releases/{version}.en.md` and translates that copy with DeepL into `{version}.pl.md`. Existing `.en.md` or `.pl.md` files are never overwritten (edit them to fix wording).
+English and Polish notes come from semantic-release (`CHANGELOG.md`): internal changes (`ci`, `dev`, `website`, `expo`, etc.) are filtered out, then **Google Gemini** (free tier via [Google AI Studio](https://aistudio.google.com/apikey)) writes customer-facing release notes in both languages. CI writes `website/content/releases/{version}.en.md` and `{version}.pl.md`. If Gemini fails, the release fails. Existing `.en.md` or `.pl.md` files are never overwritten (edit them to fix wording).
 
 After a version bump, CI builds both mobile artifacts and uploads them to the GitHub Release:
 
@@ -267,7 +267,7 @@ Website-only commits still deploy the site; they do not start mobile builds.
    - `EXPO_TOKEN` — Expo access token for EAS cloud builds
    - `EXPO_PUBLIC_SUPABASE_URL` — same value as in your local `.env` (required for automated IPA builds)
    - `EXPO_PUBLIC_SUPABASE_ANON_KEY` — same value as in your local `.env` (required for automated IPA builds)
-   - `DEEPL_API_KEY` — DeepL Free API key (English → Polish notes)
+   - `GEMINI_API_KEY` — free Google AI Studio key (English and Polish release notes)
 
 EAS Free includes 15 Android builds per month. Two production releases a week fits; unused quota does not roll over.
 
