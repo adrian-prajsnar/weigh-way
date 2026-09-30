@@ -38,8 +38,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "c580fdd8-aa90-4366-ad10-27bb1a5c8cc9"
+        "projectId": "33b1af38-bf33-46e0-b4bd-826b0ac94ad4"
       }
-    }
+    },
+    "owner": "adrianprajsnars-team"
   }
 }
