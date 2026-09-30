@@ -1,3 +1,23 @@
+# [1.3.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.2.0...v1.3.0) (2026-09-30)
+
+
+### Bug Fixes
+
+* unify date filters and polish website UX ([85bb377](https://github.com/adrian-prajsnar/weigh-way/commit/85bb3778d1c43e7ac897c532cdfe885ebe6cfe01))
+
+
+### Features
+
+* **auth:** add Google sign-in with Android OAuth fixes ([54e8179](https://github.com/adrian-prajsnar/weigh-way/commit/54e81792f7109d7b61bd71530e583e2b247fae03))
+* enrich dashboard insights and polish interaction UX ([57986e0](https://github.com/adrian-prajsnar/weigh-way/commit/57986e0c614bf739192224a57c45748d1221bc3e)), closes [wei#ins](https://github.com/wei/issues/ins)
+* **layout:** adapt UI for wide portrait tablets ([75185c4](https://github.com/adrian-prajsnar/weigh-way/commit/75185c43566557c32f8ced04a918879f5d1f9c37))
+* **release:** add iOS IPA builds and platform downloads ([f1262c5](https://github.com/adrian-prajsnar/weigh-way/commit/f1262c57fec37f98ccf0d296cdbadd9df75bf5c6))
+* **release:** continue release when Gemini notes fail ([21e8d6e](https://github.com/adrian-prajsnar/weigh-way/commit/21e8d6ef05ea895a9c731f7ae693a4f58d09fb5c))
+* **release:** generate bilingual release notes with Gemini ([685d87d](https://github.com/adrian-prajsnar/weigh-way/commit/685d87dc2b15b1fc398ff2cf980e5e94e2a28358))
+* strengthen showcase quality with CI, tests, and agent docs ([467a25f](https://github.com/adrian-prajsnar/weigh-way/commit/467a25f86bb4ec8027347cc2e924d45cf260de2e))
+* **website:** add terms page and expand legal content ([258af57](https://github.com/adrian-prajsnar/weigh-way/commit/258af571f86f42a9b00d49fcb6d1242ac3ca24c7))
+* **website:** tailor download buttons to visitor platform ([38a8bb4](https://github.com/adrian-prajsnar/weigh-way/commit/38a8bb41013b4ec33b03147f356e659438063177))
+
 # [1.2.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.1.1...v1.2.0) (2026-09-21)
 
 
