@@ -10,16 +10,16 @@
   {
     "version": "1.1.1",
     "date": "2026-09-05",
-    "notesEn": "### Bug fixes\r\n\r\n* Editing a weigh-in stays visible above the keyboard.",
-    "notesPl": "### Poprawki\r\n\r\n* Podczas edycji ważenia pole pozostaje widoczne nad klawiaturą.",
+    "notesEn": "### Bug fixes\n\n* The edit weight modal now stays above the keyboard on the entry form, making it easier to update your logs.",
+    "notesPl": "### Poprawki błędów\n\n* Podczas edycji wpisu wagi na telefonie, formularz nie chowa się już pod klawiaturą, dzięki czemu wygodnie wpiszesz i skorygujesz swoje dane.",
     "apkUrl": null,
     "ipaUrl": null
   },
   {
     "version": "1.1.0",
     "date": "2026-09-04",
-    "notesEn": "### What's new\r\n\r\n* Clear message when the app is offline.\r\n* Easier date filtering and scrolling in History.\r\n* Profile now shows the app version.",
-    "notesPl": "### Co nowego\r\n\r\n* Jasny komunikat, gdy brak internetu.\r\n* Wygodniejsze filtrowanie dat i przewijanie w Historii.\r\n* Na ekranie Profilu widać teraz wersję aplikacji.",
+    "notesEn": "### What's new\n\n* WeighWay now displays a clear offline screen whenever your internet connection is unavailable so you always know your connectivity status.\n* You can now view the app version label and copyright information conveniently located in your Profile.\n\n### Improvements\n\n* Navigating through past entries in History is now smoother with enhanced date filtering and refined scrolling behavior.",
+    "notesPl": "### Co nowego\n\n* Ekran Profilu wyświetla teraz stopkę z informacją o prawach autorskich oraz numer aktualnej wersji aplikacji.\n\n### Ulepszenia\n\n* Aplikacja automatycznie wyświetla dedykowany ekran informacyjny o braku połączenia, gdy nie ma dostępu do internetu.\n* Ekran Historii oferuje wygodniejsze filtrowanie po datach oraz płynniejsze przewijanie listy wpisów.",
     "apkUrl": null,
     "ipaUrl": null
   }
