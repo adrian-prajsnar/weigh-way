@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/adrian-prajsnar/weigh-way/compare/v1.3.0...v1.3.1) (2026-09-30)
+
+
+### Bug Fixes
+
+* **expo:** link weigh-way slug to new EAS project ([6ff1193](https://github.com/adrian-prajsnar/weigh-way/commit/6ff1193a8250701ea05fd851f23f2bc976da215d)), closes [wei#way](https://github.com/wei/issues/way) [adrianprajsnars-team/wei#way](https://github.com/adrianprajsnars-team/wei/issues/way)
+
 # [1.3.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.2.0...v1.3.0) (2026-09-30)
 
 
