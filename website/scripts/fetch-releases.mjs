@@ -27,6 +27,7 @@ function parseNotesFile(raw) {
     version: frontmatter.version ?? null,
     date: frontmatter.date ?? null,
     pending: frontmatter.pending === 'true',
+    hidden: frontmatter.hidden === 'true',
     body: match[2].trim(),
   };
 }
@@ -40,6 +41,35 @@ function compareVersions(a, b) {
     }
   }
   return 0;
+}
+
+async function loadLatestGitHubAssets() {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'User-Agent': 'weigh-way-website',
+  };
+  if (process.env.GITHUB_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
+  }
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+      headers,
+    });
+    if (!response.ok) {
+      return { apkUrl: null, ipaUrl: null };
+    }
+
+    const release = await response.json();
+    const apkAsset = (release.assets ?? []).find((item) => item.name === APK_NAME);
+    const ipaAsset = (release.assets ?? []).find((item) => item.name === IPA_NAME);
+    return {
+      apkUrl: apkAsset?.browser_download_url ?? null,
+      ipaUrl: ipaAsset?.browser_download_url ?? null,
+    };
+  } catch {
+    return { apkUrl: null, ipaUrl: null };
+  }
 }
 
 async function loadGitHubReleaseAssets() {
@@ -89,6 +119,9 @@ for (const fileName of files) {
   const version = fileName.replace(/\.en\.md$/, '');
   const englishRaw = await readFile(path.join(NOTES_DIR, fileName), 'utf8');
   const english = parseNotesFile(englishRaw);
+  if (english.hidden) {
+    continue;
+  }
   const polishFile = path.join(NOTES_DIR, `${version}.pl.md`);
   let notesPl;
   let pendingPl = false;
@@ -117,6 +150,14 @@ for (const fileName of files) {
 }
 
 releases.sort((a, b) => compareVersions(a.version, b.version));
+
+const latestAssets = await loadLatestGitHubAssets();
+const newest = releases[0];
+if (newest) {
+  newest.apkUrl = newest.apkUrl ?? latestAssets.apkUrl;
+  newest.ipaUrl = newest.ipaUrl ?? latestAssets.ipaUrl;
+}
+
 await mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
 await writeFile(OUTPUT_PATH, `${JSON.stringify(releases, null, 2)}\n`);
 console.log(`Wrote ${releases.length} releases to src/data/releases.json`);
