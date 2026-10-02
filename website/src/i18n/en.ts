@@ -313,8 +313,8 @@ const en: SiteMessages = {
     subtitle:
       'What changed in each version. The latest mobile app build is attached when a production release is available.',
     latest: 'Latest',
-    downloadAndroid: 'Download APK',
-    downloadIos: 'Download IPA',
+    downloadAndroid: 'Download for Android',
+    downloadIos: 'Download for iOS',
     empty: 'No releases published yet.',
     noAndroidBuild: 'Android build not published for this version',
     noIosBuild: 'iOS build not published for this version',

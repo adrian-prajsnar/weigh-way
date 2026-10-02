@@ -199,8 +199,8 @@ const pl: SiteMessages = {
     subtitle:
       'Zobacz, co zmieniło się w kolejnych wersjach aplikacji. Najnowsza wersja aplikacji mobilnej jest dostępna do pobrania zaraz po opublikowaniu.',
     latest: 'Najnowsza',
-    downloadAndroid: 'Pobierz APK',
-    downloadIos: 'Pobierz IPA',
+    downloadAndroid: 'Pobierz na Androida',
+    downloadIos: 'Pobierz na iOS',
     empty: 'Nie opublikowano jeszcze żadnych wydań.',
     noAndroidBuild: 'Wersja na Androida nie została opublikowana dla tej wersji',
     noIosBuild: 'Wersja na iOS nie została opublikowana dla tej wersji',
