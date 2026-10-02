@@ -1,25 +1,41 @@
 [
   {
+    "version": "1.3.0",
+    "date": "2026-09-30",
+    "notesEn": "### What's new\r\n\r\n* Sign in using your Google account with improved support for Android devices.\r\n* Explore richer insights on the Dashboard with smoother, more responsive interactions.\r\n* Enjoy a better-adapted layout when using WeighWay on wide portrait tablets.\r\n\r\n### Bug fixes\r\n\r\n* Unified date filters across the app for more consistent tracking.",
+    "notesPl": "### Co nowego\r\n\r\n* Loguj się do aplikacji jeszcze szybciej i wygodniej dzięki nowej opcji logowania przez konto Google.\r\n* Korzystaj z bogatszych podsumowań i wskazówek na ekranie Dashboard, które teraz oferują jeszcze płynniejsze i przyjemniejsze działanie.\r\n* Wygodnie korzystaj z aplikacji na szerokich tabletach w orientacji pionowej dzięki pełnemu dostosowaniu interfejsu.\r\n\r\n### Poprawki błędów\r\n\r\n* Ujednolicony filtry dat i dopracowano wygląd oraz działanie interfejsu.",
+    "pendingEn": false,
+    "pendingPl": false,
+    "apkUrl": "https://github.com/adrian-prajsnar/weigh-way/releases/download/v1.3.0/weigh-way.apk",
+    "ipaUrl": "https://github.com/adrian-prajsnar/weigh-way/releases/download/v1.3.0/weigh-way.ipa"
+  },
+  {
     "version": "1.2.0",
     "date": "2026-09-21",
-    "notesEn": "### What's new\n\n* Welcome to WeighWay! Experience our brand-new look, featuring the fresh WeighWay mark and a redesigned sign-in experience.\n* View helpful BMI badges right alongside your weight highlights on the Dashboard.\n* Enjoy powerful new trend lists and custom compare modes on the Compare screen.\n* Easily select and manage dates with the improved date experience across the History and Compare screens.\n\n### Improvements\n\n* Switch between languages and themes seamlessly in your Profile settings.\n* Experience a faster app startup and smoother navigation when switching between tabs.\n\n### Bug fixes\n\n* Clearer messaging is now provided if you hit the email rate limit during sign-in.",
-    "notesPl": "### Co nowego\n\n* Aplikacja zyskała nową markę WeighWay, odświeżony znak graficzny oraz nowoczesny ekran logowania i rejestracji.\n* Ekran Porównaj oferuje teraz czytelne listy trendów oraz elastyczne, niestandardowe tryby zestawiania okresów.\n* Na ekranie Dashboard przy najważniejszych wpisach wagi pojawiają się teraz pomocne oznaczenia BMI.\n\n### Ulepszenia\n\n* Aplikacja uruchamia się szybciej, a przełączanie między zakładkami jest płynniejsze.\n* Poprawiono wygodę wyboru dat na ekranach Historia i Porównaj.\n* Zmiana języka oraz motywu w sekcji Profil odbywa się teraz płynniej i bez zakłóceń.\n\n### Poprawki błędów\n\n* Dopracowano działanie aplikacji pod kątem stabilności i bezpieczeństwa.\n* Komunikaty o przekroczeniu limitu wysyłania wiadomości e-mail przy logowaniu są teraz bardziej zrozumiałe.",
+    "notesEn": "### What's new\r\n\r\n* Welcome to WeighWay! Experience our brand-new look, featuring the fresh WeighWay mark and a redesigned sign-in experience.\r\n* View helpful BMI badges right alongside your weight highlights on the Dashboard.\r\n* Enjoy powerful new trend lists and custom compare modes on the Compare screen.\r\n* Easily select and manage dates with the improved date experience across the History and Compare screens.\r\n\r\n### Improvements\r\n\r\n* Switch between languages and themes seamlessly in your Profile settings.\r\n* Experience a faster app startup and smoother navigation when switching between tabs.\r\n\r\n### Bug fixes\r\n\r\n* Clearer messaging is now provided if you hit the email rate limit during sign-in.",
+    "notesPl": "### Co nowego\r\n\r\n* Aplikacja zyskała nową markę WeighWay, odświeżony znak graficzny oraz nowoczesny ekran logowania i rejestracji.\r\n* Ekran Porównaj oferuje teraz czytelne listy trendów oraz elastyczne, niestandardowe tryby zestawiania okresów.\r\n* Na ekranie Dashboard przy najważniejszych wpisach wagi pojawiają się teraz pomocne oznaczenia BMI.\r\n\r\n### Ulepszenia\r\n\r\n* Aplikacja uruchamia się szybciej, a przełączanie między zakładkami jest płynniejsze.\r\n* Poprawiono wygodę wyboru dat na ekranach Historia i Porównaj.\r\n* Zmiana języka oraz motywu w sekcji Profil odbywa się teraz płynniej i bez zakłóceń.\r\n\r\n### Poprawki błędów\r\n\r\n* Dopracowano działanie aplikacji pod kątem stabilności i bezpieczeństwa.\r\n* Komunikaty o przekroczeniu limitu wysyłania wiadomości e-mail przy logowaniu są teraz bardziej zrozumiałe.",
+    "pendingEn": false,
+    "pendingPl": false,
     "apkUrl": null,
     "ipaUrl": null
   },
   {
     "version": "1.1.1",
     "date": "2026-09-05",
-    "notesEn": "### Bug fixes\n\n* The edit weight modal now stays above the keyboard on the entry form, making it easier to update your logs.",
-    "notesPl": "### Poprawki błędów\n\n* Podczas edycji wpisu wagi na telefonie, formularz nie chowa się już pod klawiaturą, dzięki czemu wygodnie wpiszesz i skorygujesz swoje dane.",
+    "notesEn": "### Bug fixes\r\n\r\n* The edit weight modal now stays above the keyboard on the entry form, making it easier to update your logs.",
+    "notesPl": "### Poprawki błędów\r\n\r\n* Podczas edycji wpisu wagi na telefonie, formularz nie chowa się już pod klawiaturą, dzięki czemu wygodnie wpiszesz i skorygujesz swoje dane.",
+    "pendingEn": false,
+    "pendingPl": false,
     "apkUrl": null,
     "ipaUrl": null
   },
   {
     "version": "1.1.0",
     "date": "2026-09-04",
-    "notesEn": "### What's new\n\n* WeighWay now displays a clear offline screen whenever your internet connection is unavailable so you always know your connectivity status.\n* You can now view the app version label and copyright information conveniently located in your Profile.\n\n### Improvements\n\n* Navigating through past entries in History is now smoother with enhanced date filtering and refined scrolling behavior.",
-    "notesPl": "### Co nowego\n\n* Ekran Profilu wyświetla teraz stopkę z informacją o prawach autorskich oraz numer aktualnej wersji aplikacji.\n\n### Ulepszenia\n\n* Aplikacja automatycznie wyświetla dedykowany ekran informacyjny o braku połączenia, gdy nie ma dostępu do internetu.\n* Ekran Historii oferuje wygodniejsze filtrowanie po datach oraz płynniejsze przewijanie listy wpisów.",
+    "notesEn": "### What's new\r\n\r\n* WeighWay now displays a clear offline screen whenever your internet connection is unavailable so you always know your connectivity status.\r\n* You can now view the app version label and copyright information conveniently located in your Profile.\r\n\r\n### Improvements\r\n\r\n* Navigating through past entries in History is now smoother with enhanced date filtering and refined scrolling behavior.",
+    "notesPl": "### Co nowego\r\n\r\n* Ekran Profilu wyświetla teraz stopkę z informacją o prawach autorskich oraz numer aktualnej wersji aplikacji.\r\n\r\n### Ulepszenia\r\n\r\n* Aplikacja automatycznie wyświetla dedykowany ekran informacyjny o braku połączenia, gdy nie ma dostępu do internetu.\r\n* Ekran Historii oferuje wygodniejsze filtrowanie po datach oraz płynniejsze przewijanie listy wpisów.",
+    "pendingEn": false,
+    "pendingPl": false,
     "apkUrl": null,
     "ipaUrl": null
   }
