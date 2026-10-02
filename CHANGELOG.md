@@ -1,12 +1,3 @@
-## [1.3.1](https://github.com/adrian-prajsnar/weigh-way/compare/v1.3.0...v1.3.1) (2026-10-01)
-
-
-### Bug Fixes
-
-* **expo:** link weigh-way slug to new EAS project ([6ff1193](https://github.com/adrian-prajsnar/weigh-way/commit/6ff1193a8250701ea05fd851f23f2bc976da215d)), closes [wei#way](https://github.com/wei/issues/way) [adrianprajsnars-team/wei#way](https://github.com/adrianprajsnars-team/wei/issues/way)
-* **release:** hide pipeline-only versions from the public site ([f13f2b7](https://github.com/adrian-prajsnar/weigh-way/commit/f13f2b77a110768a76d01e0956b70b02c42202b8))
-* repair package-lock after version revert ([7272958](https://github.com/adrian-prajsnar/weigh-way/commit/727295850973aa45b980284ef8e9a3f348b0bd62))
-
 # [1.3.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.2.0...v1.3.0) (2026-09-30)
 
 
