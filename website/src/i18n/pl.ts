@@ -135,7 +135,7 @@ const pl: SiteMessages = {
       {
         id: 'profile',
         title: 'Profil',
-        body: 'Wzrostu, jednostki wagi i wzrostu, motyw, język i ustawienia konta.',
+        body: 'Historia wzrostu, jednostki wagi i wzrostu, motyw, język i ustawienia konta.',
       },
     ],
     howTitle: 'Jak to działa',
