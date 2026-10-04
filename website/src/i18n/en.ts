@@ -10,6 +10,8 @@ export type SiteMessages = {
     privacyDescription: string;
     termsTitle: string;
     termsDescription: string;
+    geeksTitle: string;
+    geeksDescription: string;
   };
   brand: string;
   skip: string;
@@ -116,6 +118,31 @@ export type SiteMessages = {
     termsOfService: string;
     questions: string;
     copyrightName: string;
+    geeks: string;
+  };
+  geeks: {
+    eyebrow: string;
+    title: string;
+    lead: string;
+    architectureTitle: string;
+    architectureLead: string;
+    nodes: { title: string; body: string }[];
+    tablesTitle: string;
+    tables: { name: string; body: string }[];
+    rls: string;
+    decisionsTitle: string;
+    decisionsLead: string;
+    tradeoffLabel: string;
+    decisions: { title: string; body: string; tradeoff: string }[];
+    shippingTitle: string;
+    shippingLead: string;
+    shipping: { title: string; body: string }[];
+    limitsTitle: string;
+    limitsLead: string;
+    limits: { title: string; body: string }[];
+    repoTitle: string;
+    repoBody: string;
+    repoLink: string;
   };
 };
 
@@ -133,6 +160,9 @@ const en: SiteMessages = {
     termsTitle: 'Terms of Service — WeighWay',
     termsDescription:
       'Terms and conditions for using the WeighWay mobile app and this website.',
+    geeksTitle: 'For Geeks — WeighWay',
+    geeksDescription:
+      'How WeighWay is built: the data model, BMI rules, row-level security, and the release pipeline.',
   },
   brand: 'WeighWay',
   skip: 'Skip to content',
@@ -503,6 +533,118 @@ const en: SiteMessages = {
     termsOfService: 'Terms of Service',
     questions: 'Questions?',
     copyrightName: 'Adrian Prajsnar DEV',
+    geeks: 'For Geeks',
+  },
+  geeks: {
+    eyebrow: 'For Geeks',
+    title: 'For Geeks',
+    lead:
+      'A small product with accounts, a database, and a release pipeline. This page is the short version of the decisions behind it.',
+    architectureTitle: 'Where the data lives',
+    architectureLead:
+      'The phone talks to Supabase. The database, not the screen, decides which rows a signed-in person can see.',
+    nodes: [
+      {
+        title: 'App',
+        body: 'Expo and React Native, in TypeScript. English and Polish. Metric or imperial. Light, dark, or the device theme.',
+      },
+      {
+        title: 'Sign-in',
+        body: 'Email and password through Supabase Auth. The journal stays closed until there is a session. Password reset returns through the app’s own link.',
+      },
+      {
+        title: 'Database',
+        body: 'Postgres on Supabase. The app uses the public anon key. Row-level security is what keeps one account from reading another.',
+      },
+    ],
+    tablesTitle: 'Three tables',
+    tables: [
+      {
+        name: 'weight_entries',
+        body: 'One row per person per calendar day. Weight is stored in kilograms. The primary key is the user and the date, so saving the same day updates that row.',
+      },
+      {
+        name: 'height_entries',
+        body: 'One height per effective date. A weigh-in uses the latest height on or before that day. If none covers the date, BMI is not shown.',
+      },
+      {
+        name: 'user_profiles',
+        body: 'Optional birth date and sex. They change how BMI is classified. A weight can be logged without them.',
+      },
+    ],
+    rls: 'Select, insert, update, and delete on each table require the signed-in user to match the row. Deleting the account runs a database function that removes the auth user. Weight, height, and profile rows go with it. Anonymous visitors cannot run that function.',
+    decisionsTitle: 'Decisions',
+    decisionsLead: 'Each one is a constraint. The product stays small because these stayed in place.',
+    tradeoffLabel: 'Tradeoff',
+    decisions: [
+      {
+        title: 'One weigh-in a day',
+        body: 'The day is the record. Editing Tuesday overwrites Tuesday.',
+        tradeoff:
+          'A log of every time someone steps on the scale would need a different key, and every average would have to decide which reading counts.',
+      },
+      {
+        title: 'Height belongs to a date',
+        body: 'BMI is computed in the app from the height that applied on the weigh-in date.',
+        tradeoff:
+          'Storing only the current height would change last year’s BMI whenever the profile changes.',
+      },
+      {
+        title: 'Adult categories start at 20',
+        body: 'From the 2nd birthday until the 20th, when sex is set, BMI is a CDC BMI-for-age percentile: an LMS lookup by sex and age in months, a z-score, then a percentile. From the 20th birthday it uses adult categories. Under 2, or before 20 without sex, the result stays unclassified.',
+        tradeoff:
+          'Adult cutoffs on a child’s weigh-in would show a category the reference data does not support.',
+      },
+      {
+        title: 'The server holds the journal',
+        body: 'There is no local database of weigh-ins. The device stores the session and a few preferences: language, theme, units, and whether BMI is shown. Without a connection, the app shows an offline screen.',
+        tradeoff:
+          'Logging without a network would need a queue of pending writes, and a rule for two phones editing the same day. That queue is not in the app.',
+      },
+    ],
+    shippingTitle: 'How a version ships',
+    shippingLead: 'A push to main is the release, when the commits call for one.',
+    shipping: [
+      {
+        title: 'Version',
+        body: 'Conventional commits. semantic-release chooses the next version and bumps the app version and the native build numbers.',
+      },
+      {
+        title: 'Android',
+        body: 'A production APK is built with EAS and attached to the GitHub Release.',
+      },
+      {
+        title: 'iOS',
+        body: 'An unsigned IPA is built on a GitHub-hosted Mac and attached to the same release. It installs with SideStore.',
+      },
+      {
+        title: 'Notes',
+        body: 'Customer-facing notes are written in English and Polish. Internal commits stay out. A note file that was already edited is not overwritten.',
+      },
+      {
+        title: 'Site',
+        body: 'This website is Astro, deployed to GitHub Pages on the same pipeline, in English and Polish.',
+      },
+    ],
+    limitsTitle: 'Limits, on purpose',
+    limitsLead: 'A few things are true today, and worth saying before they turn up in the repository.',
+    limits: [
+      {
+        title: 'One database',
+        body: 'Development and the published app share one Supabase project on the free tier. Row-level security isolates accounts. Schema changes are dated SQL files that add columns and tables. The full bootstrap script is for an empty project only.',
+      },
+      {
+        title: 'No measurement analytics',
+        body: 'There is no product analytics. Weight, height, and BMI are not sent to an analytics tool.',
+      },
+      {
+        title: 'A scroll view is enough',
+        body: 'History is a scroll view. That fits one person’s log. A virtualized list is the change if a long history gets slow to scroll.',
+      },
+    ],
+    repoTitle: 'Source',
+    repoBody: 'The app, the migrations, and this site are in one public repository.',
+    repoLink: 'View on GitHub',
   },
 };
 

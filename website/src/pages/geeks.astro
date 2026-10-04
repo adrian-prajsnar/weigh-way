@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/base-layout.astro';
+import SiteHeader from '../components/site-header.astro';
+import SiteFooter from '../components/site-footer.astro';
+import GeeksPage from '../components/geeks-page.astro';
+import { getMessages } from '../i18n';
+
+const locale = 'en' as const;
+const t = getMessages(locale);
+---
+
+<BaseLayout
+  locale={locale}
+  page="geeks"
+  title={t.meta.geeksTitle}
+  description={t.meta.geeksDescription}
+>
+  <SiteHeader locale={locale} page="geeks" />
+  <main id="content">
+    <GeeksPage locale={locale} />
+  </main>
+  <SiteFooter locale={locale} />
+</BaseLayout>

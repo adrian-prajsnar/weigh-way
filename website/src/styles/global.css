@@ -3278,3 +3278,139 @@ html.theme-animating::view-transition-new(root) {
     transform: none;
   }
 }
+
+.eng-flow,
+.eng-table-list {
+  list-style: none;
+  display: grid;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+}
+
+.eng-flow,
+.eng-table-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.eng-node {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 22px;
+}
+
+.eng-index {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 0.88rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.eng-node h3,
+.eng-pipeline h3 {
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.eng-node p,
+.eng-pipeline p,
+.eng-note {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+.eng-tables {
+  margin-top: 48px;
+}
+
+.eng-kicker {
+  margin-bottom: 22px;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.card p.eng-table-name {
+  margin-top: 0;
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.eng-note {
+  max-width: 46rem;
+  margin-top: 22px;
+}
+
+.eng-tradeoff {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.eng-tradeoff-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--accent-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.eng-pipeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 42rem;
+}
+
+.eng-pipeline li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  column-gap: 16px;
+  position: relative;
+  padding-bottom: 28px;
+}
+
+.eng-pipeline li:last-child {
+  padding-bottom: 0;
+}
+
+.eng-pipeline li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 17px;
+  top: 36px;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-strong);
+}
+
+.eng-pipeline .eng-index {
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.eng-pipeline p {
+  margin-top: 8px;
+}
+
+@media (max-width: 860px) {
+  .eng-flow,
+  .eng-table-list {
+    grid-template-columns: 1fr;
+  }
+}

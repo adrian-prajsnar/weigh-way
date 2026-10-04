@@ -21,7 +21,8 @@ const contactEmail = 'adrian.prajsnar.dev@outlook.com';
       </div>
     </div>
     <div class="footer-meta">
-      <nav class="footer-links" aria-label={t.footer.legalNav}>
+      <nav class="footer-links" aria-label={t.brand}>
+        <a href={withBase(localePath(locale, 'geeks'))}>{t.footer.geeks}</a>
         <a href={withBase(localePath(locale, 'privacy'))}>{t.footer.privacyPolicy}</a>
         <a href={withBase(localePath(locale, 'terms'))}>{t.footer.termsOfService}</a>
       </nav>

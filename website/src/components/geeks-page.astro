@@ -1,0 +1,132 @@
+---
+import { getMessages, type SiteLocale } from '../i18n';
+
+type Props = { locale: SiteLocale };
+const { locale } = Astro.props;
+const t = getMessages(locale);
+const page = t.geeks;
+const repoUrl = 'https://github.com/adrian-prajsnar/weigh-way';
+---
+
+<section class="page-hero">
+  <div class="section-inner is-visible" data-reveal>
+    <h1>{page.title}</h1>
+    <p class="section-lead">{page.lead}</p>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="geeks-architecture">
+  <div class="section-inner">
+    <div class="section-heading" data-reveal>
+      <h2 id="geeks-architecture">{page.architectureTitle}</h2>
+      <p class="section-lead">{page.architectureLead}</p>
+    </div>
+    <ol class="eng-flow">
+      {
+        page.nodes.map((node, index) => (
+          <li class="eng-node" data-reveal style={`--reveal-delay: ${index * 80}ms`}>
+            <span class="eng-index" aria-hidden="true">
+              {index + 1}
+            </span>
+            <h3>{node.title}</h3>
+            <p>{node.body}</p>
+          </li>
+        ))
+      }
+    </ol>
+    <div class="eng-tables" data-reveal>
+      <h3 class="eng-kicker">{page.tablesTitle}</h3>
+      <ul class="eng-table-list">
+        {
+          page.tables.map((table) => (
+            <li class="card">
+              <p class="eng-table-name">{table.name}</p>
+              <p>{table.body}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="eng-note">{page.rls}</p>
+    </div>
+  </div>
+</section>
+
+<section class="section section-alt" aria-labelledby="geeks-decisions">
+  <div class="section-inner">
+    <div class="section-heading" data-reveal>
+      <h2 id="geeks-decisions">{page.decisionsTitle}</h2>
+      <p class="section-lead">{page.decisionsLead}</p>
+    </div>
+    <div class="feature-grid">
+      {
+        page.decisions.map((item, index) => (
+          <article class="card" data-reveal style={`--reveal-delay: ${(index % 2) * 80}ms`}>
+            <h3>{item.title}</h3>
+            <p>{item.body}</p>
+            <p class="eng-tradeoff">
+              <span class="eng-tradeoff-label">{page.tradeoffLabel}</span>
+              {item.tradeoff}
+            </p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="geeks-shipping">
+  <div class="section-inner">
+    <div class="section-heading" data-reveal>
+      <h2 id="geeks-shipping">{page.shippingTitle}</h2>
+      <p class="section-lead">{page.shippingLead}</p>
+    </div>
+    <ol class="eng-pipeline">
+      {
+        page.shipping.map((step, index) => (
+          <li data-reveal style={`--reveal-delay: ${index * 60}ms`}>
+            <span class="eng-index" aria-hidden="true">
+              {index + 1}
+            </span>
+            <div>
+              <h3>{step.title}</h3>
+              <p>{step.body}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</section>
+
+<section class="section section-alt" aria-labelledby="geeks-limits">
+  <div class="section-inner">
+    <div class="section-heading" data-reveal>
+      <h2 id="geeks-limits">{page.limitsTitle}</h2>
+      <p class="section-lead">{page.limitsLead}</p>
+    </div>
+    <div class="highlight-grid">
+      {
+        page.limits.map((item, index) => (
+          <article class="card" data-reveal style={`--reveal-delay: ${index * 80}ms`}>
+            <h3>{item.title}</h3>
+            <p>{item.body}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="section-inner">
+    <div class="cta-band" data-reveal>
+      <div>
+        <h2>{page.repoTitle}</h2>
+        <p class="section-lead">{page.repoBody}</p>
+      </div>
+      <a class="btn btn-primary" href={repoUrl} rel="noopener noreferrer">
+        <span>{page.repoLink}</span>
+      </a>
+    </div>
+  </div>
+</section>

@@ -14,6 +14,9 @@ const pl: SiteMessages = {
     termsTitle: 'Regulamin — WeighWay',
     termsDescription:
       'Warunki korzystania z aplikacji mobilnej WeighWay oraz tej strony internetowej.',
+    geeksTitle: 'Dla Geeków — WeighWay',
+    geeksDescription:
+      'Jak działa WeighWay: model danych, zasady obliczania BMI, bezpieczeństwo na poziomie wierszy i proces publikowania kolejnych wersji.',
   },
   brand: 'WeighWay',
   skip: 'Przejdź do treści',
@@ -389,6 +392,141 @@ const pl: SiteMessages = {
     termsOfService: 'Regulamin',
     questions: 'Pytania?',
     copyrightName: 'Adrian Prajsnar DEV',
+    geeks: 'Dla Geeków',
+  },
+  geeks: {
+    eyebrow: 'Dla Geeków',
+    title: 'Dla Geeków',
+    lead:
+      'Mały produkt z kontami użytkowników, bazą danych i własnym procesem publikowania wersji. Ta strona to skrót najważniejszych decyzji, które stoją za jego działaniem.',
+    architectureTitle: 'Gdzie przechowywane są dane',
+    architectureLead:
+      'Aplikacja komunikuje się z Supabase. To baza danych, a nie interfejs aplikacji, decyduje, które rekordy może zobaczyć zalogowany użytkownik.',
+    nodes: [
+      {
+        title: 'Aplikacja',
+        body:
+          'Expo i React Native w TypeScript. Język angielski i polski. Jednostki metryczne lub imperialne. Jasny, ciemny albo zgodny z ustawieniami urządzenia motyw.',
+      },
+      {
+        title: 'Logowanie',
+        body:
+          'Logowanie za pomocą adresu e-mail i hasła przez Supabase Auth. Dziennik jest dostępny dopiero po zalogowaniu. Reset hasła prowadzi z powrotem do aplikacji za pomocą własnego linku.',
+      },
+      {
+        title: 'Baza danych',
+        body:
+          'Postgres na Supabase. Aplikacja korzysta z publicznego klucza anon. Bezpieczeństwo na poziomie wierszy (RLS) uniemożliwia jednemu użytkownikowi odczytywanie danych należących do innego.',
+      },
+    ],
+    tablesTitle: 'Trzy tabele',
+    tables: [
+      {
+        name: 'weight_entries',
+        body:
+          'Jeden rekord na osobę i dzień kalendarzowy. Masa ciała jest przechowywana w kilogramach. Klucz główny składa się z użytkownika i daty, więc zapis dla tego samego dnia aktualizuje istniejący rekord.',
+      },
+      {
+        name: 'height_entries',
+        body:
+          'Jeden wpis dotyczący wzrostu dla każdej daty obowiązywania. Przy pomiarze aplikacja wybiera najnowszy wzrost z tej daty lub wcześniejszy. Jeśli żaden wpis nie obejmuje danego dnia, BMI nie jest wyświetlane.',
+      },
+      {
+        name: 'user_profiles',
+        body:
+          'Opcjonalna data urodzenia i płeć. Te dane wpływają na sposób klasyfikowania BMI. Pomiar masy można zapisać również bez ich podawania.',
+      },
+    ],
+    rls:
+      'Odczyt, dodawanie, edycja i usuwanie rekordów w każdej tabeli wymaga, aby zalogowany użytkownik był właścicielem danego rekordu. Usunięcie konta uruchamia funkcję w bazie danych, która usuwa użytkownika z systemu uwierzytelniania. Razem z nim usuwane są wpisy dotyczące masy, wzrostu i profilu. Anonimowy użytkownik nie może uruchomić tej funkcji.',
+    decisionsTitle: 'Decyzje',
+    decisionsLead:
+      'Każda z nich wyznacza pewne ramy. Produkt pozostaje mały i prosty właśnie dlatego, że tych założeń się trzymamy.',
+    tradeoffLabel: 'Koszt decyzji',
+    decisions: [
+      {
+        title: 'Jeden pomiar dziennie',
+        body:
+          'Dzień jest jednostką zapisu. Edycja wtorkowego pomiaru po prostu nadpisuje wtorkowy rekord.',
+        tradeoff:
+          'Zapisywanie każdego wejścia na wagę wymagałoby innego klucza, a każda średnia musiałaby dodatkowo określać, który z pomiarów danego dnia należy uwzględnić.',
+      },
+      {
+        title: 'Wzrost jest przypisany do daty',
+        body:
+          'BMI jest obliczane w aplikacji na podstawie wzrostu, który obowiązywał w dniu pomiaru.',
+        tradeoff:
+          'Przechowywanie wyłącznie aktualnego wzrostu sprawiłoby, że zmiana profilu wpływałaby również na BMI zapisane dla zeszłego roku.',
+      },
+      {
+        title: 'Kategorie dla dorosłych zaczynają się od 20. roku życia',
+        body:
+          'Od 2. do ukończenia 20. roku życia, jeśli podano płeć, BMI jest klasyfikowane na podstawie percentyla BMI dla wieku według danych CDC: na podstawie płci i wieku w miesiącach wybierany jest odpowiedni zestaw LMS, następnie obliczany jest wynik z i odpowiadający mu percentyl. Od dnia 20. urodzin stosowane są kategorie BMI dla dorosłych. Dla dzieci poniżej 2 lat oraz dla osób poniżej 20 lat bez podanej płci wynik pozostaje niesklasyfikowany.',
+        tradeoff:
+          'Zastosowanie progów dla dorosłych do pomiaru dziecka dawałoby kategorię, której nie wspierają wykorzystane dane referencyjne.',
+      },
+      {
+        title: 'Dziennik znajduje się na serwerze',
+        body:
+          'Aplikacja nie przechowuje lokalnej bazy pomiarów. Na urządzeniu zapisywana jest tylko sesja oraz kilka ustawień: język, motyw, jednostki i informacja o tym, czy wyświetlać BMI. Bez połączenia z internetem aplikacja pokazuje ekran offline.',
+        tradeoff:
+          'Zapisywanie pomiarów bez dostępu do sieci wymagałoby kolejki oczekujących zmian oraz zasad rozwiązywania sytuacji, w której dwa telefony edytują pomiar z tego samego dnia. Tego mechanizmu w aplikacji nie ma.',
+      },
+    ],
+    shippingTitle: 'Jak trafia do użytkownika nowa wersja',
+    shippingLead:
+      'Push do brancha main oznacza wydanie nowej wersji, o ile rodzaj commitów tego wymaga.',
+    shipping: [
+      {
+        title: 'Wersjonowanie',
+        body:
+          'Commit messages korzystają z Conventional Commits. semantic-release wybiera kolejny numer wersji oraz aktualizuje wersję aplikacji i natywne numery buildów.',
+      },
+      {
+        title: 'Android',
+        body:
+          'Produkcyjny plik APK jest budowany przez EAS i dołączany do GitHub Release.',
+      },
+      {
+        title: 'iOS',
+        body:
+          'Plik IPA bez podpisu jest budowany na Macu obsługiwanym przez GitHub Actions i dołączany do tego samego wydania. Instalacja odbywa się za pomocą SideStore.',
+      },
+      {
+        title: 'Informacje o wydaniu',
+        body:
+          'Informacje przeznaczone dla użytkowników są przygotowywane po angielsku i po polsku. Wewnętrzne commity nie trafiają do release notes. Jeśli plik z informacjami o wydaniu został już ręcznie zmodyfikowany, nie jest nadpisywany.',
+      },
+      {
+        title: 'Strona',
+        body:
+          'Ta strona jest zbudowana w Astro i wdrażana na GitHub Pages w ramach tego samego procesu. Jest dostępna po angielsku i po polsku.',
+      },
+    ],
+    limitsTitle: 'Ograniczenia — celowe',
+    limitsLead:
+      'Kilka rzeczy działa dziś w konkretny sposób i warto o nich powiedzieć, zanim ktoś natknie się na nie w repozytorium.',
+    limits: [
+      {
+        title: 'Jedna baza danych',
+        body:
+          'Środowisko deweloperskie i opublikowana aplikacja korzystają z tego samego projektu Supabase w darmowym planie. Bezpieczeństwo na poziomie wierszy izoluje dane poszczególnych kont. Zmiany schematu są przechowywane jako datowane pliki SQL, które dodają kolumny i tabele. Pełny skrypt inicjalizacyjny służy wyłącznie do utworzenia pustej bazy od zera.',
+      },
+      {
+        title: 'Brak analityki pomiarów',
+        body:
+          'Aplikacja nie korzysta z narzędzi analitycznych. Dane dotyczące masy, wzrostu i BMI nie są wysyłane do systemów analitycznych.',
+      },
+      {
+        title: 'Zwykły scroll wystarcza',
+        body:
+          'Historia jest wyświetlana jako zwykły scroll view. Dla pojedynczego użytkownika to w zupełności wystarcza. Jeśli przy bardzo długiej historii przewijanie zacznie działać wolniej, kolejnym krokiem będzie przejście na listę wirtualizowaną.',
+      },
+    ],
+    repoTitle: 'Źródło',
+    repoBody:
+      'Aplikacja, migracje bazy danych i ta strona znajdują się w jednym publicznym repozytorium.',
+    repoLink: 'Zobacz na GitHub',
   },
 };
 
