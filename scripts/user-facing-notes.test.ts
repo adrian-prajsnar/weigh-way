@@ -114,6 +114,18 @@ describe('user-facing notes', () => {
     expect(isInternalBullet('history', 'improve date filtering')).toBe(false);
   });
 
+  it('drops bullets that mention website in unscoped commit text', () => {
+    const notes = toCustomerFacingNotes(`### Bug Fixes
+
+* unify date filters and polish website UX
+* **entry-form:** keep edit weight modal above keyboard
+`);
+
+    expect(notes).toContain('Editing a weigh-in stays visible above the keyboard.');
+    expect(notes).not.toContain('website');
+    expect(notes).not.toContain('date filters');
+  });
+
   it('drops website-scoped changelog entries from customer notes', () => {
     const notes = toCustomerFacingNotes(`### Bug Fixes
 
@@ -145,6 +157,18 @@ describe('user-facing notes', () => {
     expect(input).not.toContain('website');
     expect(input).not.toContain('expo');
     expect(input).not.toContain('wei#in');
+  });
+
+  it('drops unscoped website mentions from LLM changelog input', () => {
+    const input = prepareChangelogForLlm(`### Bug Fixes
+
+* unify date filters and polish website UX
+* **auth:** clarify email rate limit message
+`);
+
+    expect(input).toContain('[auth] clarify email rate limit message');
+    expect(input).not.toContain('website');
+    expect(input).not.toContain('unify date filters');
   });
 
   it('validates and normalizes LLM markdown output', () => {

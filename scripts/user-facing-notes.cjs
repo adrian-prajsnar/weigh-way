@@ -61,7 +61,8 @@ const BULLET_REWRITES = [
   [/keep modal above keyboard/i, 'Editing a weigh-in stays visible above the keyboard.'],
 ];
 
-const INTERNAL_TEXT = /\b(commitlint|semantic-release|husky|github actions|workflow)\b/i;
+const INTERNAL_TEXT =
+  /\b(commitlint|semantic-release|husky|github actions|workflow|website)\b/i;
 
 function parseChangelog(content) {
   const heading =

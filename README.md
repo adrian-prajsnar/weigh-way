@@ -258,7 +258,7 @@ Latest downloads:
 
 `https://github.com/adrian-prajsnar/weigh-way/releases/latest/download/weigh-way.ipa`
 
-Website-only commits still deploy the site; they do not start mobile builds.
+Website-only commits still deploy the site; they do not start mobile builds. Use the `website` commit scope for site-only changes, and never mix `website/` files with mobile app files in the same commit — customer release notes include only app changes.
 
 ### One-time GitHub setup
 

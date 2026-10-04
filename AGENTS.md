@@ -110,6 +110,7 @@ When changing app code that reads/writes Supabase, ensure the migration ships **
 Versions are managed by [semantic-release](https://github.com/semantic-release/semantic-release) on push to `main`.
 
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:` (minor), `fix:` (patch), `feat!:` or `BREAKING CHANGE:` (major). `chore:`, `ci:`, and `docs:` do not trigger a release.
+- **Website vs app commits:** marketing-site work under `website/` must use the `website` scope (e.g. `fix(website): …`). Never mix `website/` and mobile app files (`src/`, `app.json`, `app.config.ts`, `app.tsx`, `assets/`) in one commit — split them so release notes stay app-only. Husky enforces this via `scripts/validate-commit-scope.cjs`.
 - Husky runs commitlint on each local commit.
 - CI bumps `app.json`, `package.json`, Android `versionCode`, and iOS `buildNumber`, then tags the release (e.g. `v1.1.0`).
 - Tag the current `1.0.0` baseline once before the first automated release: `git tag v1.0.0 && git push origin v1.0.0`.
