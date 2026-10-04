@@ -2,7 +2,13 @@
 import PlatformDownloads from './platform-downloads.astro';
 import { marked } from 'marked';
 import { dateLocale, getMessages, type SiteLocale } from '../i18n';
-import { getReleases, isNotesPending, notesFor } from '../lib/releases';
+import {
+  countReleaseChanges,
+  formatChangesCount,
+  getReleases,
+  isNotesPending,
+  notesFor,
+} from '../lib/releases';
 
 const CONTACT_EMAIL = 'adrian.prajsnar.dev@outlook.com';
 
@@ -36,31 +42,37 @@ function formatDate(value: string) {
       releases.length === 0 ? (
         <p class="card" data-reveal>{t.releases.empty}</p>
       ) : (
-        <div class="release-list">
+        <div class="release-list" data-release-accordion>
           {releases.map((release, index) => {
             const isLatest = index === 0;
             const notesPending = isNotesPending(release, locale);
+            const notes = notesFor(release, locale);
+            const changeCount = countReleaseChanges(notes);
+            const changesLabel = formatChangesCount(changeCount, locale);
             const html = notesPending
               ? ''
-              : (marked.parse(notesFor(release, locale), { async: false }) as string);
+              : (marked.parse(notes, { async: false }) as string);
             const contactSubject = encodeURIComponent(
               `WeighWay release notes for ${release.version}`,
             );
-            return (
-              <article
-                class:list={['release-card', isLatest && 'is-latest']}
-                data-reveal
-                style={`--reveal-delay: ${index * 80}ms`}
-              >
-                <div class="release-head">
-                  <div>
-                    <h2 class="release-version">
-                      {release.version}
-                      {isLatest && <span class="latest-badge">{t.releases.latest}</span>}
-                    </h2>
-                    <p class="release-date">{formatDate(release.date)}</p>
-                  </div>
-                  {isLatest ? (
+            const panelId = `release-panel-${index}`;
+            const triggerId = `release-trigger-${index}`;
+
+            if (isLatest) {
+              return (
+                <article
+                  class:list={['release-card', 'is-latest']}
+                  data-reveal
+                  style={`--reveal-delay: ${index * 80}ms`}
+                >
+                  <div class="release-head">
+                    <div>
+                      <h2 class="release-version">
+                        {release.version}
+                        <span class="latest-badge">{t.releases.latest}</span>
+                      </h2>
+                      <p class="release-date">{formatDate(release.date)}</p>
+                    </div>
                     <PlatformDownloads
                       apkUrl={release.apkUrl}
                       ipaUrl={release.ipaUrl}
@@ -69,22 +81,81 @@ function formatDate(value: string) {
                       unavailableAndroid={t.releases.noAndroidBuild}
                       unavailableIos={t.releases.noIosBuild}
                     />
-                  ) : null}
-                </div>
-                {notesPending ? (
-                  <div class="release-notes-pending">
-                    <p class="release-notes-pending-title">{t.releases.pendingTitle}</p>
-                    <p>{t.releases.pendingBody}</p>
-                    <p>
-                      {t.releases.pendingContact}{' '}
-                      <a href={`mailto:${CONTACT_EMAIL}?subject=${contactSubject}`}>
-                        {CONTACT_EMAIL}
-                      </a>
-                    </p>
                   </div>
-                ) : (
-                  <div class="release-notes" set:html={html} />
-                )}
+                  {notesPending ? (
+                    <div class="release-notes-pending">
+                      <p class="release-notes-pending-title">{t.releases.pendingTitle}</p>
+                      <p>{t.releases.pendingBody}</p>
+                      <p>
+                        {t.releases.pendingContact}{' '}
+                        <a href={`mailto:${CONTACT_EMAIL}?subject=${contactSubject}`}>
+                          {CONTACT_EMAIL}
+                        </a>
+                      </p>
+                    </div>
+                  ) : (
+                    <div class="release-notes" set:html={html} />
+                  )}
+                </article>
+              );
+            }
+
+            return (
+              <article
+                class:list={['release-card', 'is-collapsible']}
+                data-release-item
+                data-reveal
+                style={`--reveal-delay: ${index * 80}ms`}
+              >
+                <h2 class="release-toggle-heading">
+                  <button
+                    type="button"
+                    class="release-toggle"
+                    aria-expanded="false"
+                    id={triggerId}
+                    aria-controls={panelId}
+                  >
+                    <span class="release-toggle-content">
+                      <span class="release-toggle-primary">
+                        <span class="release-version-row">
+                          <span class="release-version-shell">
+                            <span class="release-version">{release.version}</span>
+                          </span>
+                          <span class="release-changes-pill">{changesLabel}</span>
+                        </span>
+                        <time class="release-date" datetime={release.date}>
+                          {formatDate(release.date)}
+                        </time>
+                      </span>
+                    </span>
+                    <span class="release-chevron" aria-hidden="true" />
+                  </button>
+                </h2>
+                <div
+                  class="release-panel"
+                  id={panelId}
+                  role="region"
+                  aria-labelledby={triggerId}
+                >
+                  <div class="release-panel-inner">
+                    <div class="release-panel-body">
+                      {notesPending ? (
+                        <div class="release-notes-pending">
+                          <p class="release-notes-pending-title">{t.releases.pendingTitle}</p>
+                          <p>{t.releases.pendingBody}</p>
+                          <p>
+                            {t.releases.pendingContact}{' '}
+                            <a href={`mailto:${CONTACT_EMAIL}?subject=${contactSubject}`}>
+                              {CONTACT_EMAIL}
+                            </a>
+                          </p>
+                        </div>
+                      ) : (
+                        <div class="release-notes" set:html={html} />
+                      )}
+                    </div>
+                  </div>
+                </div>
               </article>
             );
           })}
@@ -93,3 +164,41 @@ function formatDate(value: string) {
     }
   </div>
 </section>
+
+<script is:inline>
+  (function () {
+    document.querySelectorAll('[data-release-accordion]').forEach(function (list) {
+      var items = list.querySelectorAll('[data-release-item]');
+
+      function setExpanded(item, open) {
+        var toggle = item.querySelector('.release-toggle');
+        item.classList.toggle('is-open', open);
+        if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+
+      function closeItem(item) {
+        setExpanded(item, false);
+      }
+
+      function openItem(item) {
+        items.forEach(function (other) {
+          if (other !== item) closeItem(other);
+        });
+        setExpanded(item, true);
+      }
+
+      items.forEach(function (item) {
+        var toggle = item.querySelector('.release-toggle');
+        if (!toggle) return;
+
+        toggle.addEventListener('click', function () {
+          if (item.classList.contains('is-open')) {
+            closeItem(item);
+            return;
+          }
+          openItem(item);
+        });
+      });
+    });
+  })();
+</script>
