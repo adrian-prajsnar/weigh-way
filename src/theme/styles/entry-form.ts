@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import { fontFamily, radius, spacing } from '../tokens';
+import { webFocusRingBoxShadow } from '../web-focus-ring';
 import { StyleContext, cardSurface, floatingSurface, tabularNums } from './helpers';
 
 export function createEntryFormStyles({ colors, scheme }: StyleContext) {
@@ -8,6 +9,13 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
       flexDirection: 'row',
       alignItems: 'stretch',
       gap: spacing.md,
+      ...(Platform.OS === 'web'
+        ? {
+            margin: -spacing.xs,
+            padding: spacing.xs,
+            overflow: 'visible',
+          }
+        : null),
     },
     weightInputWrapper: {
       flex: 1,
@@ -19,6 +27,15 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
       borderRadius: radius.md,
       backgroundColor: colors.surfaceMuted,
       paddingHorizontal: spacing.md,
+    },
+    weightInputWrapperFocused: {
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: webFocusRingBoxShadow(colors, 'control'),
+          }
+        : {
+            borderColor: colors.accent,
+          }),
     },
     weightInput: {
       flex: 1,
@@ -42,6 +59,12 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
       backgroundColor: colors.surfaceMuted,
       borderWidth: 1,
       borderColor: colors.border,
+      ...(Platform.OS === 'web'
+        ? {
+            position: 'relative',
+            zIndex: 0,
+          }
+        : null),
     },
   };
 }

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, Text, View } from 'react-native';
+import { ModalSheetDismissArea } from './modal-sheet-dismiss-area';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatAgeDetailed, getAgeOnDate } from '../age';
 import { calculateBmi, BmiInfo, classifyBmiValue, formatBmiValue } from '../bmi';
@@ -237,12 +238,17 @@ export function BmiDetailsModal({ details, onClose }: BmiDetailsModalProps) {
   const insets = useSafeAreaInsets();
   const sheetContainerStyle = useSheetContainerStyle({ paddingBottom: Math.max(insets.bottom, 16) });
   const { t } = useTranslation();
-  const title = details?.type === 'period' ? t(periodTitleKey(details.metric)) : t('bmi.detailsTitle');
+
+  if (!details) {
+    return null;
+  }
+
+  const title = details.type === 'period' ? t(periodTitleKey(details.metric)) : t('bmi.detailsTitle');
 
   return (
-    <Modal visible={details !== null} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalSheetBackdrop}>
-        <Pressable style={styles.modalSheetDismissArea} onPress={onClose} />
+        <ModalSheetDismissArea onPress={onClose} />
         <View style={sheetContainerStyle}>
           <View style={styles.datePickerSheetHeader}>
             <Text style={styles.datePickerSheetTitle}>{title}</Text>
@@ -255,16 +261,16 @@ export function BmiDetailsModal({ details, onClose }: BmiDetailsModalProps) {
               <Ionicons name="close" size={20} color={colors.textMuted} />
             </Pressable>
           </View>
-          {details?.type === 'weighIn' ? (
+          {details.type === 'weighIn' ? (
             <WeighInDetails
               date={details.date}
               weightKg={details.weightKg}
               createdAt={details.createdAt}
               updatedAt={details.updatedAt}
             />
-          ) : details?.type === 'period' ? (
+          ) : (
             <PeriodDetails metric={details.metric} range={details.range} entries={details.entries} />
-          ) : null}
+          )}
         </View>
       </View>
     </Modal>

@@ -37,6 +37,10 @@ export default {
       'This app needs an internet connection to sync your weight data. Check your connection and try again.',
     offlineRefresh: 'Refresh',
   },
+  demo: {
+    sessionHint: 'Sign-out and delete account are disabled in the demo version.',
+    authUnavailable: 'Not available in the demo version.',
+  },
   auth: {
     welcomeBack: 'Welcome back',
     signInSubtitle: 'Sign in to see your weigh-ins',

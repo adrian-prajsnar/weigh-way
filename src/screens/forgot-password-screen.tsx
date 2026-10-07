@@ -8,6 +8,7 @@ import { useToast } from '../context/toast-context';
 import { useTranslation } from '../i18n/language-context';
 import { AuthStackParamList } from '../navigation/types';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
@@ -49,6 +50,7 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
           onPress={() =>
             navigation.navigate('Login', { email: email.trim() || undefined })
           }
+          {...webFocusTarget('text-button')}
         >
           <Text style={styles.linkText}>{t('auth.backToSignIn')}</Text>
         </Pressable>

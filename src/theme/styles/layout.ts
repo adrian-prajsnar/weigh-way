@@ -7,7 +7,6 @@ export function createLayoutStyles({ colors, scheme }: StyleContext) {
     content: {
       padding: spacing.xl,
       paddingTop: spacing.xs,
-      paddingBottom: 120,
       gap: spacing.lg,
     },
     title: {

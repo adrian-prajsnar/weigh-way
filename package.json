@@ -60,7 +60,8 @@
     "release": "semantic-release",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "export-web-demo": "node scripts/export-web-demo.cjs"
   },
   "private": true
 }

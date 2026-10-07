@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { t } from '../i18n';
 import { useSupabaseAuth } from '../context/supabase-auth-context';
+import { isDemoMode } from '../demo/is-demo-mode';
+import {
+  deleteDemoWeightEntry,
+  getDemoWeightEntries,
+  saveDemoWeightEntry,
+} from '../demo/demo-storage';
 import { useRefreshOnAppForeground } from './use-refresh-on-app-foreground';
 import { deleteEntry, getEntries, saveEntry } from '../supabase/weight-sync';
 import { WeightEntry } from '../types';
@@ -15,6 +21,22 @@ export function useWeightEntries() {
   const hasLoadedRef = useRef(false);
 
   const refreshEntries = useCallback(async () => {
+    if (isDemoMode()) {
+      try {
+        const loaded = await getDemoWeightEntries();
+        setEntries(loaded);
+        setError(null);
+        hasLoadedRef.current = true;
+      } catch (loadError) {
+        const message = loadError instanceof Error ? loadError.message : t('errors.couldNotLoadEntries');
+        setError(message);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+      return;
+    }
+
     if (isAuthLoading) {
       return;
     }
@@ -59,7 +81,11 @@ export function useWeightEntries() {
     async (date: string) => {
       setDeletingDate(date);
       try {
-        await deleteEntry(date);
+        if (isDemoMode()) {
+          await deleteDemoWeightEntry(date);
+        } else {
+          await deleteEntry(date);
+        }
         await refreshEntries();
       } catch (deleteError) {
         throw deleteError instanceof Error
@@ -75,7 +101,11 @@ export function useWeightEntries() {
   const upsertEntry = useCallback(
     async (date: string, weightKg: number) => {
       try {
-        await saveEntry(date, weightKg);
+        if (isDemoMode()) {
+          await saveDemoWeightEntry(date, weightKg);
+        } else {
+          await saveEntry(date, weightKg);
+        }
         await refreshEntries();
       } catch (saveError) {
         throw saveError instanceof Error ? saveError : new Error(t('entryForm.saveFailed'));

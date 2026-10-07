@@ -24,6 +24,9 @@ import {
 import { assertDevAllowedEmail, assertDevAllowedSession, isDevAllowedSession } from '../dev-auth-guard';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
+import { createDemoSession } from '../demo/demo-session';
+import { isDemoMode } from '../demo/is-demo-mode';
+import { demoReadOnlyError } from '../demo/read-only';
 
 type SignUpResult = {
   needsEmailConfirmation: boolean;
@@ -92,6 +95,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (isDemoMode()) {
+      setSession(createDemoSession());
+      setIsLoading(false);
+      return;
+    }
+
     if (!isSupabaseConfigured()) {
       setIsLoading(false);
       return;
@@ -210,6 +219,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    if (isDemoMode()) {
+      throw demoReadOnlyError();
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw new Error(formatSignOutError(error));
@@ -219,6 +232,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteAccount = useCallback(async () => {
+    if (isDemoMode()) {
+      throw demoReadOnlyError();
+    }
+
     const { error } = await supabase.rpc('delete_own_account');
     if (error) {
       throw new Error(formatDeleteAccountError(error));
@@ -268,7 +285,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         isPasswordRecovery,
         isLoading,
         isCompletingOAuth,
-        isConfigured: isSupabaseConfigured(),
+        isConfigured: isDemoMode() || isSupabaseConfigured(),
         authLinkError,
         clearAuthLinkError,
         signIn,

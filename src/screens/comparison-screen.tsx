@@ -16,11 +16,13 @@ import { SegmentedControl, SegmentedOption } from '../components/segmented-contr
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { isTrendMode, useComparison } from '../hooks/use-comparison';
+import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useWideLayout } from '../hooks/use-wide-layout';
 import { useTranslation } from '../i18n/language-context';
 import { CustomCompareKind } from '../types';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 
 type RangePickerProps = {
   title: string;
@@ -73,6 +75,7 @@ export function ComparisonScreen() {
   const { entries, isLoading, isRefreshing, error, refreshEntries } = useSharedWeightEntries();
   const { birthDate } = useSharedUserProfile();
   const { scrollY, onScroll } = useScrollHeader();
+  const scrollContentStyle = useScrollContentStyle();
   const isWideLayout = useWideLayout();
 
   const comparison = useComparison({
@@ -100,7 +103,7 @@ export function ComparisonScreen() {
         />
         <Animated.ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={scrollContentStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
@@ -153,7 +156,7 @@ export function ComparisonScreen() {
                 </View>
                 {!comparison.isDefaultRange ? (
                   <View style={styles.filterActionsRow}>
-                    <Pressable onPress={comparison.resetRange} hitSlop={8}>
+                    <Pressable onPress={comparison.resetRange} hitSlop={8} {...webFocusTarget('text-button')}>
                       <Text style={styles.linkText}>{t('history.clearAll')}</Text>
                     </Pressable>
                   </View>

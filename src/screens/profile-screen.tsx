@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
-  Switch,
   Text,
   View,
 } from 'react-native';
@@ -17,11 +16,13 @@ import { PreferenceTransition } from '../components/preference-transition';
 import { ProfileAccountSkeleton } from '../components/profile-details-skeleton';
 import { ScreenHeader } from '../components/screen-header';
 import { SegmentedControl, SegmentedOption } from '../components/segmented-control';
+import { SettingSwitch } from '../components/setting-switch';
 import { useSharedBmiDisplay } from '../context/bmi-display-context';
 import { useConfirm } from '../context/confirm-context';
 import { useToast } from '../context/toast-context';
 import { useSupabaseAuth } from '../context/supabase-auth-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
+import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTranslation } from '../i18n/language-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -30,6 +31,7 @@ import { getDateLocale } from '../i18n/resolve-locale';
 import { useUnits } from '../context/unit-context';
 import { UnitPreference } from '../storage/unit-preference';
 import { useSharedUserProfile } from '../context/user-profile-context';
+import { isDemoMode } from '../demo/is-demo-mode';
 import { BiologicalSex } from '../types';
 import { getTodayDate, toDateKey } from '../format';
 import { hasAnyHeight } from '../height';
@@ -93,6 +95,7 @@ export function ProfileScreen({
   const { showError, showInfo, showSuccess } = useToast();
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
+  const scrollContentStyle = useScrollContentStyle();
   const user = session?.user;
   const dateLocale = getDateLocale(locale);
   const emDash = t('common.emDash');
@@ -177,6 +180,7 @@ export function ProfileScreen({
   };
 
   const entryCountLabel = t('history.entryCount', { count: entries.length });
+  const demoMode = isDemoMode();
   const focusSection = route.params?.focusSection;
   const [shouldOpenBirthDatePicker, setShouldOpenBirthDatePicker] = useState(false);
   const minimumBirthDate = useMemo(() => {
@@ -261,7 +265,7 @@ export function ProfileScreen({
           />
           <Animated.ScrollView
             style={styles.scrollView}
-            contentContainerStyle={styles.content}
+            contentContainerStyle={scrollContentStyle}
             onScroll={onScroll}
             scrollEventThrottle={16}
             refreshControl={
@@ -347,7 +351,7 @@ export function ProfileScreen({
                 <Text style={styles.settingHintWarning}>{t('profile.showBmiNoHeightHint')}</Text>
               ) : null}
             </View>
-            <Switch
+            <SettingSwitch
               value={showBmi}
               onValueChange={(value) => {
                 void setShowBmi(value);
@@ -359,15 +363,28 @@ export function ProfileScreen({
         </AppCard>
 
         <AppCard title={t('profile.session')} delay={180}>
+          {demoMode ? (
+            <Text style={styles.settingHint}>{t('demo.sessionHint')}</Text>
+          ) : null}
           <Pressable
-            style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              demoMode && styles.buttonDisabled,
+              pressed && !demoMode && styles.buttonPressed,
+            ]}
             onPress={handleSignOut}
+            disabled={demoMode}
           >
             <Text style={styles.secondaryButtonText}>{t('profile.signOut')}</Text>
           </Pressable>
           <Pressable
-            style={({ pressed }) => [styles.dangerButton, pressed && styles.buttonPressed]}
+            style={({ pressed }) => [
+              styles.dangerButton,
+              demoMode && styles.buttonDisabled,
+              pressed && !demoMode && styles.buttonPressed,
+            ]}
             onPress={handleDeleteAccount}
+            disabled={demoMode}
           >
             <Text style={styles.dangerButtonText}>{t('profile.deleteAccount')}</Text>
           </Pressable>

@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { t } from '../i18n';
 import { useSupabaseAuth } from '../context/supabase-auth-context';
+import { isDemoMode } from '../demo/is-demo-mode';
+import {
+  deleteDemoHeight,
+  getDemoProfile,
+  saveDemoHeight,
+  saveDemoUserProfile,
+} from '../demo/demo-storage';
 import { useRefreshOnAppForeground } from './use-refresh-on-app-foreground';
 import { getCurrentHeight } from '../height';
 import { getUserProfile, saveUserProfile } from '../supabase/profile-sync';
@@ -20,6 +27,24 @@ export function useUserProfile() {
   const hasLoadedRef = useRef(false);
 
   const refreshProfile = useCallback(async () => {
+    if (isDemoMode()) {
+      try {
+        const profile = await getDemoProfile();
+        setHeightEntries(profile.heightEntries);
+        setBirthDate(profile.birthDate);
+        setSex(profile.sex);
+        setError(null);
+        hasLoadedRef.current = true;
+      } catch (loadError) {
+        const message = loadError instanceof Error ? loadError.message : t('errors.couldNotLoadProfile');
+        setError(message);
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+      return;
+    }
+
     if (isAuthLoading) {
       return;
     }
@@ -67,7 +92,11 @@ export function useUserProfile() {
     async (nextBirthDate: string | null, nextSex: BiologicalSex | null) => {
       setIsSaving(true);
       try {
-        await saveUserProfile({ birthDate: nextBirthDate, sex: nextSex });
+        if (isDemoMode()) {
+          await saveDemoUserProfile(nextBirthDate, nextSex);
+        } else {
+          await saveUserProfile({ birthDate: nextBirthDate, sex: nextSex });
+        }
         setBirthDate(nextBirthDate);
         setSex(nextSex);
       } finally {
@@ -81,7 +110,11 @@ export function useUserProfile() {
     async (effectiveDate: string, heightCm: number) => {
       setIsSaving(true);
       try {
-        await saveHeight(effectiveDate, heightCm);
+        if (isDemoMode()) {
+          await saveDemoHeight(effectiveDate, heightCm);
+        } else {
+          await saveHeight(effectiveDate, heightCm);
+        }
         await refreshProfile();
       } finally {
         setIsSaving(false);
@@ -94,9 +127,16 @@ export function useUserProfile() {
     async (previousEffectiveDate: string, effectiveDate: string, heightCm: number) => {
       setIsSaving(true);
       try {
-        await saveHeight(effectiveDate, heightCm);
-        if (previousEffectiveDate !== effectiveDate) {
-          await deleteHeight(previousEffectiveDate);
+        if (isDemoMode()) {
+          await saveDemoHeight(effectiveDate, heightCm);
+          if (previousEffectiveDate !== effectiveDate) {
+            await deleteDemoHeight(previousEffectiveDate);
+          }
+        } else {
+          await saveHeight(effectiveDate, heightCm);
+          if (previousEffectiveDate !== effectiveDate) {
+            await deleteHeight(previousEffectiveDate);
+          }
         }
         await refreshProfile();
       } finally {
@@ -110,7 +150,11 @@ export function useUserProfile() {
     async (effectiveDate: string) => {
       setDeletingEffectiveDate(effectiveDate);
       try {
-        await deleteHeight(effectiveDate);
+        if (isDemoMode()) {
+          await deleteDemoHeight(effectiveDate);
+        } else {
+          await deleteHeight(effectiveDate);
+        }
         await refreshProfile();
       } catch (deleteError) {
         throw deleteError instanceof Error

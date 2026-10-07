@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import { fontFamily, layoutWidth, radius, spacing } from '../tokens';
+import { WEB_FOCUS_RING_OUTER_SPREAD } from '../web-focus-ring';
 import { StyleContext, cardSurface, floatingSurface, tabularNums } from './helpers';
 
 export function createOverlayStyles({ colors, scheme }: StyleContext) {
@@ -18,15 +19,32 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
       alignItems: 'center',
       paddingHorizontal: spacing.xl,
     },
-    confirmDialogCard: {
+    confirmDialogFrame: {
       width: '100%',
       maxWidth: layoutWidth.dialog,
+      zIndex: 1,
+      ...(Platform.OS === 'web'
+        ? {
+            padding: WEB_FOCUS_RING_OUTER_SPREAD,
+            overflow: 'visible',
+          }
+        : null),
+    },
+    confirmDialogCard: {
+      width: '100%',
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
       padding: spacing.xl,
       gap: spacing.md,
       borderWidth: scheme === 'dark' ? 1 : StyleSheet.hairlineWidth,
       borderColor: colors.borderStrong,
+      ...(Platform.OS === 'web'
+        ? {
+            overflow: 'visible',
+            margin: -WEB_FOCUS_RING_OUTER_SPREAD,
+            padding: spacing.xl + WEB_FOCUS_RING_OUTER_SPREAD,
+          }
+        : null),
     },
     confirmDialogTitle: {
       fontSize: 18,
@@ -70,6 +88,13 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     },
     modalSheetDismissArea: {
       flex: 1,
+      alignSelf: 'stretch',
+      ...(Platform.OS === 'web'
+        ? {
+            marginTop: spacing.sm,
+            marginHorizontal: spacing.sm,
+          }
+        : null),
     },
     datePickerSheet: {
       width: '100%',

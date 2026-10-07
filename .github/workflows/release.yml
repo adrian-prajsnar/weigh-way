@@ -141,6 +141,18 @@ jobs:
         with:
           node-version: 20
           cache: npm
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Export read-only web demo
+        run: node scripts/export-web-demo.cjs
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
           cache-dependency-path: website/package-lock.json
 
       - name: Install website dependencies

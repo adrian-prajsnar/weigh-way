@@ -9,6 +9,7 @@ import { WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { spacing } from '../theme/tokens';
+import { ModalSheetDismissArea } from './modal-sheet-dismiss-area';
 import { WeightEntryFormBody } from './weight-entry-form-body';
 
 type WeightEntryModalProps = {
@@ -45,7 +46,7 @@ export function WeightEntryModal({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalSheetBackdrop}>
-        <Pressable style={styles.modalSheetDismissArea} onPress={onClose} />
+        <ModalSheetDismissArea onPress={onClose} />
         <View
           style={[
             sheetContainerStyle,

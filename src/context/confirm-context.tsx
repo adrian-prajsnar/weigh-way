@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Modal, Pressable, Text, TextInput, View } from 'react-native';
+import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useTranslation } from '../i18n/language-context';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
@@ -74,68 +74,77 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             animationType="fade"
             onRequestClose={() => close(false)}
           >
-            <Pressable
-              style={styles.modalBackdropCentered}
-              onPress={() => close(false)}
-            >
+            <View style={styles.modalBackdropCentered}>
               <Pressable
-                style={styles.confirmDialogCard}
-                onPress={(event) => event.stopPropagation()}
+                style={StyleSheet.absoluteFill}
+                onPress={() => close(false)}
+                focusable={false}
+                accessibilityRole="button"
+                accessibilityLabel={cancelLabel}
+                {...(Platform.OS === 'web'
+                  ? { dataSet: { wwModalDismiss: 'true', wwConfirmDismiss: 'true' }, tabIndex: -1 }
+                  : {})}
+              />
+              <View
+                style={styles.confirmDialogFrame}
+                {...(Platform.OS === 'web' ? { dataSet: { wwConfirmDialog: 'true' } } : {})}
               >
-                <Text style={styles.confirmDialogTitle}>{pending.title}</Text>
-                <Text style={styles.confirmDialogMessage}>{pending.message}</Text>
-                {pending.confirmationPhrase ? (
-                  <View style={styles.passwordFieldGroup}>
-                    {pending.confirmationPhraseHint ? (
-                      <Text style={styles.fieldLabel}>{pending.confirmationPhraseHint}</Text>
+                <View style={styles.confirmDialogCard}>
+                    <Text style={styles.confirmDialogTitle}>{pending.title}</Text>
+                    <Text style={styles.confirmDialogMessage}>{pending.message}</Text>
+                    {pending.confirmationPhrase ? (
+                      <View style={styles.passwordFieldGroup}>
+                        {pending.confirmationPhraseHint ? (
+                          <Text style={styles.fieldLabel}>{pending.confirmationPhraseHint}</Text>
+                        ) : null}
+                        <TextInput
+                          style={styles.input}
+                          value={phraseInput}
+                          onChangeText={setPhraseInput}
+                          autoCapitalize="characters"
+                          autoCorrect={false}
+                          placeholder={pending.confirmationPhrase}
+                          placeholderTextColor={colors.textSubtle}
+                        />
+                      </View>
                     ) : null}
-                    <TextInput
-                      style={styles.input}
-                      value={phraseInput}
-                      onChangeText={setPhraseInput}
-                      autoCapitalize="characters"
-                      autoCorrect={false}
-                      placeholder={pending.confirmationPhrase}
-                      placeholderTextColor={colors.textSubtle}
-                    />
-                  </View>
-                ) : null}
-                <View style={styles.confirmDialogActions}>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.confirmDialogButton,
-                      styles.secondaryButton,
-                      pressed && styles.buttonPressed,
-                    ]}
-                    onPress={() => close(false)}
-                  >
-                    <Text style={styles.secondaryButtonText}>{cancelLabel}</Text>
-                  </Pressable>
-                  <Pressable
-                    disabled={!phraseMatches}
-                    style={({ pressed }) => [
-                      styles.confirmDialogButton,
-                      pending.destructive
-                        ? styles.confirmDialogDestructiveButton
-                        : styles.primaryButton,
-                      !phraseMatches && styles.buttonDisabled,
-                      pressed && phraseMatches && styles.buttonPressed,
-                    ]}
-                    onPress={() => close(true)}
-                  >
-                    <Text
-                      style={
-                        pending.destructive
-                          ? styles.confirmDialogDestructiveButtonText
-                          : styles.primaryButtonText
-                      }
-                    >
-                      {confirmLabel}
-                    </Text>
-                  </Pressable>
+                    <View style={styles.confirmDialogActions}>
+                      <Pressable
+                        style={({ pressed }) => [
+                          styles.confirmDialogButton,
+                          styles.secondaryButton,
+                          pressed && styles.buttonPressed,
+                        ]}
+                        onPress={() => close(false)}
+                      >
+                        <Text style={styles.secondaryButtonText}>{cancelLabel}</Text>
+                      </Pressable>
+                      <Pressable
+                        disabled={!phraseMatches}
+                        style={({ pressed }) => [
+                          styles.confirmDialogButton,
+                          pending.destructive
+                            ? styles.confirmDialogDestructiveButton
+                            : styles.primaryButton,
+                          !phraseMatches && styles.buttonDisabled,
+                          pressed && phraseMatches && styles.buttonPressed,
+                        ]}
+                        onPress={() => close(true)}
+                      >
+                        <Text
+                          style={
+                            pending.destructive
+                              ? styles.confirmDialogDestructiveButtonText
+                              : styles.primaryButtonText
+                          }
+                        >
+                          {confirmLabel}
+                        </Text>
+                      </Pressable>
+                    </View>
                 </View>
-              </Pressable>
-            </Pressable>
+              </View>
+            </View>
           </Modal>
         ) : null}
       </View>

@@ -37,6 +37,10 @@ const pl = {
       'Ta aplikacja wymaga połączenia z internetem, aby synchronizować Twoje dane. Sprawdź połączenie i spróbuj ponownie.',
     offlineRefresh: 'Odśwież',
   },
+  demo: {
+    sessionHint: 'Wylogowanie i usunięcie konta są wyłączone w wersji demonstracyjnej.',
+    authUnavailable: 'Niedostępne w wersji demonstracyjnej.',
+  },
   auth: {
     welcomeBack: 'Witaj ponownie',
     signInSubtitle: 'Zaloguj się, aby zobaczyć swoje pomiary',

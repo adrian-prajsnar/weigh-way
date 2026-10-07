@@ -1,5 +1,5 @@
-import { useWindowDimensions } from 'react-native';
 import { layoutBreakpoint, layoutWidth, spacing } from '../theme/tokens';
+import { useAppWindowDimensions } from './use-app-window-dimensions';
 
 /** Width of the main content column: full bleed on phones, padded and capped on wide tablets. */
 export function getContentFrameWidth(windowWidth: number): number | '100%' {
@@ -11,6 +11,6 @@ export function getContentFrameWidth(windowWidth: number): number | '100%' {
 }
 
 export function useContentFrameWidth(): number | '100%' {
-  const { width } = useWindowDimensions();
+  const { width } = useAppWindowDimensions();
   return getContentFrameWidth(width);
 }
