@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import DemoModal from '../components/demo-modal.astro';
 import { getMessages, localePath, type SiteLocale, type SitePage } from '../i18n';
 import { withBase, absoluteUrl } from '../lib/paths';
 import { buildDownloadPlatformBootstrapScript } from '../lib/download-platform';
@@ -77,6 +78,7 @@ const plUrl = absoluteUrl(localePath('pl', page));
     <div class="scroll-progress" hidden></div>
     <a class="skip-link" href="#content">{t.skip}</a>
     <slot />
+    <DemoModal locale={locale} />
     <script is:inline define:vars={{ baseUrl: import.meta.env.BASE_URL }}>
       (function () {
         function syncScreenshotImages() {

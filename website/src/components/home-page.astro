@@ -1,4 +1,5 @@
 ---
+import DemoButton from './demo-button.astro';
 import PlatformDownloads from './platform-downloads.astro';
 import { getMessages, type SiteLocale } from '../i18n';
 import { getLatestRelease } from '../lib/releases';
@@ -87,6 +88,7 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           unavailableAndroid={t.home.downloadUnavailableAndroid}
           unavailableIos={t.home.downloadUnavailableIos}
         />
+        <DemoButton label={t.home.openDemo} />
         {
           latest && (
             <span class="version-chip version-chip--live">
@@ -322,14 +324,17 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
         </h2>
         <p class="section-lead">{t.home.ctaBody}</p>
       </div>
-      <PlatformDownloads
-        apkUrl={apkUrl}
-        ipaUrl={ipaUrl}
-        downloadAndroid={t.home.downloadAndroid}
-        downloadIos={t.home.downloadIos}
-        unavailableAndroid={t.home.downloadUnavailableAndroid}
-        unavailableIos={t.home.downloadUnavailableIos}
-      />
+      <div class="hero-actions">
+        <PlatformDownloads
+          apkUrl={apkUrl}
+          ipaUrl={ipaUrl}
+          downloadAndroid={t.home.downloadAndroid}
+          downloadIos={t.home.downloadIos}
+          unavailableAndroid={t.home.downloadUnavailableAndroid}
+          unavailableIos={t.home.downloadUnavailableIos}
+        />
+        <DemoButton label={t.home.openDemo} />
+      </div>
     </div>
   </div>
 </section>

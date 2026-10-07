@@ -1,0 +1,12 @@
+---
+type Props = {
+  label: string;
+};
+
+const { label } = Astro.props;
+---
+
+<a class="btn btn-demo" href="#demo" data-demo-open>
+  <span class="btn-demo__live" aria-hidden="true"></span>
+  <span>{label}</span>
+</a>

@@ -133,20 +133,12 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
   </div>
 </div>
 
-<button class="legal-top" type="button" data-legal-top hidden aria-label={t.legal.backToTop}>
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <path d="M12 19V5"></path>
-    <path d="M6 11l6-6 6 6"></path>
-  </svg>
-</button>
-
 <script>
   (function () {
     var sections = document.querySelectorAll('[data-legal-section]');
     var links = document.querySelectorAll('[data-toc-target]');
     var list = document.querySelector('.legal-toc-list');
     var slider = document.querySelector('.legal-toc-slider');
-    var top = document.querySelector('[data-legal-top]');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var sliderQuery = window.matchMedia('(max-width: 980px)');
 
@@ -249,18 +241,6 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
         },
         true,
       );
-    }
-
-    if (top) {
-      var onScroll = function () {
-        top.hidden = window.scrollY < 480;
-      };
-      onScroll();
-      window.addEventListener('scroll', onScroll, { passive: true });
-      top.addEventListener('click', function () {
-        var behavior = reduce ? 'auto' : 'smooth';
-        window.scrollTo({ top: 0, behavior: behavior });
-      });
     }
 
     if (!sections.length || !links.length) return;

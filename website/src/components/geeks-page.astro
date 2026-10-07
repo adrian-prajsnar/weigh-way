@@ -1,4 +1,5 @@
 ---
+import DemoButton from './demo-button.astro';
 import { getMessages, type SiteLocale } from '../i18n';
 
 type Props = { locale: SiteLocale };
@@ -12,6 +13,9 @@ const repoUrl = 'https://github.com/adrian-prajsnar/weigh-way';
   <div class="section-inner is-visible" data-reveal>
     <h1>{page.title}</h1>
     <p class="section-lead">{page.lead}</p>
+    <p class="hero-actions">
+      <DemoButton label={page.demoLink} />
+    </p>
   </div>
 </section>
 
