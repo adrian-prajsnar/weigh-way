@@ -12,6 +12,7 @@ import { useToast } from '../context/toast-context';
 import { useTranslation } from '../i18n/language-context';
 import { AuthStackParamList } from '../navigation/types';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -80,7 +81,7 @@ export function LoginScreen({ navigation, route }: Props) {
       title={t('auth.welcomeBack')}
       subtitle={t('auth.signInSubtitle')}
       footer={
-        <Pressable onPress={() => navigation.navigate('SignUp')}>
+        <Pressable onPress={() => navigation.navigate('SignUp')} {...webFocusTarget('text-button')}>
           <Text style={styles.linkText}>{t('auth.noAccount')}</Text>
         </Pressable>
       }
@@ -109,6 +110,7 @@ export function LoginScreen({ navigation, route }: Props) {
         onPress={() =>
           navigation.navigate('ForgotPassword', { email: email.trim() || undefined })
         }
+        {...webFocusTarget('text-button')}
       >
         <Text style={styles.linkText}>{t('auth.forgotPassword')}</Text>
       </Pressable>

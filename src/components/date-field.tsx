@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Platform, Pressable, Text, View } from 'react-native';
 import { formatDateLabel, addDays, getTodayDate, toDateKey } from '../format';
 import { useTranslation } from '../i18n/language-context';
 import type { TranslationKey } from '../i18n/translation-keys';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
 import { DatePickerSheet } from './date-picker-sheet';
 
@@ -115,6 +116,7 @@ export function DateField({
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t(clearLabelKey)}
+            {...webFocusTarget('text-button')}
           >
             <Text style={styles.linkText}>{t(clearLabelKey)}</Text>
           </Pressable>
@@ -132,6 +134,7 @@ export function DateField({
             disabled={!canDecreaseDay}
             accessibilityRole="button"
             accessibilityLabel={t('dateField.decreaseDay')}
+            {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
           >
             <Ionicons name="remove" size={22} color={colors.textMuted} />
           </Pressable>
@@ -146,6 +149,7 @@ export function DateField({
             disabled={!canIncreaseDay}
             accessibilityRole="button"
             accessibilityLabel={t('dateField.increaseDay')}
+            {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
           >
             <Ionicons name="add" size={22} color={colors.textMuted} />
           </Pressable>

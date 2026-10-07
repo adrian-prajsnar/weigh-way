@@ -1,13 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useState } from 'react';
-import { LayoutChangeEvent, Pressable, Text, useWindowDimensions } from 'react-native';
+import { LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAppWindowDimensions } from '../hooks/use-app-window-dimensions';
 import { getContentFrameWidth } from '../hooks/use-content-frame-width';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { spacing } from '../theme/tokens';
+import { getTabBarBottomOffset } from './tab-bar-layout';
 import { RootTabParamList } from './types';
 
 type TabIconName = keyof typeof Ionicons.glyphMap;
@@ -23,7 +25,7 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
   const styles = useAppStyles();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { width: windowWidth } = useWindowDimensions();
+  const { width: windowWidth } = useAppWindowDimensions();
   const [barWidth, setBarWidth] = useState(0);
   const contentFrameWidth = getContentFrameWidth(windowWidth);
   const tabBarWidth =
@@ -51,17 +53,18 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
   };
 
   return (
-    <Animated.View
-      style={[
-        styles.tabBar,
-        {
-          bottom: insets.bottom + spacing.sm,
-          width: tabBarWidth,
-          left: tabBarLeft,
-        },
-      ]}
-      onLayout={handleLayout}
+    <View
+      style={{
+        position: 'absolute',
+        bottom: getTabBarBottomOffset(insets.bottom),
+        width: tabBarWidth,
+        left: tabBarLeft,
+      }}
     >
+      <Animated.View
+        style={[styles.tabBar, { position: 'relative', width: '100%' }]}
+        onLayout={handleLayout}
+      >
       <Animated.View style={[styles.tabBarIndicator, indicatorStyle]} />
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -110,5 +113,6 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
         );
       })}
     </Animated.View>
+    </View>
   );
 }

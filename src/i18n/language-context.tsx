@@ -8,6 +8,8 @@ import {
   useMemo,
   useState,
 } from 'react';
+import { getDemoLocaleFromUrl } from '../demo/demo-locale';
+import { isDemoMode } from '../demo/is-demo-mode';
 import {
   getLanguagePreference,
   LanguagePreference,
@@ -25,21 +27,38 @@ type LanguageContextValue = {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
+function readDemoLocale(): AppLocale | null {
+  if (!isDemoMode() || typeof window === 'undefined') {
+    return null;
+  }
+  return getDemoLocaleFromUrl(window.location.search);
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const locales = useLocales();
-  const [preference, setPreferenceState] = useState<LanguagePreference>('system');
+  const demoLocale = readDemoLocale();
+  const [preference, setPreferenceState] = useState<LanguagePreference>(
+    demoLocale ?? 'system',
+  );
 
   useEffect(() => {
+    if (demoLocale) {
+      setPreferenceState(demoLocale);
+      return;
+    }
     void getLanguagePreference().then(setPreferenceState);
-  }, []);
+  }, [demoLocale]);
 
   const locale = useMemo(() => {
+    if (demoLocale) {
+      return demoLocale;
+    }
     if (preference === 'system') {
       const languageCode = locales[0]?.languageCode?.toLowerCase();
       return languageCode === 'pl' ? 'pl' : 'en';
     }
     return preference;
-  }, [preference, locales]);
+  }, [demoLocale, preference, locales]);
 
   useEffect(() => {
     setI18nLocale(locale);

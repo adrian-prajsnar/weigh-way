@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 
 const TRACK_PADDING = 4;
 
@@ -60,6 +61,7 @@ export function SegmentedControl<T extends string>({
             }}
             accessibilityRole="button"
             accessibilityState={{ selected: isActive }}
+            {...webFocusTarget('segmented-item')}
           >
             <Text
               style={[styles.segmentedLabel, isActive && styles.segmentedLabelActive]}

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { calculateBmi } from '../bmi';
 import { BmiBadge } from './bmi-badge';
 import { DateField } from './date-field';
@@ -164,11 +164,15 @@ export function WeightEntryFormBody({
               disabled={isDisabled}
               accessibilityRole="button"
               accessibilityLabel={t('entryForm.decreaseWeight')}
+              {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
             >
               <Ionicons name="remove" size={22} color={colors.textMuted} />
             </Pressable>
 
-            <View style={[styles.weightInputWrapper, isFocused && styles.inputFocused]}>
+            <View
+              style={[styles.weightInputWrapper, isFocused && styles.weightInputWrapperFocused]}
+              {...(Platform.OS === 'web' ? { dataSet: { wwWeightField: 'true' } } : {})}
+            >
               <TextInput
                 ref={weightInputRef}
                 style={styles.weightInput}
@@ -180,6 +184,7 @@ export function WeightEntryFormBody({
                 placeholder={weightPlaceholder}
                 placeholderTextColor={colors.textSubtle}
                 editable={!isDisabled}
+                {...(Platform.OS === 'web' ? { dataSet: { wwFieldInput: 'true' } } : {})}
               />
               <Text style={styles.weightInputUnit}>{getWeightUnitLabel(units)}</Text>
             </View>
@@ -190,6 +195,7 @@ export function WeightEntryFormBody({
               disabled={isDisabled}
               accessibilityRole="button"
               accessibilityLabel={t('entryForm.increaseWeight')}
+              {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
             >
               <Ionicons name="add" size={22} color={colors.textMuted} />
             </Pressable>

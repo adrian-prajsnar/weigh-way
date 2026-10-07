@@ -24,6 +24,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
+    ...(process.env.EXPO_PUBLIC_DEMO === 'true'
+      ? {
+          experiments: {
+            ...config.experiments,
+            baseUrl: '/weigh-way/demo',
+          },
+        }
+      : {}),
     plugins: [
       ...(config.plugins ?? []),
       [

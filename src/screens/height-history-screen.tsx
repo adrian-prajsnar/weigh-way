@@ -10,6 +10,7 @@ import { ScreenHeader } from '../components/screen-header';
 import { useConfirm } from '../context/confirm-context';
 import { useToast } from '../context/toast-context';
 import { useSharedUserProfile } from '../context/user-profile-context';
+import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTranslation } from '../i18n/language-context';
 import { ProfileStackParamList } from '../navigation/types';
@@ -28,6 +29,7 @@ export function HeightHistoryScreen({ navigation }: Props) {
   const { confirm } = useConfirm();
   const { showError, showSuccess } = useToast();
   const { scrollY, onScroll } = useScrollHeader();
+  const scrollContentStyle = useScrollContentStyle();
   const {
     heightEntries,
     isLoading,
@@ -111,7 +113,7 @@ export function HeightHistoryScreen({ navigation }: Props) {
         />
         <Animated.ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={scrollContentStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={

@@ -13,6 +13,7 @@ import { WeightEntryModal } from '../components/weight-entry-modal';
 import { useConfirm } from '../context/confirm-context';
 import { useToast } from '../context/toast-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
+import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useWideLayout } from '../hooks/use-wide-layout';
 import { useTranslation } from '../i18n/language-context';
@@ -28,6 +29,7 @@ import {
 import { filterEntriesByBounds } from '../stats';
 import { runWhenIdle } from '../run-when-idle';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
 import { waitForInteractions, waitForPaint } from '../wait-for-paint';
 
@@ -41,6 +43,7 @@ export function HistoryScreen() {
   const { showError, showSuccess } = useToast();
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
+  const scrollContentStyle = useScrollContentStyle();
   const isWideLayout = useWideLayout();
   const today = getTodayDate();
   const defaultRange = useMemo(() => getDefaultHistoryDateRange(today), [today]);
@@ -174,7 +177,7 @@ export function HistoryScreen() {
 
         <Animated.ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={scrollContentStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
@@ -222,6 +225,7 @@ export function HistoryScreen() {
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityState={{ busy: isClearingFilter }}
+                {...webFocusTarget('text-button')}
               >
                 {isClearingFilter ? (
                   <ActivityIndicator size="small" color={colors.accent} />

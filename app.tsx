@@ -18,6 +18,9 @@ import { SupabaseAuthProvider, useSupabaseAuth } from './src/context/supabase-au
 import { useToast, ToastProvider } from './src/context/toast-context';
 import { useNetworkStatus } from './src/hooks/use-network-status';
 import { useHideSplashWhenReady } from './src/hooks/use-hide-splash';
+import { DemoWebDesktopInteractions } from './src/demo/demo-web-desktop-interactions';
+import { DemoWebShell } from './src/demo/demo-web-shell';
+import { isDemoMode } from './src/demo/is-demo-mode';
 import { BmiDetailsProvider } from './src/context/bmi-details-context';
 import { BmiDisplayProvider } from './src/context/bmi-display-context';
 import { ConfirmProvider } from './src/context/confirm-context';
@@ -115,7 +118,9 @@ function AppShell() {
     [fontFamily.bold]: Inter_700Bold,
   });
 
-  return (
+  return isDemoMode() ? (
+    <ThemedApp fontsLoaded={fontsLoaded} />
+  ) : (
     <NetworkGate>
       <ThemedApp fontsLoaded={fontsLoaded} />
     </NetworkGate>
@@ -126,9 +131,12 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
+        <DemoWebDesktopInteractions />
         <LanguageProvider>
           <UnitProvider>
-            <AppShell />
+            <DemoWebShell>
+              <AppShell />
+            </DemoWebShell>
           </UnitProvider>
         </LanguageProvider>
       </ThemeProvider>

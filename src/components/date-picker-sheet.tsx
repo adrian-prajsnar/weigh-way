@@ -9,6 +9,7 @@ import { useTranslation } from '../i18n/language-context';
 import { toDateKey } from '../format';
 import { waitForPaint } from '../wait-for-paint';
 import { useSheetContainerStyle } from '../hooks/use-sheet-container-style';
+import { ModalSheetDismissArea } from './modal-sheet-dismiss-area';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { fontFamily } from '../theme/tokens';
@@ -235,11 +236,7 @@ export function DatePickerSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={isConfirming ? undefined : onClose}>
       <View style={styles.modalSheetBackdrop}>
-        <Pressable
-          style={styles.modalSheetDismissArea}
-          onPress={isConfirming ? undefined : onClose}
-          disabled={isConfirming}
-        />
+        <ModalSheetDismissArea onPress={isConfirming ? undefined : onClose} disabled={isConfirming} />
         <View style={sheetContainerStyle}>
           <View style={styles.datePickerSheetHeader}>
             <Text style={styles.datePickerSheetTitle}>{title ?? t('dateField.selectDate')}</Text>

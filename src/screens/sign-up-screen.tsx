@@ -12,6 +12,7 @@ import { useTranslation } from '../i18n/language-context';
 import { AuthStackParamList } from '../navigation/types';
 import { isValidPassword } from '../password';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
@@ -67,7 +68,7 @@ export function SignUpScreen({ navigation }: Props) {
       title={t('auth.createAccount')}
       subtitle={t('auth.signUpSubtitle')}
       footer={
-        <Pressable onPress={() => navigation.navigate('Login')}>
+        <Pressable onPress={() => navigation.navigate('Login')} {...webFocusTarget('text-button')}>
           <Text style={styles.linkText}>{t('auth.hasAccount')}</Text>
         </Pressable>
       }

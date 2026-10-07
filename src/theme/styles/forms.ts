@@ -1,5 +1,6 @@
 import { Platform, StyleSheet } from 'react-native';
 import { fontFamily, radius, spacing } from '../tokens';
+import { webFocusRingBoxShadow } from '../web-focus-ring';
 import { StyleContext, cardSurface, floatingSurface, tabularNums } from './helpers';
 
 export function createFormStyles({ colors, scheme }: StyleContext) {
@@ -21,8 +22,15 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
       fontFamily: fontFamily.regular,
     },
     inputFocused: {
-      borderColor: colors.accent,
-      backgroundColor: colors.surface,
+      ...(Platform.OS === 'web'
+        ? {
+            boxShadow: webFocusRingBoxShadow(colors, 'control'),
+            backgroundColor: colors.surface,
+          }
+        : {
+            borderColor: colors.accent,
+            backgroundColor: colors.surface,
+          }),
     },
     passwordFieldGroup: {
       gap: spacing.sm,
@@ -48,6 +56,7 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
       padding: spacing.sm,
     },
     dateButton: {
+      width: '100%',
       borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.md,
@@ -122,11 +131,14 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
 
     presetScroll: {
       marginHorizontal: -spacing.xl,
+      // Room for inset focus rings inside horizontal scroll views.
+      marginVertical: -spacing.xs,
     },
     presetScrollContent: {
       flexDirection: 'row',
       gap: spacing.sm,
       paddingHorizontal: spacing.xl,
+      paddingVertical: spacing.xs,
     },
     presetButton: {
       borderWidth: 1,

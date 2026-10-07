@@ -16,6 +16,7 @@ import {
 import { useTranslation } from '../i18n/language-context';
 import { HeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
 import { DateField } from './date-field';
 
@@ -49,7 +50,7 @@ export function HeightHistoryPreview({ heightEntries, onShowAll }: HeightHistory
         <Text style={styles.settingHint}>{t('profile.heightTimelineEmptyHint')}</Text>
       )}
 
-      <Pressable onPress={onShowAll} hitSlop={8}>
+      <Pressable onPress={onShowAll} hitSlop={8} {...webFocusTarget('text-button')}>
         <Text style={styles.linkText}>{t('profile.manageHeightRecords')}</Text>
       </Pressable>
     </View>
@@ -208,13 +209,23 @@ export function HeightTimelineEditor({
 
       <View style={styles.filterFieldHeader}>
         {!isFormOpen ? (
-          <Pressable onPress={startAdding} hitSlop={8} disabled={isSaving}>
+          <Pressable
+            onPress={startAdding}
+            hitSlop={8}
+            disabled={isSaving}
+            {...webFocusTarget('text-button')}
+          >
             <Text style={styles.linkText}>
               {sortedEntries.length === 0 ? t('common.add') : t('profile.addHeightRecord')}
             </Text>
           </Pressable>
         ) : (
-          <Pressable onPress={resetForm} hitSlop={8} disabled={isSaving}>
+          <Pressable
+            onPress={resetForm}
+            hitSlop={8}
+            disabled={isSaving}
+            {...webFocusTarget('text-button')}
+          >
             <Text style={styles.linkText}>{t('common.cancel')}</Text>
           </Pressable>
         )}

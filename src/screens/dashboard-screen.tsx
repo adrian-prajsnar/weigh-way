@@ -21,6 +21,7 @@ import { DismissibleInfoBanner } from '../components/dismissible-info-banner';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { useDashboardAlertDismissals } from '../hooks/use-dashboard-alert-dismissals';
+import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTranslation } from '../i18n/language-context';
 import { formatDateLabel } from '../format';
@@ -37,6 +38,7 @@ import {
   shouldShowProfileSetupBanner,
 } from '../profile-setup-banner';
 import { useAppStyles } from '../theme/styles';
+import { webFocusTarget } from '../theme/web-focus-target';
 
 type Props = BottomTabScreenProps<RootTabParamList, 'Dashboard'>;
 
@@ -50,6 +52,7 @@ export function DashboardScreen({ navigation }: Props) {
   const { showError, showSuccess } = useToast();
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
+  const scrollContentStyle = useScrollContentStyle();
   const [period, setPeriod] = useState<DashboardPeriod>('thisWeek');
   const [editingDate, setEditingDate] = useState<string | null>(null);
 
@@ -129,7 +132,7 @@ export function DashboardScreen({ navigation }: Props) {
         />
         <Animated.ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={scrollContentStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
@@ -179,7 +182,11 @@ export function DashboardScreen({ navigation }: Props) {
           isBusy={isRefreshing}
           delay={180}
           right={
-            <Pressable onPress={() => navigation.navigate('History')} hitSlop={8}>
+            <Pressable
+              onPress={() => navigation.navigate('History')}
+              hitSlop={8}
+              {...webFocusTarget('text-button')}
+            >
               <Text style={styles.linkText}>{t('dashboard.viewAll')}</Text>
             </Pressable>
           }
