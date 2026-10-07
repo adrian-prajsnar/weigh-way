@@ -67,10 +67,10 @@ function formatDate(value: string) {
                 >
                   <div class="release-head">
                     <div>
-                      <h2 class="release-version">
-                        {release.version}
+                      <div class="release-title-row">
+                        <h2 class="release-version">{release.version}</h2>
                         <span class="latest-badge">{t.releases.latest}</span>
-                      </h2>
+                      </div>
                       <p class="release-date">{formatDate(release.date)}</p>
                     </div>
                     <PlatformDownloads

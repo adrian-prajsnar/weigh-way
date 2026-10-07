@@ -1,0 +1,72 @@
+---
+import { getMessages, type SiteLocale } from '../i18n';
+import { withBase } from '../lib/paths';
+
+type Props = { locale: SiteLocale };
+const { locale } = Astro.props;
+const t = getMessages(locale);
+const demoUrl = withBase(`/demo/?embed=1&lang=${locale}`);
+---
+
+<div class="demo-modal" data-demo-modal data-demo-url={demoUrl} hidden>
+  <button class="demo-modal__backdrop" type="button" data-demo-close aria-label={t.demoModal.close}></button>
+  <div
+    class="demo-modal__dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label={t.demoModal.title}
+    tabindex="-1"
+    data-demo-dialog
+  >
+    <div class="app-screen-frame demo-modal__phone">
+      <span class="phone-island" aria-hidden="true"></span>
+      <div class="demo-modal__screen">
+        <div
+          class="demo-modal__skeleton"
+          data-demo-skeleton
+          aria-hidden="true"
+          aria-label={t.demoModal.loading}
+        >
+          <div class="demo-skeleton__header">
+            <span class="demo-skeleton__block demo-skeleton__block--title"></span>
+            <span class="demo-skeleton__block demo-skeleton__block--subtitle"></span>
+          </div>
+          <div class="demo-skeleton__stats">
+            <span class="demo-skeleton__stat"></span>
+            <span class="demo-skeleton__stat"></span>
+            <span class="demo-skeleton__stat"></span>
+            <span class="demo-skeleton__stat"></span>
+          </div>
+          <span class="demo-skeleton__block demo-skeleton__block--section"></span>
+          <div class="demo-skeleton__list">
+            <span class="demo-skeleton__row"></span>
+            <span class="demo-skeleton__row"></span>
+            <span class="demo-skeleton__row"></span>
+            <span class="demo-skeleton__row"></span>
+            <span class="demo-skeleton__row"></span>
+          </div>
+          <div class="demo-skeleton__tabbar" aria-hidden="true">
+            <span class="demo-skeleton__tab"></span>
+            <span class="demo-skeleton__tab"></span>
+            <span class="demo-skeleton__tab"></span>
+            <span class="demo-skeleton__tab"></span>
+          </div>
+        </div>
+        <iframe
+          data-demo-iframe
+          class="demo-modal__iframe"
+          title={t.demoModal.title}
+          loading="lazy"
+          allow="clipboard-read; clipboard-write"
+        ></iframe>
+      </div>
+      <span class="phone-home" aria-hidden="true"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { initDemoModal } from '../scripts/demo-modal';
+
+  initDemoModal();
+</script>

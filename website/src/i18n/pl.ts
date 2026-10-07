@@ -47,6 +47,7 @@ const pl: SiteMessages = {
     downloadIos: 'Pobierz na iOS',
     downloadUnavailableAndroid: 'Wersja na Androida pojawi się w kolejnym wydaniu',
     downloadUnavailableIos: 'Wersja na iOS pojawi się w kolejnym wydaniu',
+    openDemo: 'Wypróbuj WeighWay',
     versionLabel: 'Najnowsza wersja',
     freeBadge: 'Bezpłatna',
     platformsBadge: 'Android & iOS',
@@ -382,7 +383,6 @@ const pl: SiteMessages = {
   legal: {
     tocLabel: 'Na tej stronie',
     minRead: 'min czytania',
-    backToTop: 'Wróć na górę',
     alsoRead: 'Zobacz również',
   },
   footer: {
@@ -394,11 +394,17 @@ const pl: SiteMessages = {
     copyrightName: 'Adrian Prajsnar DEV',
     geeks: 'Dla Geeków',
   },
+  demoModal: {
+    title: 'Przykładowy dziennik',
+    close: 'Zamknij przykładowy dziennik',
+    loading: 'Ładowanie przykładowego dziennika',
+  },
   geeks: {
     eyebrow: 'Dla Geeków',
     title: 'Dla Geeków',
     lead:
       'Mały produkt z kontami użytkowników, bazą danych i własnym procesem publikowania wersji. Ta strona to skrót najważniejszych decyzji, które stoją za jego działaniem.',
+    demoLink: 'Wypróbuj WeighWay',
     architectureTitle: 'Gdzie przechowywane są dane',
     architectureLead:
       'Aplikacja komunikuje się z Supabase. To baza danych, a nie interfejs aplikacji, decyduje, które rekordy może zobaczyć zalogowany użytkownik.',

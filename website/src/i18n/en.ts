@@ -41,6 +41,7 @@ export type SiteMessages = {
     downloadIos: string;
     downloadUnavailableAndroid: string;
     downloadUnavailableIos: string;
+    openDemo: string;
     versionLabel: string;
     freeBadge: string;
     platformsBadge: string;
@@ -108,7 +109,6 @@ export type SiteMessages = {
   legal: {
     tocLabel: string;
     minRead: string;
-    backToTop: string;
     alsoRead: string;
   };
   footer: {
@@ -120,10 +120,16 @@ export type SiteMessages = {
     copyrightName: string;
     geeks: string;
   };
+  demoModal: {
+    title: string;
+    close: string;
+    loading: string;
+  };
   geeks: {
     eyebrow: string;
     title: string;
     lead: string;
+    demoLink: string;
     architectureTitle: string;
     architectureLead: string;
     nodes: { title: string; body: string }[];
@@ -193,6 +199,7 @@ const en: SiteMessages = {
     downloadIos: 'Download for iOS',
     downloadUnavailableAndroid: 'Android build coming with the next release',
     downloadUnavailableIos: 'iOS build coming with the next release',
+    openDemo: 'Try WeighWay',
     versionLabel: 'Latest',
     freeBadge: 'Free',
     platformsBadge: 'Android & iOS',
@@ -523,7 +530,6 @@ const en: SiteMessages = {
   legal: {
     tocLabel: 'On this page',
     minRead: 'min read',
-    backToTop: 'Back to top',
     alsoRead: 'Also read',
   },
   footer: {
@@ -535,11 +541,17 @@ const en: SiteMessages = {
     copyrightName: 'Adrian Prajsnar DEV',
     geeks: 'For Geeks',
   },
+  demoModal: {
+    title: 'Sample journal',
+    close: 'Close sample journal',
+    loading: 'Loading sample journal',
+  },
   geeks: {
     eyebrow: 'For Geeks',
     title: 'For Geeks',
     lead:
       'A small product with accounts, a database, and a release pipeline. This page is the short version of the decisions behind it.',
+    demoLink: 'Try WeighWay',
     architectureTitle: 'Where the data lives',
     architectureLead:
       'The phone talks to Supabase. The database, not the screen, decides which rows a signed-in person can see.',
