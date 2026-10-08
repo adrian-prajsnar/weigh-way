@@ -19,7 +19,6 @@ const pl: SiteMessages = {
       'Jak działa WeighWay: model danych, zasady obliczania BMI, bezpieczeństwo na poziomie wierszy i proces publikowania kolejnych wersji.',
   },
   brand: 'WeighWay',
-  skip: 'Przejdź do treści',
   nav: {
     home: 'Strona główna',
     releases: 'Aktualizacje',
