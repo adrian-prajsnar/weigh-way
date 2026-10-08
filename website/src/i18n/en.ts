@@ -14,7 +14,6 @@ export type SiteMessages = {
     geeksDescription: string;
   };
   brand: string;
-  skip: string;
   nav: {
     home: string;
     releases: string;
@@ -171,7 +170,6 @@ const en: SiteMessages = {
       'How WeighWay is built: the data model, BMI rules, row-level security, and the release pipeline.',
   },
   brand: 'WeighWay',
-  skip: 'Skip to content',
   nav: {
     home: 'Home',
     releases: 'Releases',

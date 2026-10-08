@@ -45,6 +45,26 @@
   --vt-x: 50%;
   --vt-y: 50%;
   --vt-r: 150vmax;
+  --focus-ring-band-sm: 1px;
+  --focus-ring-gap-sm: 2px;
+  --focus-ring-outer-sm: calc(var(--focus-ring-gap-sm) + var(--focus-ring-band-sm));
+  --focus-ring-band: 2px;
+  --focus-ring-gap: 2px;
+  --focus-ring-outer: calc(var(--focus-ring-gap) + var(--focus-ring-band));
+  --focus-ring-gap-lg: 4px;
+  --focus-ring-outer-lg: calc(var(--focus-ring-gap-lg) + var(--focus-ring-band));
+  --focus-ring-nav: inset 0 0 0 var(--focus-ring-gap-sm) var(--accent),
+    inset 0 0 0 var(--focus-ring-outer-sm) var(--on-accent);
+  --focus-ring-control: inset 0 0 0 var(--focus-ring-gap) var(--surface),
+    inset 0 0 0 var(--focus-ring-outer) var(--accent);
+  --focus-ring-control-lg: inset 0 0 0 var(--focus-ring-gap-lg) var(--surface),
+    inset 0 0 0 var(--focus-ring-outer-lg) var(--accent);
+  --focus-ring-button: inset 0 0 0 var(--focus-ring-gap) var(--accent),
+    inset 0 0 0 var(--focus-ring-outer) var(--on-accent);
+  --focus-ring-text: inset 0 0 0 var(--focus-ring-gap) var(--accent),
+    inset 0 0 0 var(--focus-ring-outer) var(--on-accent);
+  --focus-ring-overlay: inset 0 0 0 var(--focus-ring-gap) var(--accent-soft),
+    inset 0 0 0 var(--focus-ring-outer) var(--accent);
   color-scheme: light;
 }
 
@@ -105,9 +125,122 @@ body {
   color: var(--accent-text);
 }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 3px;
+@media (hover: hover) and (pointer: fine) {
+  a,
+  button,
+  input,
+  textarea,
+  select,
+  [tabindex]:not([tabindex='-1']) {
+    outline: none;
+  }
+
+  .nav-link:focus:not(:focus-visible),
+  .menu-toggle:focus:not(:focus-visible),
+  .icon-toggle button:focus:not(:focus-visible),
+  .hero-slider-arrow:focus:not(:focus-visible),
+  .faq-trigger:focus:not(:focus-visible),
+  .release-toggle:focus:not(:focus-visible),
+  .brand:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
+  }
+
+  .legal-switch a:focus:not(:focus-visible),
+  .legal-section-anchor:focus:not(:focus-visible),
+  .legal-link:focus:not(:focus-visible),
+  .footer-links a:focus:not(:focus-visible),
+  .footer-contact-mail:focus:not(:focus-visible),
+  .demo-modal__backdrop:focus:not(:focus-visible) {
+    box-shadow: none;
+  }
+
+  .btn-primary:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-button);
+  }
+
+  .btn-primary:focus-visible::after {
+    opacity: 0;
+  }
+
+  .btn-secondary:focus-visible,
+  .btn-demo:focus-visible {
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+    box-shadow: var(--focus-ring-control);
+  }
+
+  .legal-toc-link:focus-visible,
+  .legal-next:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-control);
+  }
+
+  .icon-toggle button:focus-visible,
+  .legal-switch a:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-control);
+  }
+
+  .nav-link:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-nav);
+  }
+
+  .menu-toggle:focus-visible,
+  .hero-slider-arrow:focus-visible,
+  .legal-section-anchor:focus-visible,
+  .legal-link:focus-visible,
+  .footer-links a:focus-visible,
+  .footer-contact-mail:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-text);
+  }
+
+  .brand:focus-visible {
+    position: relative;
+    z-index: 1;
+    outline: var(--focus-ring-band) solid var(--accent);
+    outline-offset: var(--focus-ring-gap-lg);
+    box-shadow: none;
+  }
+
+  .brand:focus-visible svg {
+    box-shadow: none;
+  }
+
+  .faq-trigger:focus-visible,
+  .release-toggle:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-control-lg);
+  }
+
+  .faq-item:has(.faq-trigger:focus-visible),
+  .release-card.is-collapsible:has(.release-toggle:focus-visible) {
+    overflow: visible;
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    box-shadow: var(--focus-ring-control);
+  }
+
+  .demo-modal__backdrop:focus-visible {
+    box-shadow: var(--focus-ring-overlay);
+  }
+
+  .demo-modal__dialog {
+    overflow: visible;
+  }
 }
 
 img {
@@ -137,21 +270,6 @@ main,
 .site-footer {
   position: relative;
   z-index: 1;
-}
-
-.skip-link {
-  position: absolute;
-  left: -999px;
-  top: 8px;
-  z-index: 50;
-  padding: 8px 14px;
-  border-radius: var(--radius-pill);
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.skip-link:focus {
-  left: 12px;
 }
 
 .page-fx {
@@ -288,12 +406,15 @@ html[data-theme='dark'] .page-fx {
 }
 
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-md);
-  width: fit-content;
-  max-width: 100%;
-  transition: transform var(--duration) var(--ease);
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: var(--radius-pill);
+  transition:
+    transform var(--duration) var(--ease),
+    outline-offset 0.15s ease;
 }
 
 .brand:hover {
@@ -332,7 +453,8 @@ html[data-theme='dark'] .page-fx {
 }
 
 .nav-link {
-  padding: 10px 14px;
+  padding: 12px 18px;
+  margin: -2px -4px;
   border-radius: var(--radius-pill);
   color: var(--text-muted);
   font-weight: 600;
@@ -340,7 +462,8 @@ html[data-theme='dark'] .page-fx {
   transition:
     color var(--duration) var(--ease),
     background-color var(--duration) var(--ease),
-    transform var(--duration) var(--ease);
+    transform var(--duration) var(--ease),
+    box-shadow 0.15s ease;
 }
 
 .nav-link:hover,
@@ -480,6 +603,14 @@ html[data-theme='dark'] .page-fx {
   box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .icon-toggle button[aria-pressed='true']:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-control);
+  }
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -496,7 +627,7 @@ html[data-theme='dark'] .page-fx {
   isolation: isolate;
   transition:
     transform var(--duration) var(--ease),
-    box-shadow var(--duration) var(--ease),
+    box-shadow 0.15s ease,
     filter var(--duration) var(--ease),
     background-color var(--duration) var(--ease),
     border-color var(--duration) var(--ease);
@@ -715,11 +846,6 @@ html[data-theme='dark'] .page-fx {
 .hero-slider-arrow:hover,
 .hero-slider-arrow:focus-visible {
   opacity: 0.72;
-}
-
-.hero-slider-arrow:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .hero-slider-arrow[hidden] {
@@ -1236,6 +1362,7 @@ html.js[data-download-platform='ios'] .download-action--android {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-lg);
+  border-radius: var(--radius-lg);
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1522,6 +1649,14 @@ html.js[data-download-platform='ios'] .download-action--android {
 
 .release-toggle-heading {
   margin: 0;
+}
+
+.release-card.is-collapsible .release-toggle {
+  border-radius: var(--radius-xl);
+}
+
+.release-card.is-collapsible.is-open .release-toggle {
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
 }
 
 .release-toggle {
@@ -1904,6 +2039,14 @@ html.js[data-download-platform='ios'] .download-action--android {
     0 0 0 1px var(--border);
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .legal-switch a[aria-current='page']:focus-visible {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--focus-ring-control);
+  }
+}
+
 .legal-hero h1 {
   max-width: 16ch;
   font-size: clamp(2.2rem, 4vw, 3.15rem);
@@ -2030,7 +2173,8 @@ html.js[data-download-platform='ios'] .download-action--android {
   justify-content: center;
   width: 28px;
   height: 28px;
-  margin-top: 2px;
+  margin: 2px -3px 0;
+  padding: 3px;
   flex-shrink: 0;
   border-radius: 8px;
   color: var(--text-subtle);
@@ -2164,6 +2308,9 @@ html.js[data-download-platform='ios'] .download-action--android {
 }
 
 .legal-link {
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 6px;
   color: var(--accent-text);
   font-weight: 700;
   text-decoration: underline;
@@ -2172,7 +2319,8 @@ html.js[data-download-platform='ios'] .download-action--android {
   transition:
     color var(--duration) var(--ease),
     background-color var(--duration) var(--ease),
-    text-decoration-color var(--duration) var(--ease);
+    text-decoration-color var(--duration) var(--ease),
+    box-shadow 0.15s ease;
 }
 
 .legal-link:hover {
@@ -2506,7 +2654,12 @@ html.js[data-download-platform='ios'] .download-action--android {
   position: relative;
   color: var(--text);
   font-weight: 600;
-  transition: color var(--duration) var(--ease);
+  padding: 2px 6px;
+  margin: -2px -6px;
+  border-radius: 6px;
+  transition:
+    color var(--duration) var(--ease),
+    box-shadow 0.15s ease;
 }
 
 .footer-contact-mail::after {
@@ -2533,9 +2686,15 @@ html.js[data-download-platform='ios'] .download-action--android {
 }
 
 .footer-links a {
+  padding: 4px 8px;
+  margin: -4px -8px;
+  border-radius: 6px;
   color: var(--text-muted);
   font-weight: 600;
-  transition: color var(--duration) var(--ease), transform var(--duration) var(--ease);
+  transition:
+    color var(--duration) var(--ease),
+    transform var(--duration) var(--ease),
+    box-shadow 0.15s ease;
 }
 
 .footer-links a:hover {
@@ -3713,5 +3872,60 @@ body.demo-modal-open {
     animation: none;
     opacity: 0.35;
     transform: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-link,
+  .menu-toggle,
+  .hero-slider-arrow,
+  .faq-trigger,
+  .release-toggle,
+  .brand,
+  .legal-section-anchor,
+  .legal-link,
+  .footer-links a,
+  .footer-contact-mail,
+  .icon-toggle,
+  .icon-toggle button,
+  .legal-switch a,
+  .legal-toc-link,
+  .legal-next,
+  .demo-modal__backdrop,
+  input,
+  textarea,
+  select {
+    transition:
+      opacity 0.15s ease,
+      background-color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease,
+      color 0.15s ease,
+      transform 0.15s ease,
+      filter 0.15s ease;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .nav-link,
+  .menu-toggle,
+  .hero-slider-arrow,
+  .faq-trigger,
+  .release-toggle,
+  .brand,
+  .legal-section-anchor,
+  .legal-link,
+  .footer-links a,
+  .footer-contact-mail,
+  .icon-toggle,
+  .icon-toggle button,
+  .legal-switch a,
+  .legal-toc-link,
+  .legal-next,
+  .demo-modal__backdrop,
+  input,
+  textarea,
+  select {
+    transition: none;
   }
 }

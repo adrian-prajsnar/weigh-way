@@ -76,7 +76,6 @@ const plUrl = absoluteUrl(localePath('pl', page));
       <div class="page-fx-grid"></div>
     </div>
     <div class="scroll-progress" hidden></div>
-    <a class="skip-link" href="#content">{t.skip}</a>
     <slot />
     <DemoModal locale={locale} />
     <script is:inline define:vars={{ baseUrl: import.meta.env.BASE_URL }}>
