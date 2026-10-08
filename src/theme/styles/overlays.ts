@@ -340,6 +340,7 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     },
     tabBarIndicator: {
       position: 'absolute',
+      left: 0,
       top: spacing.sm,
       bottom: spacing.sm,
       backgroundColor: colors.accentSoft,

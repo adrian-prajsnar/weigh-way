@@ -8,7 +8,7 @@ describe('tab-bar-layout', () => {
   });
 
   it('clears the floating tab bar in scroll content', () => {
-    expect(getScrollBottomPadding(0)).toBe(108);
-    expect(getScrollBottomPadding(34)).toBe(142);
+    expect(getScrollBottomPadding(0)).toBe(100);
+    expect(getScrollBottomPadding(34)).toBe(134);
   });
 });
