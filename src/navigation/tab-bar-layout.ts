@@ -8,5 +8,5 @@ export function getTabBarBottomOffset(bottomInset: number): number {
 }
 
 export function getScrollBottomPadding(bottomInset: number): number {
-  return getTabBarBottomOffset(bottomInset) + TAB_BAR_HEIGHT + spacing.xxl;
+  return getTabBarBottomOffset(bottomInset) + TAB_BAR_HEIGHT + spacing.xl;
 }

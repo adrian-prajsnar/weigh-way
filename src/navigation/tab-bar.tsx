@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { useState } from 'react';
-import { LayoutChangeEvent, Pressable, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppWindowDimensions } from '../hooks/use-app-window-dimensions';
 import { getContentFrameWidth } from '../hooks/use-content-frame-width';
@@ -21,36 +21,54 @@ const TAB_ICONS: Record<keyof RootTabParamList, { active: TabIconName; inactive:
   Profile: { active: 'person', inactive: 'person-outline' },
 };
 
+const TAB_INDICATOR_SPRING = { damping: 20, mass: 0.7 };
+
+type TabLayout = {
+  x: number;
+  width: number;
+};
+
 export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const styles = useAppStyles();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useAppWindowDimensions();
-  const [barWidth, setBarWidth] = useState(0);
+  const [tabLayouts, setTabLayouts] = useState<TabLayout[]>([]);
+  const indicatorX = useSharedValue(0);
+  const indicatorWidth = useSharedValue(0);
   const contentFrameWidth = getContentFrameWidth(windowWidth);
   const tabBarWidth =
     typeof contentFrameWidth === 'number' ? contentFrameWidth : windowWidth - spacing.lg * 2;
   const tabBarLeft = (windowWidth - tabBarWidth) / 2;
 
-  const itemWidth =
-    barWidth > 0 ? (barWidth - spacing.sm * 2) / state.routes.length : 0;
+  const handleTabLayout = useCallback((index: number, x: number, width: number) => {
+    setTabLayouts((current) => {
+      const previous = current[index];
+      if (previous?.x === x && previous?.width === width) {
+        return current;
+      }
+
+      const next = [...current];
+      next[index] = { x, width };
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const layout = tabLayouts[state.index];
+    if (!layout) {
+      return;
+    }
+
+    indicatorX.value = withSpring(layout.x, TAB_INDICATOR_SPRING);
+    indicatorWidth.value = withSpring(layout.width, TAB_INDICATOR_SPRING);
+  }, [indicatorWidth, indicatorX, state.index, tabLayouts]);
 
   const indicatorStyle = useAnimatedStyle(() => ({
-    width: itemWidth,
-    opacity: itemWidth > 0 ? 1 : 0,
-    transform: [
-      {
-        translateX: withSpring(spacing.sm + state.index * itemWidth, {
-          damping: 20,
-          mass: 0.7,
-        }),
-      },
-    ],
+    width: indicatorWidth.value,
+    opacity: indicatorWidth.value > 0 ? 1 : 0,
+    transform: [{ translateX: indicatorX.value }],
   }));
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    setBarWidth(event.nativeEvent.layout.width);
-  };
 
   return (
     <View
@@ -61,10 +79,7 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
         left: tabBarLeft,
       }}
     >
-      <Animated.View
-        style={[styles.tabBar, { position: 'relative', width: '100%' }]}
-        onLayout={handleLayout}
-      >
+      <Animated.View style={[styles.tabBar, { position: 'relative', width: '100%' }]}>
       <Animated.View style={[styles.tabBarIndicator, indicatorStyle]} />
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -88,6 +103,10 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
           <Pressable
             key={route.key}
             style={styles.tabBarItem}
+            onLayout={(event) => {
+              const { x, width } = event.nativeEvent.layout;
+              handleTabLayout(index, x, width);
+            }}
             onPress={onPress}
             onLongPress={() =>
               navigation.emit({ type: 'tabLongPress', target: route.key })
