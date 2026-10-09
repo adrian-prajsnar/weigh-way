@@ -11,7 +11,7 @@ describe('buildDemoWebDesktopCss', () => {
     expect(css).toContain('--ww-focus-ring-control');
     expect(css).toContain('--ww-focus-ring-button');
     expect(css).toContain(
-      '--ww-focus-ring-button: inset 0 0 0 2px var(--ww-accent), inset 0 0 0 4px var(--ww-on-accent)',
+      '--ww-focus-ring-button: inset 0 0 0 0.125rem var(--ww-accent), inset 0 0 0 0.25rem var(--ww-on-accent)',
     );
     expect(css).toContain(
       '[role="button"]:not([aria-disabled="true"]):not([data-ww-modal-dismiss="true"]):hover',
@@ -43,8 +43,8 @@ describe('buildDemoWebDesktopCss', () => {
     expect(css).toContain('[data-ww-modal-dismiss="true"]:focus-visible');
     expect(css).toContain('box-shadow: var(--ww-focus-ring-overlay)');
     expect(css).toContain('[data-ww-confirm-dismiss="true"]:focus-visible::after');
-    expect(css).toContain('inset: 8px');
-    expect(css).toContain('border-radius: 20px');
+    expect(css).toContain('inset: 0.5rem');
+    expect(css).toContain('border-radius: 1.25rem');
     expect(css).toContain('[data-ww-confirm-dialog="true"]');
     expect(css).toContain('overflow: visible');
   });

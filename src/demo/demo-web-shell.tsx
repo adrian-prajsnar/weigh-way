@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { pxToRem } from '../theme/css-rem';
 import { DemoViewportProvider } from './demo-viewport-context';
 import { DEMO_PHONE_CORNER_RADIUS, getDemoFrameSize, shouldUseDemoPhoneFrame } from './demo-viewport';
 import { isDemoEmbedded } from './is-demo-embedded';
@@ -38,6 +39,9 @@ function useDemoWebDocumentStyles(active: boolean, embedded: boolean) {
     const style = document.createElement('style');
     style.id = DEMO_WEB_STYLE_ID;
     style.textContent = `
+      html {
+        font-size: 100%;
+      }
       #root {
         display: flex;
         height: 100%;
@@ -133,7 +137,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     ...(Platform.OS === 'web'
       ? {
-          boxShadow: '0 24px 80px rgba(0, 0, 0, 0.45)',
+          boxShadow: `0 ${pxToRem(24)} ${pxToRem(80)} rgba(0, 0, 0, 0.45)`,
         }
       : null),
   },

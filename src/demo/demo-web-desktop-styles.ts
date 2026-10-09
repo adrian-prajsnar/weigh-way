@@ -1,3 +1,4 @@
+import { pxToRem } from '../theme/css-rem';
 import { Palette } from '../theme/tokens';
 import { buildWebFocusRingCssVars } from '../theme/web-focus-ring';
 import { DEMO_EMBEDDED_CLASS, DEMO_EMBEDDED_DRAGGING_CLASS } from './demo-web-embedded-scroll';
@@ -126,9 +127,9 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
       }
 
       [data-ww-text-button="true"] {
-        border-radius: 6px;
-        padding: 3px 6px;
-        margin: -3px -6px;
+        border-radius: ${pxToRem(6)};
+        padding: ${pxToRem(3)} ${pxToRem(6)};
+        margin: ${pxToRem(-3)} ${pxToRem(-6)};
       }
 
       [data-ww-text-button="true"]:focus-visible {
@@ -145,9 +146,9 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
 
       [data-ww-switch="true"] {
         align-self: flex-start;
-        border-radius: 999px;
-        padding: 3px;
-        margin: -3px;
+        border-radius: ${pxToRem(999)};
+        padding: ${pxToRem(3)};
+        margin: ${pxToRem(-3)};
       }
 
       [data-ww-switch="true"]:focus-within {
@@ -187,8 +188,8 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
         content: "";
         position: absolute;
         pointer-events: none;
-        inset: ${CONFIRM_OVERLAY_RING_INSET}px;
-        border-radius: ${DEMO_PHONE_CORNER_RADIUS - CONFIRM_OVERLAY_RING_INSET}px;
+        inset: ${pxToRem(CONFIRM_OVERLAY_RING_INSET)};
+        border-radius: ${pxToRem(DEMO_PHONE_CORNER_RADIUS - CONFIRM_OVERLAY_RING_INSET)};
         box-shadow: var(--ww-focus-ring-overlay);
       }
 

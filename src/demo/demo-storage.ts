@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getTodayDate } from '../format';
+import { getTodayDate, toDateKey } from '../format';
 import { BiologicalSex, HeightEntry, WeightEntry } from '../types';
 import {
   DEMO_BIRTH_DATE,
@@ -15,7 +15,12 @@ type DemoJournal = {
   heightEntries: HeightEntry[];
   birthDate: string | null;
   sex: BiologicalSex | null;
+  seededFor: string;
 };
+
+function getSeedDateKey(): string {
+  return toDateKey(getTodayDate());
+}
 
 function createDefaultJournal(): DemoJournal {
   return {
@@ -23,7 +28,20 @@ function createDefaultJournal(): DemoJournal {
     heightEntries: [...DEMO_HEIGHT_ENTRIES],
     birthDate: DEMO_BIRTH_DATE,
     sex: DEMO_SEX,
+    seededFor: getSeedDateKey(),
   };
+}
+
+function refreshDemoWeightEntries(journal: DemoJournal): DemoJournal {
+  return {
+    ...journal,
+    weightEntries: buildDemoWeightEntries(getTodayDate()),
+    seededFor: getSeedDateKey(),
+  };
+}
+
+function needsWeightReseed(journal: DemoJournal): boolean {
+  return journal.seededFor !== getSeedDateKey();
 }
 
 function sortWeightEntries(entries: WeightEntry[]): WeightEntry[] {
@@ -69,8 +87,31 @@ function isDemoJournal(value: unknown): value is DemoJournal {
     Array.isArray(journal.heightEntries) &&
     journal.heightEntries.every(isHeightEntry) &&
     (journal.birthDate === null || typeof journal.birthDate === 'string') &&
-    (journal.sex === null || journal.sex === 'female' || journal.sex === 'male')
+    (journal.sex === null || journal.sex === 'female' || journal.sex === 'male') &&
+    typeof journal.seededFor === 'string'
   );
+}
+
+function normalizeJournal(journal: DemoJournal): { journal: DemoJournal; didReseed: boolean } {
+  const sorted: DemoJournal = {
+    ...journal,
+    weightEntries: sortWeightEntries(journal.weightEntries),
+    heightEntries: sortHeightEntries(journal.heightEntries),
+  };
+
+  if (!needsWeightReseed(sorted)) {
+    return { journal: sorted, didReseed: false };
+  }
+
+  const refreshed = refreshDemoWeightEntries(sorted);
+  return {
+    journal: {
+      ...refreshed,
+      weightEntries: sortWeightEntries(refreshed.weightEntries),
+      heightEntries: sortHeightEntries(refreshed.heightEntries),
+    },
+    didReseed: true,
+  };
 }
 
 async function loadJournal(): Promise<DemoJournal> {
@@ -89,11 +130,11 @@ async function loadJournal(): Promise<DemoJournal> {
       return journal;
     }
 
-    return {
-      ...parsed,
-      weightEntries: sortWeightEntries(parsed.weightEntries),
-      heightEntries: sortHeightEntries(parsed.heightEntries),
-    };
+    const { journal, didReseed } = normalizeJournal(parsed);
+    if (didReseed) {
+      await saveJournal(journal);
+    }
+    return journal;
   } catch {
     const journal = createDefaultJournal();
     await saveJournal(journal);

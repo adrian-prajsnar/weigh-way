@@ -1,3 +1,4 @@
+import { pxToRem } from './css-rem';
 import { Palette } from './tokens';
 
 export type WebFocusRingVariant = 'control' | 'button' | 'compact' | 'text' | 'switch' | 'overlay';
@@ -9,7 +10,7 @@ const FOCUS_RING_GAP_SPREAD = 2;
 export const WEB_FOCUS_RING_OUTER_SPREAD = 4;
 
 function insetFocusRing(gapColor: string, ringColor: string): string {
-  return `inset 0 0 0 ${FOCUS_RING_GAP_SPREAD}px ${gapColor}, inset 0 0 0 ${WEB_FOCUS_RING_OUTER_SPREAD}px ${ringColor}`;
+  return `inset 0 0 0 ${pxToRem(FOCUS_RING_GAP_SPREAD)} ${gapColor}, inset 0 0 0 ${pxToRem(WEB_FOCUS_RING_OUTER_SPREAD)} ${ringColor}`;
 }
 
 /** Accent gap is listed first so it paints above the outer ring band. */

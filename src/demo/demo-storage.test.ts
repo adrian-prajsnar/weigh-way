@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as format from '../format';
+import { toDateKey } from '../format';
+import { getDemoLatestWeighInDate } from './demo-data';
 import {
   deleteDemoWeightEntry,
   getDemoWeightEntries,
@@ -27,8 +30,31 @@ describe('demo-storage', () => {
   });
 
   it('seeds sample data on first load', async () => {
+    const today = new Date(2026, 9, 8);
+    vi.spyOn(format, 'getTodayDate').mockReturnValue(today);
+
     const entries = await getDemoWeightEntries();
-    expect(entries.length).toBeGreaterThan(0);
+    expect(entries[0]?.date).toBe(toDateKey(getDemoLatestWeighInDate(today)));
+    expect(entries.length).toBe(1000);
+
+    vi.restoreAllMocks();
+  });
+
+  it('reseeds weight entries when the calendar day changes', async () => {
+    const firstDay = new Date(2026, 9, 7);
+    const secondDay = new Date(2026, 9, 8);
+    const todaySpy = vi.spyOn(format, 'getTodayDate');
+    todaySpy.mockReturnValue(firstDay);
+
+    const firstEntries = await getDemoWeightEntries();
+    expect(firstEntries[0]?.date).toBe(toDateKey(getDemoLatestWeighInDate(firstDay)));
+
+    todaySpy.mockReturnValue(secondDay);
+    const secondEntries = await getDemoWeightEntries();
+    expect(secondEntries[0]?.date).toBe(toDateKey(getDemoLatestWeighInDate(secondDay)));
+    expect(secondEntries[0]?.date).not.toBe(firstEntries[0]?.date);
+
+    vi.restoreAllMocks();
   });
 
   it('persists weight upserts and deletes', async () => {
