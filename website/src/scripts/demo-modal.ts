@@ -5,6 +5,8 @@ const CLOSE_ATTR = 'data-demo-close';
 const SKELETON_ATTR = 'data-demo-skeleton';
 const DIALOG_ATTR = 'data-demo-dialog';
 const LOADING_CLASS = 'is-loading';
+const STATUS_TIME_ATTR = 'data-demo-status-time';
+const STATUS_CLOCK_INTERVAL_MS = 30_000;
 
 export type DemoModalLoadingState = {
   isLoading: boolean;
@@ -28,6 +30,27 @@ function getIframe(modal: HTMLElement): HTMLIFrameElement | null {
   return modal.querySelector<HTMLIFrameElement>(`[${IFRAME_ATTR}]`);
 }
 
+export function formatDemoStatusBarTime(date: Date): string {
+  return date.toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function initDemoStatusBarClock(modal: HTMLElement): void {
+  const timeEl = modal.querySelector<HTMLElement>(`[${STATUS_TIME_ATTR}]`);
+  if (!timeEl) {
+    return;
+  }
+
+  const tick = () => {
+    timeEl.textContent = formatDemoStatusBarTime(new Date());
+  };
+
+  tick();
+  window.setInterval(tick, STATUS_CLOCK_INTERVAL_MS);
+}
+
 export function setDemoModalLoading(modal: HTMLElement, loading: boolean): void {
   const state = getDemoModalLoadingState(loading);
   modal.classList.toggle(LOADING_CLASS, state.isLoading);
@@ -41,6 +64,8 @@ export function initDemoModal(): void {
   if (!modal || !demoUrl) {
     return;
   }
+
+  initDemoStatusBarClock(modal);
 
   const iframe = getIframe(modal);
   let previousOverflow = '';

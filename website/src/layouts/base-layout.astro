@@ -5,6 +5,7 @@ import { getMessages, localePath, type SiteLocale, type SitePage } from '../i18n
 import { withBase, absoluteUrl } from '../lib/paths';
 import { buildDownloadPlatformBootstrapScript } from '../lib/download-platform';
 import { buildLanguageRedirectScript, buildThemeBootstrapScript } from '../lib/site-preferences';
+import { buildScreenshotBootstrapScript } from '../lib/screenshot-sync';
 
 type Props = {
   locale: SiteLocale;
@@ -45,6 +46,7 @@ const plUrl = absoluteUrl(localePath('pl', page));
       rel="stylesheet"
     />
     <script is:inline set:html={buildThemeBootstrapScript()} />
+    <script is:inline set:html={buildScreenshotBootstrapScript(import.meta.env.BASE_URL)} />
     <script is:inline set:html={buildDownloadPlatformBootstrapScript()} />
     <script
       is:inline
@@ -78,27 +80,9 @@ const plUrl = absoluteUrl(localePath('pl', page));
     <div class="scroll-progress" hidden></div>
     <slot />
     <DemoModal locale={locale} />
-    <script is:inline define:vars={{ baseUrl: import.meta.env.BASE_URL }}>
-      (function () {
-        function syncScreenshotImages() {
-          var locale = document.documentElement.getAttribute('data-screenshot-locale') || 'en';
-          var theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-          var base = String(baseUrl).replace(/\/$/, '');
-          document.querySelectorAll('[data-screenshot]').forEach(function (img) {
-            var id = img.getAttribute('data-screenshot');
-            if (!id) return;
-            var next = base + '/screenshots/' + id + '-' + theme + '-' + locale + '.webp';
-            if (img.getAttribute('src') !== next) {
-              img.setAttribute('src', next);
-            }
-          });
-        }
+    <script>
+      import { pxToRemCSSValue } from '../scripts/css-length';
 
-        window.syncScreenshotImages = syncScreenshotImages;
-        syncScreenshotImages();
-      })();
-    </script>
-    <script is:inline>
       (function () {
         var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         var header = document.querySelector('.site-header');
@@ -139,6 +123,7 @@ const plUrl = absoluteUrl(localePath('pl', page));
                 reveal.unobserve(entry.target);
               });
             },
+            // IntersectionObserver requires px/% margins; unitless 0 is invalid.
             { threshold: 0.16, rootMargin: '0px 0px -8% 0px' },
           );
           document.querySelectorAll('[data-reveal]').forEach(function (el) {
@@ -155,8 +140,8 @@ const plUrl = absoluteUrl(localePath('pl', page));
           document.querySelectorAll('.card, .release-card, .faq-item, .cta-band, .legal-document').forEach(function (card) {
             card.addEventListener('pointermove', function (event) {
               var rect = card.getBoundingClientRect();
-              card.style.setProperty('--spot-x', event.clientX - rect.left + 'px');
-              card.style.setProperty('--spot-y', event.clientY - rect.top + 'px');
+              card.style.setProperty('--spot-x', pxToRemCSSValue(event.clientX - rect.left));
+              card.style.setProperty('--spot-y', pxToRemCSSValue(event.clientY - rect.top));
             });
           });
         }

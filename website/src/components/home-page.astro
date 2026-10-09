@@ -3,8 +3,7 @@ import DemoButton from './demo-button.astro';
 import PlatformDownloads from './platform-downloads.astro';
 import { getMessages, type SiteLocale } from '../i18n';
 import { getLatestRelease } from '../lib/releases';
-import { absoluteUrl, withBase } from '../lib/paths';
-import { screenshotPath, type ScreenshotId } from '../lib/screenshots';
+import { absoluteUrl } from '../lib/paths';
 
 type Props = { locale: SiteLocale };
 const { locale } = Astro.props;
@@ -105,9 +104,9 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           <img
             class="app-screen-shot screen-shot-image"
             data-screenshot="home"
-            src={withBase(screenshotPath('home', locale, 'light'))}
             alt={homeScreen?.title ?? 'Home'}
             loading="eager"
+            decoding="async"
             width="360"
             height="660"
           />
@@ -214,9 +213,9 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
               <img
                 class="app-screen-shot screen-shot-image"
                 data-screenshot={screen.id}
-                src={withBase(screenshotPath(screen.id as ScreenshotId, locale, 'light'))}
                 alt={screen.title}
                 loading="lazy"
+                decoding="async"
                 width="360"
                 height="660"
               />
@@ -341,7 +340,9 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
 
 <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
 
-<script is:inline>
+<script>
+  import { mediaMaxWidthRem, parseCssLengthToPx, pxToRemCSSValue } from '../scripts/css-length';
+
   (function () {
     document.querySelectorAll('[data-hero-slider]').forEach(function (slider) {
       var viewport = slider.querySelector('.hero-slider-viewport');
@@ -357,7 +358,7 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
       var isDragging = false;
       var isHorizontalSwipe = false;
       var swipeThreshold = 48;
-      var media = window.matchMedia('(max-width: 860px)');
+      var media = window.matchMedia(mediaMaxWidthRem(860));
 
       var copySlide = track.querySelector('.hero-copy');
       var resizeObserver = null;
@@ -373,10 +374,10 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
         var shadowSpread = 0;
         if (media.matches) {
           var spreadValue = getComputedStyle(slider).getPropertyValue('--hero-phone-shadow-spread-y').trim();
-          shadowSpread = spreadValue ? parseFloat(spreadValue) || 48 : 48;
+          shadowSpread = spreadValue ? parseCssLengthToPx(spreadValue) : 48;
         }
-        slider.style.setProperty('--hero-slider-height', height + 'px');
-        viewport.style.height = height + shadowSpread + 'px';
+        slider.style.setProperty('--hero-slider-height', pxToRemCSSValue(height));
+        viewport.style.height = pxToRemCSSValue(height + shadowSpread);
       }
 
       function startHeightObserver() {
@@ -407,7 +408,8 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
         if (!slideWidth) return;
 
         track.classList.toggle('is-dragging', !animate);
-        track.style.transform = 'translateX(' + (-index * slideWidth + offsetPx) + 'px)';
+        track.style.transform =
+          'translateX(' + pxToRemCSSValue(-index * slideWidth + offsetPx) + ')';
       }
 
       function updateSlider() {

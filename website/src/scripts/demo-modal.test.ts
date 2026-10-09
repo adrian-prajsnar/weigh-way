@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { getDemoModalLoadingState } from './demo-modal';
+import { formatDemoStatusBarTime, getDemoModalLoadingState } from './demo-modal';
+
+describe('formatDemoStatusBarTime', () => {
+  it('formats hours and minutes for the status bar', () => {
+    const formatted = formatDemoStatusBarTime(new Date(2026, 2, 9, 9, 41));
+    expect(formatted).toMatch(/9:41/);
+  });
+});
 
 describe('getDemoModalLoadingState', () => {
   it('shows the skeleton while the demo iframe is loading', () => {

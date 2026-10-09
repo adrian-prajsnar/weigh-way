@@ -11,11 +11,13 @@ const repoUrl = 'https://github.com/adrian-prajsnar/weigh-way';
 
 <section class="page-hero">
   <div class="section-inner is-visible" data-reveal>
-    <h1>{page.title}</h1>
+    <div class="page-hero__head">
+      <h1>{page.title}</h1>
+      <div class="hero-actions page-hero__actions">
+        <DemoButton label={page.demoLink} />
+      </div>
+    </div>
     <p class="section-lead">{page.lead}</p>
-    <p class="hero-actions">
-      <DemoButton label={page.demoLink} />
-    </p>
   </div>
 </section>
 

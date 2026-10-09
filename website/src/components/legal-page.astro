@@ -134,13 +134,15 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
 </div>
 
 <script>
+  import { mediaMaxWidthRem } from '../scripts/css-length';
+
   (function () {
     var sections = document.querySelectorAll('[data-legal-section]');
     var links = document.querySelectorAll('[data-toc-target]');
     var list = document.querySelector('.legal-toc-list');
     var slider = document.querySelector('.legal-toc-slider');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var sliderQuery = window.matchMedia('(max-width: 980px)');
+    var sliderQuery = window.matchMedia(mediaMaxWidthRem(980));
 
     function isSliderMode() {
       return sliderQuery.matches;

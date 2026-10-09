@@ -1,3 +1,4 @@
+import { mediaMaxWidthRem } from './css-length';
 import {
   LANGUAGE_STORAGE_KEY,
   SCROLL_STORAGE_KEY,
@@ -246,7 +247,7 @@ export function initSiteHeader(): void {
   const menuToggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
   const menuOverlay = document.querySelector<HTMLElement>('[data-menu-overlay]');
   const mobileMenu = document.getElementById('site-menu');
-  const menuMq = window.matchMedia('(max-width: 900px)');
+  const menuMq = window.matchMedia(mediaMaxWidthRem(900));
 
   function syncMenuA11y(open: boolean): void {
     if (!mobileMenu) {
