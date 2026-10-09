@@ -1,23 +1,49 @@
 ---
 import DemoButton from './demo-button.astro';
 import { getMessages, type SiteLocale } from '../i18n';
+import { withBase } from '../lib/paths';
 
 type Props = { locale: SiteLocale };
 const { locale } = Astro.props;
 const t = getMessages(locale);
 const page = t.geeks;
 const repoUrl = 'https://github.com/adrian-prajsnar/weigh-way';
+const heroImageSrc = withBase('/images/geeks-hero.webp');
+const rlsIcons = [
+  '<circle cx="8" cy="15" r="4"/><path d="M11 13l8-8M16 5h3v3"/>',
+  '<circle cx="12" cy="8" r="3"/><path d="M5 19c1.2-3.4 3.8-5 7-5s5.8 1.6 7 5"/>',
+  '<path d="M5 7h14M9 7V5h6v2M8 7l1 13h6l1-13"/>',
+];
+const pipelineIcons = [
+  '<circle cx="7" cy="7" r="2.2"/><circle cx="17" cy="17" r="2.2"/><path d="M9 8.2c2.4 1 3.6 2.6 4.8 5.6"/>',
+  '<path d="M8 6.5h8l2 2.2V18H8z"/><path d="M16 6.5V9h2.2"/>',
+  '<rect x="7" y="4.5" width="10" height="15" rx="2"/><path d="M11 17.2h2"/>',
+  '<rect x="6" y="5" width="12" height="14" rx="2"/><path d="M9 8.5h6M9 11.5h4"/>',
+  '<circle cx="12" cy="12" r="7"/><path d="M5.5 12h13M12 5.2c2 2.1 3 4.3 3 6.8s-1 4.7-3 6.8c-2-2.1-3-4.3-3-6.8s1-4.7 3-6.8"/>',
+];
 ---
 
-<section class="page-hero">
-  <div class="section-inner is-visible" data-reveal>
-    <div class="page-hero__head">
-      <h1>{page.title}</h1>
-      <div class="hero-actions page-hero__actions">
+<section class="geeks-hero" aria-labelledby="geeks-hero-title">
+  <div class="geeks-hero__media">
+    <img
+      src={heroImageSrc}
+      alt={page.heroImageAlt}
+      width="1800"
+      height="1200"
+      loading="eager"
+      decoding="async"
+      fetchpriority="high"
+    />
+  </div>
+  <div class="section-inner geeks-hero__inner">
+    <div class="geeks-hero__copy is-visible" data-reveal>
+      <p class="eyebrow">{page.eyebrow}</p>
+      <h1 id="geeks-hero-title"><span class="headline-accent">{page.title}</span></h1>
+      <p class="geeks-hero__lead">{page.lead}</p>
+      <div class="hero-actions">
         <DemoButton label={page.demoLink} />
       </div>
     </div>
-    <p class="section-lead">{page.lead}</p>
   </div>
 </section>
 
@@ -52,7 +78,30 @@ const repoUrl = 'https://github.com/adrian-prajsnar/weigh-way';
           ))
         }
       </ul>
-      <p class="eng-note">{page.rls}</p>
+      <aside class="eng-rls" data-reveal aria-label={page.rlsTitle}>
+        <p class="eng-rls__kicker">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="5" y="11" width="14" height="9" rx="2"></rect>
+            <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
+          </svg>
+          {page.rlsTitle}
+        </p>
+        <ul class="eng-rls__grid">
+          {
+            page.rlsPoints.map((point, index) => (
+              <li>
+                <span class="eng-rls__icon" aria-hidden="true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <Fragment set:html={rlsIcons[index]} />
+                  </svg>
+                </span>
+                <span class="eng-rls__label">{point.title}</span>
+                <span class="eng-rls__body">{point.body}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </aside>
     </div>
   </div>
 </section>
@@ -81,26 +130,56 @@ const repoUrl = 'https://github.com/adrian-prajsnar/weigh-way';
 </section>
 
 <section class="section" aria-labelledby="geeks-shipping">
-  <div class="section-inner">
-    <div class="section-heading" data-reveal>
-      <h2 id="geeks-shipping">{page.shippingTitle}</h2>
-      <p class="section-lead">{page.shippingLead}</p>
+  <div class="section-inner shipping-layout">
+    <div class="shipping-copy">
+      <div class="section-heading" data-reveal>
+        <h2 id="geeks-shipping">{page.shippingTitle}</h2>
+        <p class="section-lead">{page.shippingLead}</p>
+      </div>
+      <ol class="eng-pipeline">
+        {
+          page.shipping.map((step, index) => (
+            <li data-reveal style={`--reveal-delay: ${index * 60}ms`}>
+              <span class="eng-index" aria-hidden="true">
+                {index + 1}
+              </span>
+              <div>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ol>
     </div>
-    <ol class="eng-pipeline">
-      {
-        page.shipping.map((step, index) => (
-          <li data-reveal style={`--reveal-delay: ${index * 60}ms`}>
-            <span class="eng-index" aria-hidden="true">
-              {index + 1}
-            </span>
-            <div>
-              <h3>{step.title}</h3>
-              <p>{step.body}</p>
-            </div>
-          </li>
-        ))
-      }
-    </ol>
+    <figure class="pipeline-art" data-reveal style="--reveal-delay: 80ms" aria-hidden="true">
+      <ol class="pipeline-art__flow">
+        {
+          page.pipelineArt.map((step, index) => (
+            <li class:list={['pipeline-art__step', { 'is-last': index === page.pipelineArt.length - 1 }]}>
+              <span class="pipeline-art__node">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <Fragment set:html={pipelineIcons[index]} />
+                </svg>
+              </span>
+              <span class="pipeline-art__card">
+                <span class="pipeline-art__title">{step.title}</span>
+                <span class="pipeline-art__detail">{step.detail}</span>
+              </span>
+            </li>
+          ))
+        }
+      </ol>
+    </figure>
   </div>
 </section>
 

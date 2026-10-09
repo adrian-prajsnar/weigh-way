@@ -128,19 +128,22 @@ export type SiteMessages = {
     eyebrow: string;
     title: string;
     lead: string;
+    heroImageAlt: string;
     demoLink: string;
     architectureTitle: string;
     architectureLead: string;
     nodes: { title: string; body: string }[];
     tablesTitle: string;
     tables: { name: string; body: string }[];
-    rls: string;
+    rlsTitle: string;
+    rlsPoints: { title: string; body: string }[];
     decisionsTitle: string;
     decisionsLead: string;
     tradeoffLabel: string;
     decisions: { title: string; body: string; tradeoff: string }[];
     shippingTitle: string;
     shippingLead: string;
+    pipelineArt: { title: string; detail: string }[];
     shipping: { title: string; body: string }[];
     limitsTitle: string;
     limitsLead: string;
@@ -545,10 +548,11 @@ const en: SiteMessages = {
     loading: 'Loading sample journal',
   },
   geeks: {
-    eyebrow: 'For Geeks',
+    eyebrow: 'How it’s built',
     title: 'For Geeks',
     lead:
       'A small product with accounts, a database, and a release pipeline. This page is the short version of the decisions behind it.',
+    heroImageAlt: 'Neon-lit geek desk with a retro computer, handheld console, and joystick',
     demoLink: 'Try WeighWay',
     architectureTitle: 'Where the data lives',
     architectureLead:
@@ -582,7 +586,21 @@ const en: SiteMessages = {
         body: 'Optional birth date and sex. They change how BMI is classified. A weight can be logged without them.',
       },
     ],
-    rls: 'Select, insert, update, and delete on each table require the signed-in user to match the row. Deleting the account runs a database function that removes the auth user. Weight, height, and profile rows go with it. Anonymous visitors cannot run that function.',
+    rlsTitle: 'Row-level security',
+    rlsPoints: [
+      {
+        title: 'Policies',
+        body: 'The public anon key is enough. Table policies, not the screen, decide each row.',
+      },
+      {
+        title: 'Own rows',
+        body: 'A signed-in user only sees and changes their weight, height, and profile.',
+      },
+      {
+        title: 'Delete account',
+        body: 'A database function removes the auth user and those rows. Visitors cannot call it.',
+      },
+    ],
     decisionsTitle: 'Decisions',
     decisionsLead: 'Each one is a constraint. The product stays small because these stayed in place.',
     tradeoffLabel: 'Tradeoff',
@@ -614,6 +632,13 @@ const en: SiteMessages = {
     ],
     shippingTitle: 'How a version ships',
     shippingLead: 'A push to main is the release, when the commits call for one.',
+    pipelineArt: [
+      { title: 'main', detail: 'push' },
+      { title: 'semver', detail: 'tag' },
+      { title: 'APK', detail: 'android' },
+      { title: 'IPA', detail: 'ios' },
+      { title: 'site', detail: 'shipped' },
+    ],
     shipping: [
       {
         title: 'Version',

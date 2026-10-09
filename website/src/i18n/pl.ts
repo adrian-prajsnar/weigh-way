@@ -399,10 +399,11 @@ const pl: SiteMessages = {
     loading: 'Ładowanie przykładowego dziennika',
   },
   geeks: {
-    eyebrow: 'Dla Geeków',
+    eyebrow: 'Jak to powstało',
     title: 'Dla Geeków',
     lead:
       'Mały produkt z kontami użytkowników, bazą danych i własnym procesem publikowania wersji. Ta strona to skrót najważniejszych decyzji, które stoją za jego działaniem.',
+    heroImageAlt: 'Neonowe biurko geeka: retro komputer, konsola przenośna i joystick',
     demoLink: 'Wypróbuj WeighWay',
     architectureTitle: 'Gdzie przechowywane są dane',
     architectureLead:
@@ -442,8 +443,24 @@ const pl: SiteMessages = {
           'Opcjonalna data urodzenia i płeć. Te dane wpływają na sposób klasyfikowania BMI. Pomiar masy można zapisać również bez ich podawania.',
       },
     ],
-    rls:
-      'Odczyt, dodawanie, edycja i usuwanie rekordów w każdej tabeli wymaga, aby zalogowany użytkownik był właścicielem danego rekordu. Usunięcie konta uruchamia funkcję w bazie danych, która usuwa użytkownika z systemu uwierzytelniania. Razem z nim usuwane są wpisy dotyczące masy, wzrostu i profilu. Anonimowy użytkownik nie może uruchomić tej funkcji.',
+    rlsTitle: 'Bezpieczeństwo na poziomie wierszy (RLS)',
+    rlsPoints: [
+      {
+        title: 'Zasady dostępu',
+        body:
+          'Wystarczy publiczny klucz anon. O tym, które wiersze można odczytywać i modyfikować, decydują reguły w bazie danych, a nie interfejs aplikacji.',
+      },
+      {
+        title: 'Tylko własne dane',
+        body:
+          'Zalogowany użytkownik może przeglądać i zmieniać wyłącznie własne dane dotyczące wagi, wzrostu i profilu.',
+      },
+      {
+        title: 'Usuwanie konta',
+        body:
+          'Funkcja w bazie danych usuwa konto użytkownika oraz powiązane z nim dane. Niezalogowani użytkownicy nie mogą jej wywołać.',
+      },
+    ],
     decisionsTitle: 'Decyzje',
     decisionsLead:
       'Każda z nich wyznacza pewne ramy. Produkt pozostaje mały i prosty właśnie dlatego, że tych założeń się trzymamy.',
@@ -481,6 +498,13 @@ const pl: SiteMessages = {
     shippingTitle: 'Jak trafia do użytkownika nowa wersja',
     shippingLead:
       'Push do brancha main oznacza wydanie nowej wersji, o ile rodzaj commitów tego wymaga.',
+    pipelineArt: [
+      { title: 'main', detail: 'push' },
+      { title: 'semver', detail: 'tag' },
+      { title: 'APK', detail: 'android' },
+      { title: 'IPA', detail: 'ios' },
+      { title: 'strona', detail: 'wydane' },
+    ],
     shipping: [
       {
         title: 'Wersjonowanie',
