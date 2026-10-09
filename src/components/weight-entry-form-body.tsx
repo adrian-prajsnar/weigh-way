@@ -64,6 +64,10 @@ export function WeightEntryFormBody({
   const weightInputRef = useRef<TextInput>(null);
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
+  const existingEntryForDate = useMemo(
+    () => entries.find((entry) => entry.date === selectedDateKey),
+    [entries, selectedDateKey],
+  );
   const weightPlaceholder = units === 'imperial' ? '0.0' : '0.00';
   const heightAtDate = getHeightAtDate(heightEntries, selectedDateKey);
   const parsedWeightKg = useMemo(
@@ -89,9 +93,10 @@ export function WeightEntryFormBody({
   }, [initialDate]);
 
   useEffect(() => {
-    const existing = entries.find((entry) => entry.date === selectedDateKey);
-    setWeightInput(existing ? formatWeightValue(existing.weightKg, units) : '');
-  }, [entries, selectedDateKey, units]);
+    setWeightInput(
+      existingEntryForDate ? formatWeightValue(existingEntryForDate.weightKg, units) : '',
+    );
+  }, [existingEntryForDate, units]);
 
   useEffect(() => {
     if (!autoFocusWeight) {
@@ -119,6 +124,11 @@ export function WeightEntryFormBody({
     const weightKg = parseWeightInput(weightInput, units);
     if (weightKg === null) {
       showError(getWeightRangeMessage(units));
+      return;
+    }
+
+    if (existingEntryForDate !== undefined && existingEntryForDate.weightKg === weightKg) {
+      onSaveSuccess?.();
       return;
     }
 
@@ -209,12 +219,11 @@ export function WeightEntryFormBody({
               bmi={previewBmi}
               showUnavailable={heightAtDate === null}
               onPress={() => {
-                const existing = entries.find((entry) => entry.date === selectedDateKey);
                 openWeighIn({
                   date: selectedDateKey,
                   weightKg: parsedWeightKg,
-                  createdAt: existing?.createdAt ?? null,
-                  updatedAt: existing?.updatedAt ?? null,
+                  createdAt: existingEntryForDate?.createdAt ?? null,
+                  updatedAt: existingEntryForDate?.updatedAt ?? null,
                 });
               }}
             />

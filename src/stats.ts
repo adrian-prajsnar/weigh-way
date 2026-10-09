@@ -452,7 +452,7 @@ export function getTrendRows(
     }
   }
 
-  return rows;
+  return rows.filter((row) => hasTrendData(row.stats));
 }
 
 export function getComparison(

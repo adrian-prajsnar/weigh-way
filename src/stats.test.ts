@@ -117,6 +117,30 @@ describe('getTrendRows', () => {
     expect(rows[0].stats.average).toBe(76.5);
     expect(rows[0].deltaToOlder).toBe(-0.5);
   });
+
+  it('omits days without a weigh-in from daily trend rows', () => {
+    const rows = getTrendRows(
+      entries,
+      'day',
+      { start: '2024-06-01', end: '2024-06-03' },
+    );
+
+    expect(rows.map((row) => row.range.start)).toEqual(['2024-06-02', '2024-06-01']);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].deltaToOlder).toBe(-0.5);
+  });
+
+  it('omits weeks without weigh-ins from weekly trend rows', () => {
+    const rows = getTrendRows(
+      entries,
+      'week',
+      { start: '2024-06-01', end: '2024-06-16' },
+    );
+
+    expect(rows.every((row) => row.stats.count > 0)).toBe(true);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].stats.average).toBe(76.75);
+  });
 });
 
 describe('getComparison', () => {
