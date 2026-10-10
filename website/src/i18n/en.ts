@@ -136,6 +136,7 @@ export type SiteMessages = {
     tablesTitle: string;
     tables: { name: string; body: string }[];
     rlsTitle: string;
+    rlsLead: string;
     rlsPoints: { title: string; body: string }[];
     decisionsTitle: string;
     decisionsLead: string;
@@ -587,6 +588,8 @@ const en: SiteMessages = {
       },
     ],
     rlsTitle: 'Row-level security',
+    rlsLead:
+      'The mobile app ships with the public anon key. Postgres policies, not UI checks, decide which rows each signed-in user can read or change.',
     rlsPoints: [
       {
         title: 'Policies',

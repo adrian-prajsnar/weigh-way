@@ -78,35 +78,44 @@ const pipelineIcons = [
           ))
         }
       </ul>
-      <aside class="eng-rls" data-reveal aria-label={page.rlsTitle}>
-        <p class="eng-rls__kicker">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="5" y="11" width="14" height="9" rx="2"></rect>
-            <path d="M8 11V8a4 4 0 0 1 8 0v3"></path>
-          </svg>
-          {page.rlsTitle}
-        </p>
-        <ul class="eng-rls__grid">
-          {
-            page.rlsPoints.map((point, index) => (
-              <li>
-                <span class="eng-rls__icon" aria-hidden="true">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                    <Fragment set:html={rlsIcons[index]} />
-                  </svg>
-                </span>
-                <span class="eng-rls__label">{point.title}</span>
-                <span class="eng-rls__body">{point.body}</span>
-              </li>
-            ))
-          }
-        </ul>
-      </aside>
     </div>
   </div>
 </section>
 
-<section class="section section-alt" aria-labelledby="geeks-decisions">
+<section class="section section-alt" aria-labelledby="geeks-rls">
+  <div class="section-inner">
+    <div class="section-heading" data-reveal>
+      <h2 id="geeks-rls">{page.rlsTitle}</h2>
+      <p class="section-lead">{page.rlsLead}</p>
+    </div>
+    <div class="highlight-grid">
+      {
+        page.rlsPoints.map((point, index) => (
+          <article class="card eng-rls-card" data-reveal style={`--reveal-delay: ${index * 80}ms`}>
+            <span class="eng-rls__icon" aria-hidden="true">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <Fragment set:html={rlsIcons[index]} />
+              </svg>
+            </span>
+            <h3>{point.title}</h3>
+            <p>{point.body}</p>
+          </article>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<section class="section" aria-labelledby="geeks-decisions">
   <div class="section-inner">
     <div class="section-heading" data-reveal>
       <h2 id="geeks-decisions">{page.decisionsTitle}</h2>
@@ -129,7 +138,7 @@ const pipelineIcons = [
   </div>
 </section>
 
-<section class="section" aria-labelledby="geeks-shipping">
+<section class="section section-alt" aria-labelledby="geeks-shipping">
   <div class="section-inner shipping-layout">
     <div class="shipping-copy">
       <div class="section-heading" data-reveal>
@@ -183,7 +192,7 @@ const pipelineIcons = [
   </div>
 </section>
 
-<section class="section section-alt" aria-labelledby="geeks-limits">
+<section class="section" aria-labelledby="geeks-limits">
   <div class="section-inner">
     <div class="section-heading" data-reveal>
       <h2 id="geeks-limits">{page.limitsTitle}</h2>

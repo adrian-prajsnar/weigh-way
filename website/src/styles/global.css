@@ -3772,74 +3772,28 @@ html.theme-animating::view-transition-new(root) {
   letter-spacing: -0.02em;
 }
 
-.eng-rls {
-  margin-top: 1.375rem;
-  padding: 1.15rem 1.15rem 0.35rem;
-  border-radius: var(--radius-xl);
-  border: 0.0625rem solid var(--border);
-  background:
-    radial-gradient(90% 80% at 0% 0%, var(--glow), transparent 55%),
-    var(--surface);
-}
-
-.eng-rls__kicker {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.15rem 0.35rem 0.85rem;
-  color: var(--accent-text);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.eng-rls__grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.eng-rls__grid li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  column-gap: 0.75rem;
-  align-content: start;
-  padding: 0.85rem 1rem 1.1rem;
-  border-top: 0.0625rem solid var(--border);
-}
-
-.eng-rls__grid li + li {
-  border-left: 0.0625rem solid var(--border);
-}
-
-.eng-rls__icon {
-  grid-row: span 2;
+.eng-rls-card .eng-rls__icon {
   display: grid;
   place-items: center;
-  width: 2.15rem;
-  height: 2.15rem;
-  margin-top: 0.1rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: 1rem;
   border-radius: 0.7rem;
   color: var(--accent-text);
   background: var(--accent-soft);
 }
 
-.eng-rls__label {
-  color: var(--text);
-  font-size: 0.98rem;
+.eng-rls-card h3 {
+  font-size: 1.12rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.3;
+  line-height: 1.35;
 }
 
-.eng-rls__body {
-  margin-top: 0.3rem;
+.eng-rls-card p {
+  margin-top: 0.75rem;
   color: var(--text-muted);
-  font-size: 0.92rem;
-  line-height: 1.55;
+  font-size: 0.98rem;
+  line-height: 1.7;
 }
 
 .eng-tradeoff {
@@ -4024,13 +3978,8 @@ html.theme-animating::view-transition-new(root) {
 @media (max-width: 53.75rem) {
   .eng-flow,
   .eng-table-list,
-  .eng-rls__grid,
   .shipping-layout {
     grid-template-columns: 1fr;
-  }
-
-  .eng-rls__grid li + li {
-    border-left: none;
   }
 
   .shipping-layout .pipeline-art {

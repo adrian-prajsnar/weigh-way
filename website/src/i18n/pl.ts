@@ -444,6 +444,8 @@ const pl: SiteMessages = {
       },
     ],
     rlsTitle: 'Bezpieczeństwo na poziomie wierszy (RLS)',
+    rlsLead:
+      'Aplikacja korzysta z publicznego klucza anon. To reguły w Postgresie, a nie warstwa interfejsu, decydują, które wiersze zalogowany użytkownik może odczytać lub zmienić.',
     rlsPoints: [
       {
         title: 'Zasady dostępu',

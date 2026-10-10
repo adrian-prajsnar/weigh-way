@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { formatDemoStatusBarTime, getDemoModalLoadingState } from './demo-modal';
+import { formatDemoStatusBarTime, getDemoModalLoadingState, msUntilNextMinute } from './demo-modal';
 
 describe('formatDemoStatusBarTime', () => {
   it('formats hours and minutes for the status bar', () => {
     const formatted = formatDemoStatusBarTime(new Date(2026, 2, 9, 9, 41));
     expect(formatted).toMatch(/9:41/);
+  });
+});
+
+describe('msUntilNextMinute', () => {
+  it('returns the remaining ms in the current minute', () => {
+    expect(msUntilNextMinute(new Date(2026, 2, 9, 9, 41, 12, 340))).toBe(47_660);
   });
 });
 

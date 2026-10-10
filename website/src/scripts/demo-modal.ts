@@ -6,7 +6,6 @@ const SKELETON_ATTR = 'data-demo-skeleton';
 const DIALOG_ATTR = 'data-demo-dialog';
 const LOADING_CLASS = 'is-loading';
 const STATUS_TIME_ATTR = 'data-demo-status-time';
-const STATUS_CLOCK_INTERVAL_MS = 30_000;
 
 export type DemoModalLoadingState = {
   isLoading: boolean;
@@ -37,18 +36,40 @@ export function formatDemoStatusBarTime(date: Date): string {
   });
 }
 
-function initDemoStatusBarClock(modal: HTMLElement): void {
+/** Milliseconds until the next clock minute (status bar only needs minute precision). */
+export function msUntilNextMinute(from: Date): number {
+  const next = new Date(from);
+  next.setSeconds(0, 0);
+  next.setMinutes(next.getMinutes() + 1);
+  return Math.max(1, next.getTime() - from.getTime());
+}
+
+function createDemoStatusBarClock(modal: HTMLElement): { start: () => void; stop: () => void } {
   const timeEl = modal.querySelector<HTMLElement>(`[${STATUS_TIME_ATTR}]`);
   if (!timeEl) {
-    return;
+    return { start: () => {}, stop: () => {} };
   }
+
+  let timer: number | undefined;
 
   const tick = () => {
     timeEl.textContent = formatDemoStatusBarTime(new Date());
+    timer = window.setTimeout(tick, msUntilNextMinute(new Date()));
   };
 
-  tick();
-  window.setInterval(tick, STATUS_CLOCK_INTERVAL_MS);
+  const stop = () => {
+    if (timer !== undefined) {
+      window.clearTimeout(timer);
+      timer = undefined;
+    }
+  };
+
+  const start = () => {
+    stop();
+    tick();
+  };
+
+  return { start, stop };
 }
 
 export function setDemoModalLoading(modal: HTMLElement, loading: boolean): void {
@@ -65,7 +86,7 @@ export function initDemoModal(): void {
     return;
   }
 
-  initDemoStatusBarClock(modal);
+  const statusBarClock = createDemoStatusBarClock(modal);
 
   const iframe = getIframe(modal);
   let previousOverflow = '';
@@ -105,9 +126,12 @@ export function initDemoModal(): void {
     if (location.hash !== '#demo') {
       history.pushState(null, '', '#demo');
     }
+
+    statusBarClock.start();
   }
 
   function closeModal(): void {
+    statusBarClock.stop();
     modal.hidden = true;
     document.body.classList.remove('demo-modal-open');
     document.body.style.overflow = previousOverflow;
