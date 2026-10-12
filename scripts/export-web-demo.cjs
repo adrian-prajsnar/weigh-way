@@ -15,7 +15,6 @@ function syncDemoToWebsitePublic() {
 const env = {
   ...process.env,
   EXPO_PUBLIC_DEMO: 'true',
-  EXPO_PUBLIC_DEV: 'false',
   EXPO_PUBLIC_SUPABASE_URL: 'https://demo.invalid',
   EXPO_PUBLIC_SUPABASE_ANON_KEY: 'demo-public-anon-key',
 };

@@ -89,7 +89,6 @@ export default {
     confirmEmailFirst: 'Confirm your email first. Check your inbox, then try again.',
     invalidCredentials: 'Invalid email or password.',
     signInFailed: 'Could not sign in.',
-    devEmailRequired: 'Local dev requires a "+dev" email (e.g. you+dev@example.com).',
     email: 'Email',
     emailPlaceholder: 'you@example.com',
     showPassword: 'Show password',
@@ -287,6 +286,9 @@ export default {
     showBmiHint: 'Calculated from your height on that weigh-in date.',
     showBmiNoHeightHint: 'BMI won’t be shown until you add your height.',
     session: 'Security',
+    exportJournal: 'Export your weigh-ins',
+    exportReady: 'Weigh-ins export ready.',
+    exportFailed: 'Could not export weigh-ins.',
     signOut: 'Sign out',
     signOutConfirm: 'Sign out of your account?',
     signedOut: 'Signed out.',
@@ -321,6 +323,8 @@ export default {
     couldNotLoadProfile: 'Could not load profile.',
     mustBeSignedIn: 'You must be signed in.',
     noConnection: 'No internet connection. Check your network and try again.',
+    localDevConnection:
+      'Cannot reach local Supabase. Start Docker, run npm run db:start (and npm run db:reset if needed). On a phone, use your PC’s LAN IP in .env instead of 127.0.0.1, then restart Expo with -c.',
     sessionExpired: 'Your session expired. Sign in again.',
     databasePermission: 'Could not load data. Please try again later.',
     databasePermissionDev:

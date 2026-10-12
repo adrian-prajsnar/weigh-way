@@ -31,6 +31,9 @@ import { LanguageProvider } from './src/i18n/language-context';
 import { UnitProvider } from './src/context/unit-context';
 import { ThemeProvider, useTheme } from './src/theme/theme-context';
 import { fontFamily } from './src/theme/tokens';
+import { initErrorReporting, wrapRoot } from './src/sentry';
+
+initErrorReporting();
 
 function AppNavigation({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { colors, scheme } = useTheme();
@@ -127,7 +130,7 @@ function AppShell() {
   );
 }
 
-export default function App() {
+function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
@@ -143,3 +146,5 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+export default wrapRoot(App);

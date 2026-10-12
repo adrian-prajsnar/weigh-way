@@ -1,5 +1,6 @@
--- Migration: YYYY-MM-DD-short-description.sql
--- Copy this file to supabase/migrations/ before editing.
+-- Migration: YYYYMMDDHHmmss_short-description.sql (Supabase CLI; UTC timestamp)
+-- Create with: npx supabase migration new short-description
+-- Or copy this file to supabase/migrations/ with a new timestamp prefix before editing.
 --
 -- RULES (see AGENTS.md → Database migrations):
 -- - Never DROP TABLE / TRUNCATE / DELETE without a scoped WHERE on live data tables.

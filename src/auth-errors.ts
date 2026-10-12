@@ -1,4 +1,5 @@
 import { t } from './i18n';
+import { isLocalSupabaseEnvUrl } from './supabase/local-supabase-env';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
@@ -16,10 +17,16 @@ export function isNetworkError(error: unknown): boolean {
 }
 
 function mapNetworkError(error: unknown): string | null {
-  if (isNetworkError(error)) {
-    return t('errors.noConnection');
+  if (!isNetworkError(error)) {
+    return null;
   }
-  return null;
+
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  if (typeof __DEV__ !== 'undefined' && __DEV__ && isLocalSupabaseEnvUrl(url)) {
+    return t('errors.localDevConnection');
+  }
+
+  return t('errors.noConnection');
 }
 
 export function isEmailNotConfirmedError(error: unknown): boolean {
@@ -79,10 +86,6 @@ function getAuthErrorMessage(error: unknown): string | null {
 
 export function formatGoogleSignInError(error: unknown): string {
   const message = getAuthErrorMessage(error);
-  if (message === t('auth.devEmailRequired')) {
-    return message;
-  }
-
   const network = mapNetworkError(error);
   if (network) {
     return network;

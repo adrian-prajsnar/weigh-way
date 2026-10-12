@@ -91,7 +91,6 @@ const pl = {
     confirmEmailFirst: 'Najpierw potwierdź e-mail. Sprawdź skrzynkę i spróbuj ponownie.',
     invalidCredentials: 'Nieprawidłowy e-mail lub hasło.',
     signInFailed: 'Nie udało się zalogować.',
-    devEmailRequired: 'Lokalnie wymagany e-mail z „+dev” (np. ty+dev@example.com).',
     email: 'E-mail',
     emailPlaceholder: 'jan@example.com',
     showPassword: 'Pokaż hasło',
@@ -296,6 +295,9 @@ const pl = {
     showBmiHint: 'Liczone na podstawie wzrostu obowiązującego w dniu pomiaru.',
     showBmiNoHeightHint: 'BMI nie będzie widoczne, dopóki nie dodasz wzrostu.',
     session: 'Bezpieczeństwo',
+    exportJournal: 'Eksportuj swoje pomiary',
+    exportReady: 'Eksport pomiarów gotowy.',
+    exportFailed: 'Nie udało się wyeksportować pomiarów.',
     signOut: 'Wyloguj się',
     signOutConfirm: 'Wylogować się z konta?',
     signedOut: 'Wylogowano.',
@@ -330,6 +332,8 @@ const pl = {
     couldNotLoadProfile: 'Nie udało się załadować profilu.',
     mustBeSignedIn: 'Zaloguj się, aby kontynuować.',
     noConnection: 'Brak połączenia z internetem. Sprawdź sieć i spróbuj ponownie.',
+    localDevConnection:
+      'Brak połączenia z lokalnym Supabase. Uruchom Docker, npm run db:start (oraz npm run db:reset, jeśli trzeba). Na telefonie ustaw w .env IP komputera zamiast 127.0.0.1 i uruchom Expo ponownie z -c.',
     sessionExpired: 'Sesja wygasła. Zaloguj się ponownie.',
     databasePermission: 'Nie udało się wczytać danych. Spróbuj ponownie później.',
     databasePermissionDev:

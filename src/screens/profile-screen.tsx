@@ -2,8 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
+  Share,
   Text,
   View,
 } from 'react-native';
@@ -35,10 +38,30 @@ import { isDemoMode } from '../demo/is-demo-mode';
 import { BiologicalSex } from '../types';
 import { getTodayDate, toDateKey } from '../format';
 import { hasAnyHeight } from '../height';
+import {
+  buildJournalJson,
+  buildWeighInsCsv,
+  EXPORT_JSON_FILENAME,
+  WEIGH_INS_CSV_FILENAME,
+} from '../journal-export';
 import { LanguagePreference } from '../storage/language-preference';
 import { ThemePreference } from '../storage/theme-preference';
 import { useAppStyles } from '../theme/styles';
 import { useColors, useTheme } from '../theme/theme-context';
+
+function waitForExportUi(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(() => resolve());
+          return;
+        }
+        setTimeout(() => resolve(), 0);
+      });
+    });
+  });
+}
 
 function formatMemberSince(isoDate: string | undefined, localeTag: string, emDash: string): string {
   if (!isoDate) {
@@ -100,6 +123,7 @@ export function ProfileScreen({
   const dateLocale = getDateLocale(locale);
   const emDash = t('common.emDash');
   const appVersion = Constants.expoConfig?.version ?? emDash;
+  const [isExporting, setIsExporting] = useState(false);
 
   const languageOptions = useMemo<SegmentedOption<LanguagePreference>[]>(
     () => [
@@ -149,6 +173,51 @@ export function ProfileScreen({
         }
       })();
     });
+  };
+
+  const handleExportJournal = () => {
+    if (isExporting) {
+      return;
+    }
+    void (async () => {
+      setIsExporting(true);
+      await waitForExportUi();
+      try {
+        const json = buildJournalJson({
+          weightEntries: entries,
+          heightEntries,
+          birthDate,
+          sex,
+          now: new Date(),
+        });
+        const csv = buildWeighInsCsv(entries);
+        if (Platform.OS === 'web') {
+          if (typeof document === 'undefined') {
+            throw new Error('document unavailable');
+          }
+          for (const [filename, content, mimeType] of [
+            [EXPORT_JSON_FILENAME, json, 'application/json'],
+            [WEIGH_INS_CSV_FILENAME, csv, 'text/csv'],
+          ] as const) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = filename;
+            anchor.click();
+            URL.revokeObjectURL(url);
+          }
+        } else {
+          await Share.share({ message: json, title: EXPORT_JSON_FILENAME });
+          await Share.share({ message: csv, title: WEIGH_INS_CSV_FILENAME });
+        }
+        showSuccess(t('profile.exportReady'));
+      } catch {
+        showError(t('profile.exportFailed'));
+      } finally {
+        setIsExporting(false);
+      }
+    })();
   };
 
   const handleDeleteAccount = () => {
@@ -376,6 +445,21 @@ export function ProfileScreen({
             disabled={demoMode}
           >
             <Text style={styles.secondaryButtonText}>{t('profile.signOut')}</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.secondaryButton,
+              isExporting && styles.buttonDisabled,
+              pressed && !isExporting && styles.buttonPressed,
+            ]}
+            onPress={handleExportJournal}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <ActivityIndicator color={colors.accent} />
+            ) : (
+              <Text style={styles.secondaryButtonText}>{t('profile.exportJournal')}</Text>
+            )}
           </Pressable>
           <Pressable
             style={({ pressed }) => [

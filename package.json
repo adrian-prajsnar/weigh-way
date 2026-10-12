@@ -10,6 +10,7 @@
     "@react-navigation/bottom-tabs": "^7.18.18",
     "@react-navigation/native": "^7.3.18",
     "@react-navigation/native-stack": "^7.18.10",
+    "@sentry/react-native": "~7.11.0",
     "@supabase/supabase-js": "^2.112.4",
     "expo": "~57.0.24",
     "expo-auth-session": "~57.0.12",
@@ -61,7 +62,9 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "export-web-demo": "node scripts/export-web-demo.cjs"
+    "export-web-demo": "node scripts/export-web-demo.cjs",
+    "db:start": "npx supabase start",
+    "db:reset": "npx supabase db reset"
   },
   "private": true
 }

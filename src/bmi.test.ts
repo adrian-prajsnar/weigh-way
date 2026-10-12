@@ -24,7 +24,39 @@ describe('classifyBmiValue', () => {
       date: '2024-01-01',
       sex: 'male',
     });
+    expect(info.classification).toBe('adult');
     expect(info.category).toBe('obese');
+    expect(info.percentile).toBeNull();
+  });
+
+  it('uses adult categories at age 20 with null percentile (BMI 22 normal)', () => {
+    const info = classifyBmiValue(22, {
+      birthDate: '2004-01-01',
+      date: '2024-01-01',
+      sex: 'male',
+    });
+    expect(info.classification).toBe('adult');
+    expect(info.category).toBe('normal');
+    expect(info.percentile).toBeNull();
+  });
+
+  it('male 24 months at LMS median M is ~50th percentile (CDC row 24)', () => {
+    const birthDate = '2014-01-01';
+    const weighInDate = '2016-01-01';
+    const bmiAtMedian = 16.57502768;
+
+    const info = classifyBmiValue(bmiAtMedian, {
+      birthDate,
+      date: weighInDate,
+      sex: 'male',
+    });
+
+    expect(info.classification).toBe('bmiForAge');
+    expect(info.classification).not.toBe('adult');
+    expect(info.category).toBe('normal');
+    expect(info.percentile).not.toBeNull();
+    expect(info.percentile!).toBeGreaterThanOrEqual(48.5);
+    expect(info.percentile!).toBeLessThanOrEqual(51.5);
   });
 });
 

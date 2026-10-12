@@ -47,10 +47,10 @@ supabase/migration-template.sql
 
 **Never delete or break existing user data.** Entries belong to real users.
 
-Before touching production: follow **Production safety checklist** in [`README.md`](README.md). Local dev uses the same Supabase project as the APK; use a `+dev` email for sign-in in development (`src/dev-auth-guard.ts` enforces this by default; set `EXPO_PUBLIC_DEV=false` to disable). That guard is a **dev UX guard only** — not a security boundary. Do not describe or extend it as access control.
+Before touching production: follow **Production safety checklist** in [`README.md`](README.md). Local Expo dev uses Supabase CLI (`npm run db:start` / `db:reset`) against Docker; production APK/IPA use EAS production `EXPO_PUBLIC_SUPABASE_*` for the live project. Seeded local sign-in: `local.tester@weighway.app` / `Test123!`.
 
 - **New Supabase project:** run `supabase/schema.sql` once.
-- **Project with data (you and friends):** add `supabase/migrations/YYYY-MM-DD-description.sql` (copy `supabase/migration-template.sql`). **Do not** re-run `schema.sql` on production to apply changes.
+- **Project with data (you and friends):** add `supabase/migrations/YYYYMMDDHHmmss_description.sql` (copy `supabase/migration-template.sql` or `npx supabase migration new description`). **Do not** re-run `schema.sql` on production to apply changes.
 
 ### Rules for every migration
 

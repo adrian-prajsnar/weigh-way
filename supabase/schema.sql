@@ -1,4 +1,5 @@
 -- NEW Supabase projects only — run once in SQL Editor to bootstrap tables.
+-- Local Supabase CLI also applies this via migrations/20260801000000_bootstrap.sql — keep both in sync.
 -- Do NOT re-run on production to apply schema changes (use supabase/migrations/ instead).
 -- Safe to re-run only on an empty project: IF NOT EXISTS tables; policies are dropped and recreated.
 -- See AGENTS.md → Database migrations.
