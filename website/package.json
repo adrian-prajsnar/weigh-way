@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node scripts/fetch-releases.mjs && node ../scripts/sync-web-demo.cjs && astro dev",
     "build": "node scripts/fetch-releases.mjs && astro build",
-    "preview": "astro preview"
+    "preview": "astro preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.6.0",

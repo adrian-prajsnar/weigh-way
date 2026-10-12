@@ -86,7 +86,10 @@ export function initDemoModal(): void {
     return;
   }
 
-  const statusBarClock = createDemoStatusBarClock(modal);
+  const modalEl = modal;
+  const resolvedDemoUrl = demoUrl;
+
+  const statusBarClock = createDemoStatusBarClock(modalEl);
 
   const iframe = getIframe(modal);
   let previousOverflow = '';
@@ -94,7 +97,7 @@ export function initDemoModal(): void {
 
   function handleIframeLoad(): void {
     iframeLoaded = true;
-    setDemoModalLoading(modal, false);
+    setDemoModalLoading(modalEl, false);
   }
 
   function ensureIframeSource(): void {
@@ -103,7 +106,7 @@ export function initDemoModal(): void {
     }
 
     iframe.addEventListener('load', handleIframeLoad, { once: true });
-    iframe.src = demoUrl;
+    iframe.src = resolvedDemoUrl;
   }
 
   function openModal(): void {
@@ -114,14 +117,14 @@ export function initDemoModal(): void {
     ensureIframeSource();
 
     if (!iframeLoaded) {
-      setDemoModalLoading(modal, true);
+      setDemoModalLoading(modalEl, true);
     }
 
-    modal.hidden = false;
+    modalEl.hidden = false;
     document.body.classList.add('demo-modal-open');
     previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    modal.querySelector<HTMLElement>('.demo-modal__dialog')?.focus();
+    modalEl.querySelector<HTMLElement>('.demo-modal__dialog')?.focus();
 
     if (location.hash !== '#demo') {
       history.pushState(null, '', '#demo');
@@ -132,7 +135,7 @@ export function initDemoModal(): void {
 
   function closeModal(): void {
     statusBarClock.stop();
-    modal.hidden = true;
+    modalEl.hidden = true;
     document.body.classList.remove('demo-modal-open');
     document.body.style.overflow = previousOverflow;
 

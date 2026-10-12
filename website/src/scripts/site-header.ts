@@ -361,6 +361,9 @@ export function initSiteHeader(): void {
 
   header?.querySelectorAll('.brand').forEach((link) => {
     link.addEventListener('click', (event) => {
+      if (!(event instanceof MouseEvent)) {
+        return;
+      }
       if (
         event.defaultPrevented ||
         event.button !== 0 ||

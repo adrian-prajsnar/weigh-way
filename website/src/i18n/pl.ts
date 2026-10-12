@@ -14,9 +14,9 @@ const pl: SiteMessages = {
     termsTitle: 'Regulamin — WeighWay',
     termsDescription:
       'Warunki korzystania z aplikacji mobilnej WeighWay oraz tej strony internetowej.',
-    geeksTitle: 'Dla Geeków — WeighWay',
+    geeksTitle: 'Od kuchni — WeighWay',
     geeksDescription:
-      'Jak działa WeighWay: model danych, zasady obliczania BMI, bezpieczeństwo na poziomie wierszy i proces publikowania kolejnych wersji.',
+      'Jak zbudowano WeighWay: model danych, zasady klasyfikacji BMI, kontrola dostępu do rekordów i proces publikowania nowych wersji.',
   },
   brand: 'WeighWay',
   nav: {
@@ -105,7 +105,7 @@ const pl: SiteMessages = {
     audience: [
       {
         title: 'Tylko dla Ciebie',
-        body: 'To Twój prywatny dziennik wagi — bez udostępniania, rankingów i społeczności. Tylko Twoje pomiary.',
+        body: 'To Twój prywatny zapis pomiarów — bez udostępniania, rankingów i społeczności. Tylko Twoje wyniki.',
       },
       {
         title: 'Maraton, nie sprint',
@@ -113,7 +113,7 @@ const pl: SiteMessages = {
       },
       {
         title: 'Ty decydujesz',
-        body: 'Edytuj lub usuwaj swoje pomiary, zmieniaj historię wzrostu i zarządzaj kontem tak, jak chcesz. Kiedy zechcesz, możesz też usunąć wszystkie swoje dane.',
+        body: 'Edytuj lub usuwaj swoje pomiary, eksportuj dane z Profilu, zmieniaj historię wzrostu i zarządzaj kontem tak, jak chcesz. Kiedy zechcesz, możesz też usunąć wszystkie swoje dane.',
       },
     ],
     screensTitle: 'W środku aplikacji',
@@ -147,7 +147,7 @@ const pl: SiteMessages = {
     steps: [
       {
         title: 'Utwórz konto',
-        body: 'Zarejestruj się za pomocą adresu e-mail, potwierdź link i gotowe. Od tego momentu masz własny, prywatny dziennik swoich pomiarów.',
+        body: 'Zarejestruj się za pomocą adresu e-mail, potwierdź link i gotowe. Od tego momentu masz własną, prywatną historię pomiarów.',
       },
       {
         title: 'Zapisz swoją wagę',
@@ -215,7 +215,7 @@ const pl: SiteMessages = {
   privacy: {
     title: 'Polityka prywatności',
     updatedLabel: 'Ostatnia aktualizacja',
-    updatedDate: '28 września 2026 r.',
+    updatedDate: '10 października 2026 r.',
     lead:
       'Niniejsza Polityka prywatności opisuje zasady przetwarzania danych osobowych w związku z korzystaniem z aplikacji mobilnej WeighWay oraz niniejszej strony internetowej (łącznie „Usługa”).',
     sections: [
@@ -227,12 +227,12 @@ const pl: SiteMessages = {
       {
         title: '2. Jakie dane przetwarzamy',
         body:
-          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące dane:\n\n### Dane konta\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nPomiary wagi, wzrostu oraz informacje wynikające z tych danych, takie jak BMI, mogą w określonym kontekście stanowić dane dotyczące zdrowia w rozumieniu art. 9 RODO. Traktujemy te dane z odpowiednią ochroną.\n\n### Preferencje aplikacji i strony\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może przechowywać podobne ustawienia, takie jak wybrany język lub motyw, w pamięci przeglądarki. Służy to wyłącznie zapewnieniu prawidłowego działania i zapamiętaniu preferencji użytkownika.',
+          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące dane:\n\n### Dane konta\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nPomiary wagi, wzrostu oraz informacje wynikające z tych danych, takie jak BMI, mogą w określonym kontekście stanowić dane dotyczące zdrowia w rozumieniu art. 9 RODO. Traktujemy te dane z odpowiednią ochroną.\n\n### Preferencje aplikacji i strony\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może przechowywać podobne ustawienia, takie jak wybrany język lub motyw, w pamięci przeglądarki. Służy to wyłącznie zapewnieniu prawidłowego działania i zapamiętaniu preferencji użytkownika.\n\n### Raporty błędów\n\nWersja produkcyjna może wysłać raport o awarii albo błędzie synchronizacji. Raport zawiera wersję aplikacji i rodzaj błędu, na przykład kod błędu bazy. Nie zawiera wagi, wzrostu, BMI, daty urodzenia, płci ani innych danych pomiarowych. Wersje deweloperskie i podgląd aplikacji na tej stronie nie wysyłają takich raportów.',
       },
       {
         title: '3. W jakich celach wykorzystujemy dane',
         body:
-          'Przetwarzamy dane w celu:\n\n• utworzenia i obsługi konta użytkownika;\n• uwierzytelniania użytkownika;\n• synchronizowania danych pomiędzy urządzeniami;\n• przechowywania i wyświetlania pomiarów wagi oraz historii wzrostu;\n• obliczania i prezentowania BMI, gdy wymagane dane są dostępne;\n• umożliwienia edycji i usuwania danych;\n• umożliwienia usunięcia konta;\n• zapewnienia bezpieczeństwa i prawidłowego działania Usługi;\n• obsługi zgłoszeń i kontaktu z użytkownikiem;\n• wypełniania obowiązków prawnych, jeżeli takie obowiązki mają zastosowanie.\n\nNie wykorzystujemy danych dotyczących wagi, wzrostu, BMI ani danych profilu do celów reklamowych, sprzedaży danych, tworzenia profili reklamowych ani udostępniania ich brokerom danych.',
+          'Przetwarzamy dane w celu:\n\n• utworzenia i obsługi konta użytkownika;\n• uwierzytelniania użytkownika;\n• synchronizowania danych pomiędzy urządzeniami;\n• przechowywania i wyświetlania pomiarów wagi oraz historii wzrostu;\n• obliczania i prezentowania BMI, gdy wymagane dane są dostępne;\n• umożliwienia edycji i usuwania danych;\n• umożliwienia usunięcia konta;\n• eksportu pomiarów na urządzeniu;\n• diagnozowania awarii wydanej wersji, bez wysyłania treści pomiarów;\n• zapewnienia bezpieczeństwa i prawidłowego działania Usługi;\n• obsługi zgłoszeń i kontaktu z użytkownikiem;\n• wypełniania obowiązków prawnych, jeżeli takie obowiązki mają zastosowanie.\n\nNie wykorzystujemy danych dotyczących wagi, wzrostu, BMI ani danych profilu do celów reklamowych, sprzedaży danych, tworzenia profili reklamowych ani udostępniania ich brokerom danych.',
       },
       {
         title: '4. Podstawy prawne przetwarzania',
@@ -247,7 +247,7 @@ const pl: SiteMessages = {
       {
         title: '6. Dostawcy usług i odbiorcy danych',
         body:
-          'Korzystamy z zewnętrznych dostawców usług, którzy pomagają nam zapewnić działanie WeighWay. W szczególności korzystamy z:\n\nSupabase — infrastruktura chmurowa, baza danych i uwierzytelnianie użytkowników.\n\nDostawcy ci mogą przetwarzać dane wyłącznie w zakresie niezbędnym do świadczenia odpowiednich usług na naszą rzecz.\n\nNie sprzedajemy danych osobowych i nie udostępniamy ich reklamodawcom ani brokerom danych.\n\nMożemy ujawnić dane osobowe, jeżeli jest to wymagane przez obowiązujące prawo, prawnie wiążące żądanie właściwego organu lub w celu ochrony naszych praw i bezpieczeństwa Usługi.',
+          'Korzystamy z zewnętrznych dostawców usług, którzy pomagają nam zapewnić działanie WeighWay. W szczególności korzystamy z:\n\nSupabase — infrastruktura chmurowa, baza danych i uwierzytelnianie użytkowników.\n\nSentry — odbiera raporty błędów z wersji produkcyjnych, gdy raportowanie awarii jest włączone dla danego wydania. Raport zawiera wersję aplikacji i kod błędu. Nie zawiera treści pomiarów.\n\nDostawcy ci mogą przetwarzać dane wyłącznie w zakresie niezbędnym do świadczenia odpowiednich usług na naszą rzecz.\n\nNie sprzedajemy danych osobowych i nie udostępniamy ich reklamodawcom ani brokerom danych.\n\nMożemy ujawnić dane osobowe, jeżeli jest to wymagane przez obowiązujące prawo, prawnie wiążące żądanie właściwego organu lub w celu ochrony naszych praw i bezpieczeństwa Usługi.',
       },
       {
         title: '7. Transfery międzynarodowe',
@@ -257,7 +257,7 @@ const pl: SiteMessages = {
       {
         title: '8. Jak długo przechowujemy dane',
         body:
-          'Przechowujemy dane osobowe tak długo, jak jest to niezbędne do świadczenia Usługi i utrzymywania aktywnego konta, chyba że przepisy prawa wymagają dłuższego przechowywania.\n\nMożesz w dowolnym momencie:\n\n• edytować swoje dane;\n• usuwać pojedyncze pomiary wagi;\n• usuwać wpisy dotyczące wzrostu;\n• usunąć swoje konto.\n\nPo usunięciu konta dane aplikacji są usuwane z aktywnych systemów, z zastrzeżeniem danych, które mogą pozostać przez ograniczony czas w kopiach zapasowych lub systemach odzyskiwania danych.\n\nPo upływie okresu przechowywania kopii zapasowych dane zostają usunięte lub trwale nadpisane zgodnie z cyklem przechowywania stosowanym przez dostawcę infrastruktury.',
+          'Przechowujemy dane osobowe tak długo, jak jest to niezbędne do świadczenia Usługi i utrzymywania aktywnego konta, chyba że przepisy prawa wymagają dłuższego przechowywania.\n\nMożesz w dowolnym momencie:\n\n• edytować swoje dane;\n• usuwać pojedyncze pomiary wagi;\n• usuwać wpisy dotyczące wzrostu;\n• usunąć swoje konto;\n• wyeksportować pomiary z Profilu jako plik JSON oraz CSV z pomiarami. Pliki powstają na urządzeniu z danych, które aplikacja już wczytała. Ta czynność ich nie wysyła.\n\nPo usunięciu konta dane aplikacji są usuwane z aktywnych systemów, z zastrzeżeniem danych, które mogą pozostać przez ograniczony czas w kopiach zapasowych lub systemach odzyskiwania danych.\n\nPo upływie okresu przechowywania kopii zapasowych dane zostają usunięte lub trwale nadpisane zgodnie z cyklem przechowywania stosowanym przez dostawcę infrastruktury.',
       },
       {
         title: '9. Twoje prawa',
@@ -394,35 +394,36 @@ const pl: SiteMessages = {
     geeks: 'Dla Geeków',
   },
   demoModal: {
-    title: 'Przykładowy dziennik',
-    close: 'Zamknij przykładowy dziennik',
-    loading: 'Ładowanie przykładowego dziennika',
+    title: 'Podgląd aplikacji',
+    close: 'Zamknij podgląd aplikacji',
+    loading: 'Ładowanie podglądu aplikacji',
   },
   geeks: {
-    eyebrow: 'Jak to powstało',
-    title: 'Dla Geeków',
+    eyebrow: 'Jak to zbudowano',
+    title: 'Od kuchni',
     lead:
-      'Mały produkt z kontami użytkowników, bazą danych i własnym procesem publikowania wersji. Ta strona to skrót najważniejszych decyzji, które stoją za jego działaniem.',
-    heroImageAlt: 'Neonowe biurko geeka: retro komputer, konsola przenośna i joystick',
+      'Niewielka aplikacja, a pod spodem konta użytkowników, baza danych i automatyczny proces publikowania nowych wersji. Oto najważniejsze decyzje techniczne, które stoją za WeighWay.',
+    heroImageAlt:
+      'Biurko oświetlone neonami, z komputerem retro, przenośną konsolą i joystickiem',
     demoLink: 'Wypróbuj WeighWay',
     architectureTitle: 'Gdzie przechowywane są dane',
     architectureLead:
-      'Aplikacja komunikuje się z Supabase. To baza danych, a nie interfejs aplikacji, decyduje, które rekordy może zobaczyć zalogowany użytkownik.',
+      'Aplikacja komunikuje się z Supabase. To baza danych, a nie interfejs aplikacji, decyduje, które rekordy zalogowany użytkownik może odczytać lub zmienić.',
     nodes: [
       {
         title: 'Aplikacja',
         body:
-          'Expo i React Native w TypeScript. Język angielski i polski. Jednostki metryczne lub imperialne. Jasny, ciemny albo zgodny z ustawieniami urządzenia motyw.',
+          'Expo i React Native w TypeScripcie. Obsługa języka polskiego i angielskiego, jednostek metrycznych i imperialnych oraz jasnego i ciemnego motywu, również zgodnego z ustawieniami urządzenia.',
       },
       {
         title: 'Logowanie',
         body:
-          'Logowanie za pomocą adresu e-mail i hasła przez Supabase Auth. Dziennik jest dostępny dopiero po zalogowaniu. Reset hasła prowadzi z powrotem do aplikacji za pomocą własnego linku.',
+          'Logowanie za pomocą adresu e-mail i hasła obsługuje Supabase Auth. Pomiary są dostępne dopiero po zalogowaniu. Link do resetowania hasła prowadzi z powrotem do aplikacji.',
       },
       {
         title: 'Baza danych',
         body:
-          'Postgres na Supabase. Aplikacja korzysta z publicznego klucza anon. Bezpieczeństwo na poziomie wierszy (RLS) uniemożliwia jednemu użytkownikowi odczytywanie danych należących do innego.',
+          'Postgres w ramach Supabase. Aplikacja korzysta z publicznego klucza anon. Dostęp do danych poszczególnych użytkowników kontrolują reguły bezpieczeństwa na poziomie rekordów (RLS).',
       },
     ],
     tablesTitle: 'Trzy tabele',
@@ -430,134 +431,134 @@ const pl: SiteMessages = {
       {
         name: 'weight_entries',
         body:
-          'Jeden rekord na osobę i dzień kalendarzowy. Masa ciała jest przechowywana w kilogramach. Klucz główny składa się z użytkownika i daty, więc zapis dla tego samego dnia aktualizuje istniejący rekord.',
+          'Jeden rekord na użytkownika na każdy dzień kalendarzowy. Waga jest przechowywana w kilogramach. Klucz główny składa się z identyfikatora użytkownika i daty, więc ponowne zapisanie pomiaru z tego samego dnia aktualizuje istniejący rekord.',
       },
       {
         name: 'height_entries',
         body:
-          'Jeden wpis dotyczący wzrostu dla każdej daty obowiązywania. Przy pomiarze aplikacja wybiera najnowszy wzrost z tej daty lub wcześniejszy. Jeśli żaden wpis nie obejmuje danego dnia, BMI nie jest wyświetlane.',
+          'Każdy rekord przechowuje wzrost obowiązujący od określonej daty. Przy obliczaniu BMI dla danego pomiaru wykorzystywany jest ostatni wzrost zapisany na ten dzień lub wcześniej. Jeśli nie ma takiego wpisu, BMI nie jest wyświetlane.',
       },
       {
         name: 'user_profiles',
         body:
-          'Opcjonalna data urodzenia i płeć. Te dane wpływają na sposób klasyfikowania BMI. Pomiar masy można zapisać również bez ich podawania.',
+          'Opcjonalna data urodzenia i płeć. Dane te wpływają na klasyfikację BMI. Pomiar masy ciała można zapisać również bez ich podania.',
       },
     ],
-    rlsTitle: 'Bezpieczeństwo na poziomie wierszy (RLS)',
+    rlsTitle: 'Kontrola dostępu do rekordów (RLS)',
     rlsLead:
-      'Aplikacja korzysta z publicznego klucza anon. To reguły w Postgresie, a nie warstwa interfejsu, decydują, które wiersze zalogowany użytkownik może odczytać lub zmienić.',
+      'Aplikacja mobilna korzysta z publicznego klucza anon. O tym, które rekordy użytkownik może odczytać lub zmienić, decydują reguły RLS w bazie Postgres, a nie samo sprawdzenie uprawnień w interfejsie aplikacji.',
     rlsPoints: [
       {
-        title: 'Zasady dostępu',
+        title: 'Reguły dostępu',
         body:
-          'Wystarczy publiczny klucz anon. O tym, które wiersze można odczytywać i modyfikować, decydują reguły w bazie danych, a nie interfejs aplikacji.',
+          'Publiczny klucz anon może znajdować się w aplikacji. To reguły przypisane do tabel, a nie ekran aplikacji, określają, do których rekordów można uzyskać dostęp.',
       },
       {
         title: 'Tylko własne dane',
         body:
-          'Zalogowany użytkownik może przeglądać i zmieniać wyłącznie własne dane dotyczące wagi, wzrostu i profilu.',
+          'Zalogowany użytkownik może odczytywać i zmieniać wyłącznie własne pomiary wagi, wpisy wzrostu i dane profilu.',
       },
       {
         title: 'Usuwanie konta',
         body:
-          'Funkcja w bazie danych usuwa konto użytkownika oraz powiązane z nim dane. Niezalogowani użytkownicy nie mogą jej wywołać.',
+          'Funkcja w bazie danych usuwa użytkownika z Supabase Auth oraz powiązane z nim rekordy. Osoby niezalogowane nie mogą jej wywołać.',
       },
     ],
-    decisionsTitle: 'Decyzje',
+    decisionsTitle: 'Decyzje projektowe',
     decisionsLead:
-      'Każda z nich wyznacza pewne ramy. Produkt pozostaje mały i prosty właśnie dlatego, że tych założeń się trzymamy.',
-    tradeoffLabel: 'Koszt decyzji',
+      'Każda z tych decyzji wiąże się z pewnymi ograniczeniami. Dzięki nim WeighWay pozostaje prostą aplikacją, bez niepotrzebnej złożoności.',
+    tradeoffLabel: 'Kompromis',
     decisions: [
       {
         title: 'Jeden pomiar dziennie',
         body:
-          'Dzień jest jednostką zapisu. Edycja wtorkowego pomiaru po prostu nadpisuje wtorkowy rekord.',
+          'Jeden dzień to jeden rekord. Edycja pomiaru z wtorku zastępuje wcześniejszy zapis z tego dnia.',
         tradeoff:
-          'Zapisywanie każdego wejścia na wagę wymagałoby innego klucza, a każda średnia musiałaby dodatkowo określać, który z pomiarów danego dnia należy uwzględnić.',
+          'Zapisywanie każdego wejścia na wagę wymagałoby innego klucza oraz ustalenia, które odczyty uwzględniać przy obliczaniu średnich.',
       },
       {
-        title: 'Wzrost jest przypisany do daty',
+        title: 'Wzrost przypisany do daty',
         body:
-          'BMI jest obliczane w aplikacji na podstawie wzrostu, który obowiązywał w dniu pomiaru.',
+          'BMI jest obliczane w aplikacji na podstawie wzrostu, który obowiązywał w dniu danego pomiaru.',
         tradeoff:
-          'Przechowywanie wyłącznie aktualnego wzrostu sprawiłoby, że zmiana profilu wpływałaby również na BMI zapisane dla zeszłego roku.',
+          'Przechowywanie wyłącznie aktualnego wzrostu powodowałoby zmianę historycznych wyników BMI po każdej aktualizacji profilu.',
       },
       {
-        title: 'Kategorie dla dorosłych zaczynają się od 20. roku życia',
+        title: 'Kategorie dla dorosłych od 20. roku życia',
         body:
-          'Od 2. do ukończenia 20. roku życia, jeśli podano płeć, BMI jest klasyfikowane na podstawie percentyla BMI dla wieku według danych CDC: na podstawie płci i wieku w miesiącach wybierany jest odpowiedni zestaw LMS, następnie obliczany jest wynik z i odpowiadający mu percentyl. Od dnia 20. urodzin stosowane są kategorie BMI dla dorosłych. Dla dzieci poniżej 2 lat oraz dla osób poniżej 20 lat bez podanej płci wynik pozostaje niesklasyfikowany.',
+          'Od 2. urodzin do dnia 20. urodzin, jeśli podano płeć, BMI klasyfikowane jest na podstawie percentyla BMI względem wieku według CDC. W tym celu na podstawie płci i wieku w miesiącach pobierane są parametry LMS, z których obliczany jest wynik z, a następnie percentyl. Od 20. urodzin stosowane są kategorie BMI dla dorosłych. U dzieci poniżej 2 lat oraz osób przed 20. urodzinami, których płci nie podano, wynik nie otrzymuje klasyfikacji.',
         tradeoff:
-          'Zastosowanie progów dla dorosłych do pomiaru dziecka dawałoby kategorię, której nie wspierają wykorzystane dane referencyjne.',
+          'Zastosowanie progów BMI dla dorosłych do pomiaru dziecka przypisałoby kategorię, której nie uzasadniają dane referencyjne.',
       },
       {
-        title: 'Dziennik znajduje się na serwerze',
+        title: 'Pomiary przechowywane na serwerze',
         body:
-          'Aplikacja nie przechowuje lokalnej bazy pomiarów. Na urządzeniu zapisywana jest tylko sesja oraz kilka ustawień: język, motyw, jednostki i informacja o tym, czy wyświetlać BMI. Bez połączenia z internetem aplikacja pokazuje ekran offline.',
+          'Aplikacja nie przechowuje pomiarów w lokalnej bazie danych na urządzeniu. Zapamiętuje sesję użytkownika i kilka ustawień: język, motyw, jednostki oraz informację o tym, czy wyświetlać BMI. Bez połączenia z internetem pokazuje ekran trybu offline.',
         tradeoff:
-          'Zapisywanie pomiarów bez dostępu do sieci wymagałoby kolejki oczekujących zmian oraz zasad rozwiązywania sytuacji, w której dwa telefony edytują pomiar z tego samego dnia. Tego mechanizmu w aplikacji nie ma.',
+          'Zapisywanie pomiarów bez połączenia z internetem wymagałoby kolejki oczekujących zmian oraz zasad rozwiązywania konfliktów, gdyby dwa telefony edytowały pomiar z tego samego dnia. Takiego mechanizmu obecnie nie ma.',
       },
     ],
-    shippingTitle: 'Jak trafia do użytkownika nowa wersja',
+    shippingTitle: 'Jak powstaje nowe wydanie',
     shippingLead:
-      'Push do brancha main oznacza wydanie nowej wersji, o ile rodzaj commitów tego wymaga.',
+      'Wysłanie zmian do gałęzi main uruchamia proces wydania, jeśli rodzaj commitów wskazuje, że należy opublikować nową wersję.',
     pipelineArt: [
       { title: 'main', detail: 'push' },
-      { title: 'semver', detail: 'tag' },
-      { title: 'APK', detail: 'android' },
-      { title: 'IPA', detail: 'ios' },
-      { title: 'strona', detail: 'wydane' },
+      { title: 'semver', detail: 'wersja' },
+      { title: 'APK', detail: 'Android' },
+      { title: 'IPA', detail: 'iOS' },
+      { title: 'strona', detail: 'publikacja' },
     ],
     shipping: [
       {
         title: 'Wersjonowanie',
         body:
-          'Commit messages korzystają z Conventional Commits. semantic-release wybiera kolejny numer wersji oraz aktualizuje wersję aplikacji i natywne numery buildów.',
+          'Projekt korzysta z Conventional Commits. Narzędzie semantic-release wybiera kolejny numer wersji i aktualizuje wersję aplikacji oraz natywne numery kompilacji.',
       },
       {
         title: 'Android',
         body:
-          'Produkcyjny plik APK jest budowany przez EAS i dołączany do GitHub Release.',
+          'Produkcyjny plik APK jest budowany za pomocą EAS i dołączany do wydania na GitHubie.',
       },
       {
         title: 'iOS',
         body:
-          'Plik IPA bez podpisu jest budowany na Macu obsługiwanym przez GitHub Actions i dołączany do tego samego wydania. Instalacja odbywa się za pomocą SideStore.',
+          'Na maszynie macOS udostępnianej przez GitHub budowany jest plik IPA bez podpisu, który trafia do tego samego wydania. Można go zainstalować za pomocą SideStore.',
       },
       {
         title: 'Informacje o wydaniu',
         body:
-          'Informacje przeznaczone dla użytkowników są przygotowywane po angielsku i po polsku. Wewnętrzne commity nie trafiają do release notes. Jeśli plik z informacjami o wydaniu został już ręcznie zmodyfikowany, nie jest nadpisywany.',
+          'Informacje o zmianach dla użytkowników są przygotowywane po polsku i angielsku. Commity techniczne nie trafiają do tych informacji. Plik z notatkami, który został już ręcznie zmieniony, nie jest nadpisywany.',
       },
       {
-        title: 'Strona',
+        title: 'Strona internetowa',
         body:
-          'Ta strona jest zbudowana w Astro i wdrażana na GitHub Pages w ramach tego samego procesu. Jest dostępna po angielsku i po polsku.',
+          'Strona została zbudowana w Astro i jest publikowana w GitHub Pages w ramach tego samego procesu. Dostępne są wersje polska i angielska.',
       },
     ],
-    limitsTitle: 'Ograniczenia — celowe',
+    limitsTitle: 'Świadome ograniczenia',
     limitsLead:
-      'Kilka rzeczy działa dziś w konkretny sposób i warto o nich powiedzieć, zanim ktoś natknie się na nie w repozytorium.',
+      'Kilka ważnych informacji o tym, jak aplikacja działa obecnie — zanim zajrzysz do kodu.',
     limits: [
       {
-        title: 'Jedna baza danych',
+        title: 'Lokalna baza danych podczas developmentu',
         body:
-          'Środowisko deweloperskie i opublikowana aplikacja korzystają z tego samego projektu Supabase w darmowym planie. Bezpieczeństwo na poziomie wierszy izoluje dane poszczególnych kont. Zmiany schematu są przechowywane jako datowane pliki SQL, które dodają kolumny i tabele. Pełny skrypt inicjalizacyjny służy wyłącznie do utworzenia pustej bazy od zera.',
+          'Na co dzień prace programistyczne odbywają się na lokalnej bazie Supabase z przygotowanym kontem deweloperskim i danymi testowymi. Opublikowane wersje APK i IPA korzystają z produkcyjnego projektu Supabase skonfigurowanego na potrzeby wydań. Zmiany schematu bazy są zapisywane w plikach SQL z datą i najpierw sprawdzane lokalnie. Pełny skrypt inicjalizacyjny jest przeznaczony wyłącznie do pustego projektu.',
       },
       {
-        title: 'Brak analityki pomiarów',
+        title: 'Raporty błędów zamiast analityki',
         body:
-          'Aplikacja nie korzysta z narzędzi analitycznych. Dane dotyczące masy, wzrostu i BMI nie są wysyłane do systemów analitycznych.',
+          'Aplikacja nie korzysta z analityki produktu. Wersja produkcyjna może wysłać raport błędu zawierający wersję aplikacji i rodzaj błędu, dzięki czemu można wykryć problemy z wydaniem. Raporty nie zawierają danych o wadze, wzroście, BMI ani poszczególnych pomiarach.',
       },
       {
-        title: 'Zwykły scroll wystarcza',
+        title: 'Zwykły widok przewijany wystarczy',
         body:
-          'Historia jest wyświetlana jako zwykły scroll view. Dla pojedynczego użytkownika to w zupełności wystarcza. Jeśli przy bardzo długiej historii przewijanie zacznie działać wolniej, kolejnym krokiem będzie przejście na listę wirtualizowaną.',
+          'Historia pomiarów jest wyświetlana w zwykłym widoku przewijanym. To wystarcza w przypadku jednego użytkownika. Jeśli przewijanie długiej historii stanie się zbyt wolne, można zastąpić go listą wirtualizowaną, która renderuje tylko potrzebne elementy.',
       },
     ],
-    repoTitle: 'Źródło',
+    repoTitle: 'Kod źródłowy',
     repoBody:
-      'Aplikacja, migracje bazy danych i ta strona znajdują się w jednym publicznym repozytorium.',
-    repoLink: 'Zobacz na GitHub',
+      'Kod aplikacji, migracje bazy danych i ta strona znajdują się w jednym publicznym repozytorium.',
+    repoLink: 'Zobacz kod na GitHubie',
   },
 };
 
