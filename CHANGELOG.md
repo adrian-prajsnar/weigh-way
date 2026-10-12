@@ -1,3 +1,33 @@
+# [1.4.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.3.0...v1.4.0) (2026-10-12)
+
+
+### Bug Fixes
+
+* **expo:** link weigh-way slug to new EAS project ([6ff1193](https://github.com/adrian-prajsnar/weigh-way/commit/6ff1193a8250701ea05fd851f23f2bc976da215d)), closes [wei#way](https://github.com/wei/issues/way) [adrianprajsnars-team/wei#way](https://github.com/adrianprajsnars-team/wei/issues/way)
+* **navigation:** align tab bar indicator to tab layout ([cb85356](https://github.com/adrian-prajsnar/weigh-way/commit/cb8535643ae0e7e7fa16dfba2744b26999560a11))
+* omit empty trend periods and skip unchanged weigh-in saves ([4affd10](https://github.com/adrian-prajsnar/weigh-way/commit/4affd10ca698352a2267bcf4377b06e7c8b9f08d)), closes [wei#in](https://github.com/wei/issues/in) [wei#in](https://github.com/wei/issues/in)
+* **release:** hide pipeline-only versions from the public site ([f13f2b7](https://github.com/adrian-prajsnar/weigh-way/commit/f13f2b77a110768a76d01e0956b70b02c42202b8))
+* **release:** keep website changes out of app release notes ([99e740a](https://github.com/adrian-prajsnar/weigh-way/commit/99e740aeb9fe96317f44f772f5dba2526b75066c))
+* repair package-lock after version revert ([7272958](https://github.com/adrian-prajsnar/weigh-way/commit/727295850973aa45b980284ef8e9a3f348b0bd62))
+* **website:** improve keyboard focus styles and remove skip link ([ab41280](https://github.com/adrian-prajsnar/weigh-way/commit/ab41280032b179bf50830586dc5702bed15050bd))
+* **website:** include 1.3.0 in releases data ([067a93b](https://github.com/adrian-prajsnar/weigh-way/commit/067a93bb747017c8873b6bf2cbbb8421e0c1c284))
+* **website:** polish site background and release download labels ([9220dd2](https://github.com/adrian-prajsnar/weigh-way/commit/9220dd2d6cdd15b0d3818cb379694782aa0ff78b))
+* **website:** update Polish profile screen description ([7e6a3f6](https://github.com/adrian-prajsnar/weigh-way/commit/7e6a3f6524b27a90ccc77b252666843f35b86b8e))
+
+
+### Features
+
+* add read-only web demo mode and web UX polish ([002358c](https://github.com/adrian-prajsnar/weigh-way/commit/002358c5e7f55d0336c370bc782cd41731de153f))
+* **demo:** enrich web demo weight data and rem-based focus CSS ([5df4881](https://github.com/adrian-prajsnar/weigh-way/commit/5df488189525ec30919aa57eed8aefff3666de08))
+* local Supabase dev, journal export, and optional Sentry ([56d4f35](https://github.com/adrian-prajsnar/weigh-way/commit/56d4f35988cc713691726cfa1de315545fccb872)), closes [wei#ins](https://github.com/wei/issues/ins)
+* **website:** add expandable accordion for previous releases ([1386c16](https://github.com/adrian-prajsnar/weigh-way/commit/1386c161fa4897db636249d264c1bfe1a7daf931))
+* **website:** add For Geeks technical page ([0b10dbd](https://github.com/adrian-prajsnar/weigh-way/commit/0b10dbda013a54b875066e9cb0522828d6562496))
+* **website:** add live in-browser demo modal ([b3fd843](https://github.com/adrian-prajsnar/weigh-way/commit/b3fd843f2c5431e4bd91e513ea4d684978306a38))
+* **website:** give geeks RLS its own section and sync demo clock to minutes ([a484160](https://github.com/adrian-prajsnar/weigh-way/commit/a48416094ff3ab681dabf6ada27bb8f620e652df))
+* **website:** move layout to rem and polish live demo modal ([b6d084a](https://github.com/adrian-prajsnar/weigh-way/commit/b6d084a325d2c84466513c020f5b84dff6504f9e))
+* **website:** polish geeks page hero and engineering sections ([96b8d5f](https://github.com/adrian-prajsnar/weigh-way/commit/96b8d5f5701c00e12119e1760a31175fdf71fa74))
+* **website:** refresh geeks copy and tighten demo TypeScript ([b6e1c5c](https://github.com/adrian-prajsnar/weigh-way/commit/b6e1c5cecbdcf057e8fa867fa1eb399a2f961911))
+
 # [1.3.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.2.0...v1.3.0) (2026-09-30)
 
 
