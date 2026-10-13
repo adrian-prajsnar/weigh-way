@@ -260,6 +260,8 @@ After a version bump, CI builds both mobile artifacts and uploads them to the Gi
 - **Android** — `weigh-way.apk` (EAS cloud build)
 - **iOS** — `weigh-way.ipa` (unsigned build on macOS; install with SideStore)
 
+If the release tag exists but APK/IPA jobs failed (or were skipped), use **Actions → Rebuild mobile artifacts → Run workflow**. It builds from **`main`** (so CI fixes apply), checks that `app.json` matches the target release, uploads `weigh-way.apk` and `weigh-way.ipa` to that GitHub release, and optionally redeploys the site. Leave **version** empty to target the latest release.
+
 Latest downloads:
 
 `https://github.com/adrian-prajsnar/weigh-way/releases/latest/download/weigh-way.apk`

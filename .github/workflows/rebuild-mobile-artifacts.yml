@@ -1,0 +1,184 @@
+name: Rebuild mobile artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without "v" (e.g. 1.4.0). Empty = latest GitHub release.
+        required: false
+        type: string
+      deploy_website:
+        description: Redeploy GitHub Pages after uploads (refreshes download links on the site)
+        required: true
+        type: boolean
+        default: true
+
+concurrency:
+  group: rebuild-mobile-artifacts
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  meta:
+    name: Resolve release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Resolve target version
+        id: resolve
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          INPUT_VERSION="${{ inputs.version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            VERSION="${INPUT_VERSION#v}"
+          else
+            TAG=$(gh release view --json tagName -q '.tagName')
+            VERSION="${TAG#v}"
+          fi
+          if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
+            echo "No GitHub release found for v${VERSION}." >&2
+            exit 1
+          fi
+          APP_VERSION=$(node -p "require('./app.json').expo.version")
+          if [ "$APP_VERSION" != "$VERSION" ]; then
+            echo "app.json version is ${APP_VERSION} but target release is ${VERSION}." >&2
+            echo "Update app.json on main to match, or pass the version that matches the app." >&2
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Building from main for GitHub release v${VERSION} (app version ${APP_VERSION})."
+
+  apk:
+    name: Build Android APK
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx eas-cli build -p android --profile production --non-interactive --wait --json > eas-android.json
+
+      - name: Upload APK to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          URL=$(node scripts/eas-apk-url.cjs eas-android.json)
+          curl -fsSL "$URL" -o weigh-way.apk
+          gh release upload "v${{ needs.meta.outputs.version }}" weigh-way.apk --clobber
+
+  ipa:
+    name: Build iOS IPA
+    needs: meta
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build unsigned IPA
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: bash scripts/build-ios-ipa.sh
+
+      - name: Upload IPA to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "v${{ needs.meta.outputs.version }}" dist/ios/weigh-way.ipa --clobber
+
+  website:
+    name: Deploy website
+    needs: [meta, apk, ipa]
+    if: ${{ inputs.deploy_website }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install app dependencies
+        run: npm ci
+
+      - name: Export read-only web demo
+        run: node scripts/export-web-demo.cjs
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+
+      - name: Install website dependencies
+        working-directory: website
+        run: npm ci
+
+      - name: Build website
+        working-directory: website
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages-${{ github.run_attempt }}
+          path: website/dist
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
