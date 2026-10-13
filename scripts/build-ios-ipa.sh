@@ -5,6 +5,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Optional Sentry SDK is linked, but CI has no Sentry org/auth for source map upload.
+export SENTRY_DISABLE_AUTO_UPLOAD=true
+
 if [[ "$(uname -s)" != "Darwin" ]]; then
   echo "This script must run on macOS (use GitHub Actions if you are on Windows)." >&2
   exit 1
