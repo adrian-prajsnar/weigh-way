@@ -21,7 +21,7 @@ Local Expo dev uses **Supabase CLI on Docker**, not the live cloud project.
 npm install
 # Copy .env.example to .env (macOS/Linux: cp .env.example .env; Windows: copy .env.example .env)
 cp .env.example .env
-# Defaults in .env.example point at http://127.0.0.1:54321 and the well-known local anon JWT.
+# Defaults in .env.example point at http://127.0.0.1:54341 and the well-known local anon JWT.
 
 npm run db:start          # or: npx supabase start  (requires Docker)
 npm run db:reset          # optional: re-apply schema + migrations + seed
@@ -66,14 +66,14 @@ Coding rules for agents and contributors: [`AGENTS.md`](AGENTS.md).
 2. From the repo root: `npm run db:start` (first run downloads images; may take a few minutes).
 3. Copy [`.env.example`](.env.example) to `.env` if you have not already — defaults target the local API.
 4. After schema or seed changes: `npm run db:reset`.
-5. Open Supabase Studio at `http://127.0.0.1:54323` if you need SQL or auth inspection.
+5. Open Supabase Studio at `http://127.0.0.1:54343` if you need SQL or auth inspection.
 
 **“No internet connection” on sign-in** usually means the app cannot reach Supabase (not that Wi‑Fi is off). Check:
 
 - Docker is running and `npm run db:start` succeeded.
 - `.env` uses the **local** URL and anon key from [`.env.example`](.env.example) (not `https://….supabase.co`).
 - After changing `.env`: `npx expo start -c`.
-- **Expo Go on a physical phone:** `127.0.0.1` is the phone, not your PC. Put your PC’s LAN IP in `EXPO_PUBLIC_SUPABASE_URL` (e.g. `http://192.168.1.42:54321`). Phone and PC must be on the same Wi‑Fi. Expo Go on the same machine often rewrites `127.0.0.1` automatically; a manual IP is the reliable fix on device.
+- **Expo Go on a physical phone:** `127.0.0.1` is the phone, not your PC. Put your PC’s LAN IP in `EXPO_PUBLIC_SUPABASE_URL` (e.g. `http://192.168.1.42:54341`). Phone and PC must be on the same Wi‑Fi. Expo Go on the same machine often rewrites `127.0.0.1` automatically; a manual IP is the reliable fix on device.
 - **Android emulator:** the app maps `127.0.0.1` to `10.0.2.2` in dev when needed.
 
 Configuration lives in [`supabase/config.toml`](supabase/config.toml) (`project_id = "weigh-way"`, seed path, auth redirect URLs for Expo).
@@ -174,7 +174,7 @@ Full migration rules: [`AGENTS.md`](AGENTS.md) → Database migrations.
 - [ ] `npx expo-doctor` passes (especially after dependency or Expo config changes).
 - [ ] Test app changes against **local Supabase** (`local.tester@weighway.app`) or your own dev data — not friends’ production rows.
 - [ ] Migration already applied on production if the build reads new columns or tables.
-- [ ] After `eas env:push`, confirm `EXPO_PUBLIC_SUPABASE_*` in EAS production still point at the **live** cloud project (not `http://127.0.0.1:54321`).
+- [ ] After `eas env:push`, confirm `EXPO_PUBLIC_SUPABASE_*` in EAS production still point at the **live** cloud project (not `http://127.0.0.1:54341`).
 
 ### Never do on production
 

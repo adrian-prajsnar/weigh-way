@@ -41,6 +41,17 @@ export default {
     sessionHint: 'Sign-out and delete account are disabled in the demo version.',
     authUnavailable: 'Not available in the demo version.',
   },
+  update: {
+    title: 'WeighWay update available',
+    availableLabel: 'New version available',
+    messageAndroid:
+      'Version %{latest} is available (you have %{current}). Update to get the latest features, improvements, and bug fixes. Older versions may not support all features.',
+    messageIos:
+      'Version %{latest} is available (you have %{current}). Update to get the latest features, improvements, and bug fixes. Older versions may not support all features. Download the IPA file, then import it into SideStore to complete the update.',
+    download: 'Update now',
+    downloadAndInstall: 'Download and Install',
+    mockDownload: 'Download skipped in mock mode.',
+  },
   auth: {
     welcomeBack: 'Welcome back',
     signInSubtitle: 'Sign in to see your weigh-ins',

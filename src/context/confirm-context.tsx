@@ -72,6 +72,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             visible
             transparent
             animationType="fade"
+            statusBarTranslucent
             onRequestClose={() => close(false)}
           >
             <View style={styles.modalBackdropCentered}>

@@ -326,6 +326,17 @@ const pl = {
     decreaseDay: 'Poprzedni dzień',
     increaseDay: 'Następny dzień',
   },
+  update: {
+    title: 'Dostępna aktualizacja WeighWay',
+    availableLabel: 'Dostępna nowa wersja',
+    messageAndroid:
+      'Dostępna jest wersja %{latest} (obecnie masz %{current}). Zaktualizuj aplikację, aby korzystać z nowych funkcji, ulepszeń i poprawek błędów. Starsze wersje mogą nie obsługiwać wszystkich funkcji.',
+    messageIos:
+      'Dostępna jest wersja %{latest} (obecnie masz %{current}). Zaktualizuj aplikację, aby korzystać z nowych funkcji, ulepszeń i poprawek błędów. Starsze wersje mogą nie obsługiwać wszystkich funkcji. Pobierz plik IPA, a następnie zaimportuj go do SideStore, aby dokończyć aktualizację.',
+    download: 'Aktualizuj teraz',
+    downloadAndInstall: 'Pobierz i zainstaluj',
+    mockDownload: 'Pobieranie pominięte w trybie demonstracyjnym.',
+  },
   errors: {
     couldNotLoadData: 'Nie udało się załadować danych',
     couldNotLoadEntries: 'Nie udało się załadować pomiarów.',

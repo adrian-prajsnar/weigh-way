@@ -52,6 +52,8 @@ type SupabaseAuthContextValue = {
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextValue | null>(null);
 
+const SESSION_BOOTSTRAP_TIMEOUT_MS = 4000;
+
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,12 +100,25 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     registerSupabaseAppLifecycle();
 
+    // Never block the splash on a slow or unreachable auth server: `getSession()`
+    // retries a token refresh for up to 30s when the network is down.
+    let isBootstrapSettled = false;
+    const bootstrapTimeout = setTimeout(() => {
+      if (!isBootstrapSettled) {
+        setIsLoading(false);
+      }
+    }, SESSION_BOOTSTRAP_TIMEOUT_MS);
+
     void supabase.auth
       .getSession()
       .then(({ data: { session: activeSession } }) => {
-        setSession(activeSession);
+        if (activeSession) {
+          setSession(activeSession);
+        }
       })
       .finally(() => {
+        isBootstrapSettled = true;
+        clearTimeout(bootstrapTimeout);
         setIsLoading(false);
         void refreshSessionOnForeground();
       });
@@ -129,6 +144,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
+      clearTimeout(bootstrapTimeout);
       subscription.subscription.unsubscribe();
       linkSubscription.remove();
     };

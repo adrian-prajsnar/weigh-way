@@ -3,6 +3,14 @@ import { fontFamily, radius, spacing } from '../tokens';
 import { StyleContext, cardSurface, floatingSurface, tabularNums } from './helpers';
 
 export function createLayoutStyles({ colors, scheme }: StyleContext) {
+  const sectionLabel = {
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase' as const,
+    color: colors.textSubtle,
+    fontFamily: fontFamily.semibold,
+  };
+
   return {
     content: {
       padding: spacing.xl,
@@ -21,12 +29,19 @@ export function createLayoutStyles({ colors, scheme }: StyleContext) {
       marginTop: 2,
       fontFamily: fontFamily.regular,
     },
-    sectionLabel: {
-      fontSize: 12,
-      letterSpacing: 0.8,
-      textTransform: 'uppercase',
-      color: colors.textSubtle,
-      fontFamily: fontFamily.semibold,
+    sectionLabel,
+    appUpdateBar: {
+      backgroundColor: colors.accentSoft,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.md,
+      gap: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.accentBorder,
+    },
+    appUpdateBarLabel: {
+      ...sectionLabel,
+      color: colors.accentText,
+      textAlign: 'center',
     },
 
     card: {

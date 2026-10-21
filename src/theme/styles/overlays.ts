@@ -1,7 +1,10 @@
-import { Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet, ViewStyle } from 'react-native';
 import { fontFamily, layoutWidth, radius, spacing } from '../tokens';
 import { WEB_FOCUS_RING_OUTER_SPREAD } from '../web-focus-ring';
 import { StyleContext, cardSurface, floatingSurface, tabularNums } from './helpers';
+
+/** `100dvh` follows mobile browser chrome; RN types only allow px or percent here. */
+const FULL_DYNAMIC_VIEWPORT_HEIGHT = '100dvh' as unknown as ViewStyle['minHeight'];
 
 export function createOverlayStyles({ colors, scheme }: StyleContext) {
   return {
@@ -14,6 +17,7 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     },
     modalBackdropCentered: {
       flex: 1,
+      ...(Platform.OS === 'web' ? { minHeight: FULL_DYNAMIC_VIEWPORT_HEIGHT } : null),
       backgroundColor: scheme === 'dark' ? 'rgba(0, 0, 0, 0.62)' : 'rgba(15, 23, 42, 0.42)',
       justifyContent: 'center',
       alignItems: 'center',

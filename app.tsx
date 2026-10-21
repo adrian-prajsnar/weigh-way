@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AppUpdatePromptHandler } from './src/components/app-update-prompt-handler';
 import { OfflineScreen } from './src/components/offline-screen';
 import { SupabaseAuthProvider, useSupabaseAuth } from './src/context/supabase-auth-context';
 import { useToast, ToastProvider } from './src/context/toast-context';
@@ -21,6 +22,7 @@ import { useHideSplashWhenReady } from './src/hooks/use-hide-splash';
 import { DemoWebDesktopInteractions } from './src/demo/demo-web-desktop-interactions';
 import { DemoWebShell } from './src/demo/demo-web-shell';
 import { isDemoMode } from './src/demo/is-demo-mode';
+import { AppUpdateProvider } from './src/context/app-update-context';
 import { BmiDetailsProvider } from './src/context/bmi-details-context';
 import { BmiDisplayProvider } from './src/context/bmi-display-context';
 import { ConfirmProvider } from './src/context/confirm-context';
@@ -37,7 +39,7 @@ initErrorReporting();
 
 function AppNavigation({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { colors, scheme } = useTheme();
-  useHideSplashWhenReady(fontsLoaded);
+  const isSplashHidden = useHideSplashWhenReady(fontsLoaded);
 
   const navigationTheme = useMemo<Theme>(() => {
     const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
@@ -58,6 +60,7 @@ function AppNavigation({ fontsLoaded }: { fontsLoaded: boolean }) {
     <NavigationContainer theme={navigationTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <RootNavigator />
+      {isSplashHidden ? <AppUpdatePromptHandler /> : null}
     </NavigationContainer>
   );
 }
@@ -87,15 +90,17 @@ function ThemedApp({ fontsLoaded }: { fontsLoaded: boolean }) {
         <ToastProvider>
           <AuthLinkErrorHandler />
           <ConfirmProvider>
-            <UserProfileProvider>
-              <BmiDisplayProvider>
-                <WeightEntriesProvider>
-                  <BmiDetailsProvider>
-                    <AppNavigation fontsLoaded={fontsLoaded} />
-                  </BmiDetailsProvider>
-                </WeightEntriesProvider>
-              </BmiDisplayProvider>
-            </UserProfileProvider>
+            <AppUpdateProvider>
+              <UserProfileProvider>
+                <BmiDisplayProvider>
+                  <WeightEntriesProvider>
+                    <BmiDetailsProvider>
+                      <AppNavigation fontsLoaded={fontsLoaded} />
+                    </BmiDetailsProvider>
+                  </WeightEntriesProvider>
+                </BmiDisplayProvider>
+              </UserProfileProvider>
+            </AppUpdateProvider>
           </ConfirmProvider>
         </ToastProvider>
       </SupabaseAuthProvider>
@@ -114,18 +119,21 @@ function NetworkGate({ children }: { children: React.ReactNode }) {
 }
 
 function AppShell() {
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     [fontFamily.regular]: Inter_400Regular,
     [fontFamily.medium]: Inter_500Medium,
     [fontFamily.semibold]: Inter_600SemiBold,
     [fontFamily.bold]: Inter_700Bold,
   });
 
+  // A font failure must not leave the app stuck on the splash screen.
+  const isReady = fontsLoaded || Boolean(fontError);
+
   return isDemoMode() ? (
-    <ThemedApp fontsLoaded={fontsLoaded} />
+    <ThemedApp fontsLoaded={isReady} />
   ) : (
     <NetworkGate>
-      <ThemedApp fontsLoaded={fontsLoaded} />
+      <ThemedApp fontsLoaded={isReady} />
     </NetworkGate>
   );
 }
