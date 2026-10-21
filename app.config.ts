@@ -48,7 +48,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       ...config.android,
       usesCleartextTraffic: process.env.EXPO_PUBLIC_SUPABASE_URL?.startsWith('http://') === true,
-      versionCode: 6,
+      versionCode: 7,
       intentFilters: [
         {
           action: 'VIEW',

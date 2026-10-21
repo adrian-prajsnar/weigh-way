@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.4.0...v1.5.0) (2026-10-21)
+
+
+### Features
+
+* prompt users when a new release is available ([1e59917](https://github.com/adrian-prajsnar/weigh-way/commit/1e59917c90e30c558d85b959358498da0a9b2f1b))
+
 # [1.4.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.3.0...v1.4.0) (2026-10-12)
 
 
