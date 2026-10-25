@@ -64,11 +64,17 @@ vi.mock('expo-web-browser', () => ({
 }));
 
 // eslint-disable-next-line import/first -- load after vi.mock
+import { formatAuthLinkError } from './auth-errors';
 import {
   beginOAuthFlowExpectation,
   createSessionFromUrl,
   resetOAuthRedirectState,
 } from './auth-redirect';
+
+const PKCE_VERIFIER_MISMATCH = {
+  code: 'bad_code_verifier',
+  message: 'code challenge does not match previously saved code verifier',
+};
 
 describe('auth deep link handling', () => {
   beforeEach(() => {
@@ -129,7 +135,7 @@ describe('auth deep link handling', () => {
     authState.exchangeCodeForSession
       .mockResolvedValueOnce({
         data: { session: null },
-        error: { message: 'invalid flow state' },
+        error: PKCE_VERIFIER_MISMATCH,
       })
       .mockResolvedValueOnce({ data: { session: {} }, error: null });
 
@@ -149,7 +155,7 @@ describe('auth deep link handling', () => {
     authState.exchangeCodeForSession
       .mockResolvedValueOnce({
         data: { session: null },
-        error: { message: 'code verifier not found' },
+        error: PKCE_VERIFIER_MISMATCH,
       })
       .mockResolvedValueOnce({ data: { session: {} }, error: null });
 
@@ -157,5 +163,43 @@ describe('auth deep link handling', () => {
 
     expect(pkceState.restoreLegacyVerifierForFlow).toHaveBeenCalledWith('recovery');
     expect(pendingState.clearPasswordResetPending).toHaveBeenCalled();
+  });
+
+  it('does not fall back when OAuth returns an expired flow state', async () => {
+    beginOAuthFlowExpectation('oauth-flow');
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+    authState.exchangeCodeForSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: {
+        code: 'flow_state_expired',
+        message: 'invalid flow state, no valid flow state found',
+      },
+    });
+
+    await expect(
+      createSessionFromUrl('weigh-way://auth/callback?code=expired-code'),
+    ).rejects.toThrow('auth_signup_link_exchange_failed');
+
+    expect(authState.exchangeCodeForSession).toHaveBeenCalledTimes(1);
+    expect(pkceState.restoreLegacyVerifierForFlow).not.toHaveBeenCalled();
+  });
+
+  it('surfaces network failures without mapping them to an expired link message', async () => {
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+    authState.exchangeCodeForSession.mockResolvedValueOnce({
+      data: { session: null },
+      error: { message: 'Network request failed' },
+    });
+
+    let thrown: unknown;
+    try {
+      await createSessionFromUrl('weigh-way://auth/callback?code=offline-code');
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(formatAuthLinkError(thrown, { isPasswordRecovery: false })).toContain(
+      'internet connection',
+    );
   });
 });

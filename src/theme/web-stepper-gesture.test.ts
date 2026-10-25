@@ -85,6 +85,24 @@ describe('createWebStepperPressHandlers', () => {
     expect(onPress).toHaveBeenCalledTimes(2);
   });
 
+  it('ignores OS key repeat for Enter and Space', () => {
+    platform.OS = 'web';
+
+    const onPress = vi.fn();
+    const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
+
+    props.onKeyDown?.({
+      preventDefault: vi.fn(),
+      nativeEvent: { key: 'Enter', repeat: true },
+    } as never);
+    props.onKeyDown?.({
+      preventDefault: vi.fn(),
+      nativeEvent: { key: ' ', repeat: true },
+    } as never);
+
+    expect(onPress).not.toHaveBeenCalled();
+  });
+
   it('steps once on press out when a nearby field is focused on web', () => {
     platform.OS = 'web';
     vi.stubGlobal('document', {

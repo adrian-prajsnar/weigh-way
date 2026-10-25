@@ -1,6 +1,6 @@
 import { Platform, type GestureResponderEvent, type NativeSyntheticEvent } from 'react-native';
 
-type KeyPressEvent = NativeSyntheticEvent<{ key: string }>;
+type KeyPressEvent = NativeSyntheticEvent<{ key: string; repeat?: boolean }>;
 
 export type StepperPressProps = {
   onPress?: () => void;
@@ -195,6 +195,9 @@ export function createWebStepperPressHandlers(
     onKeyDown: (event: KeyPressEvent) => {
       const key = event.nativeEvent.key;
       if (key !== 'Enter' && key !== ' ') {
+        return;
+      }
+      if (event.nativeEvent.repeat) {
         return;
       }
       event.preventDefault?.();

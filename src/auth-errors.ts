@@ -3,6 +3,13 @@ import type { AuthLinkErrorContext } from './storage/auth-pending-flow';
 import { isLocalSupabaseEnvUrl } from './supabase/local-supabase-env';
 
 function getErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = String((error as { message: unknown }).message).trim();
+    if (message.length > 0) {
+      return message.toLowerCase();
+    }
+  }
+
   return error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
 }
 

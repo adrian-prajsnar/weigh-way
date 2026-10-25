@@ -22,6 +22,7 @@ import {
   readOAuthFlowExpectation,
 } from './storage/oauth-flow-expectation';
 import * as WebBrowser from 'expo-web-browser';
+import { isNetworkError } from './auth-errors';
 import { supabase } from './supabase/client';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -192,7 +193,32 @@ export function isPasswordRecoveryUrl(url: string): boolean {
   return params.type === 'recovery';
 }
 
+const PKCE_VERIFIER_MISMATCH_MESSAGE =
+  'code challenge does not match previously saved code verifier';
+
+function getAuthApiErrorCode(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code = (error as { code: unknown }).code;
+    if (typeof code === 'string' && code.length > 0) {
+      return code;
+    }
+  }
+  return null;
+}
+
 function isVerifierExchangeError(error: unknown): boolean {
+  const code = getAuthApiErrorCode(error);
+  if (code === 'bad_code_verifier' || code === 'AuthPKCECodeVerifierMissingError') {
+    return true;
+  }
+
+  if (typeof error === 'object' && error !== null && 'name' in error) {
+    const name = String((error as { name: unknown }).name);
+    if (name === 'AuthPKCECodeVerifierMissingError') {
+      return true;
+    }
+  }
+
   const message =
     typeof error === 'object' && error !== null && 'message' in error
       ? String((error as { message: unknown }).message).toLowerCase()
@@ -200,26 +226,36 @@ function isVerifierExchangeError(error: unknown): boolean {
         ? error.message.toLowerCase()
         : String(error).toLowerCase();
 
-  return (
-    message.includes('code verifier') ||
-    message.includes('pkce') ||
-    message.includes('flow state') ||
-    message.includes('invalid flow state')
-  );
+  return message.includes(PKCE_VERIFIER_MISMATCH_MESSAGE);
+}
+
+function isInvalidOrExpiredFlowStateError(error: unknown): boolean {
+  const code = getAuthApiErrorCode(error);
+  return code === 'flow_state_not_found' || code === 'flow_state_expired';
 }
 
 function mapExchangeError(
   error: unknown,
   context: { flowKind: CallbackFlowKind; overlappingEmailFlows: boolean },
 ): Error {
-  const message =
-    typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message: unknown }).message).toLowerCase()
-      : error instanceof Error
-        ? error.message.toLowerCase()
-        : String(error).toLowerCase();
+  if (isNetworkError(error)) {
+    if (error instanceof Error) {
+      return error;
+    }
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      return new Error(String((error as { message: unknown }).message));
+    }
+    return new Error(String(error));
+  }
 
   const isVerifierIssue = isVerifierExchangeError(error);
+
+  if (isInvalidOrExpiredFlowStateError(error)) {
+    if (context.flowKind === 'recovery') {
+      return new Error('auth_recovery_link_exchange_failed');
+    }
+    return new Error('auth_signup_link_exchange_failed');
+  }
 
   if (context.overlappingEmailFlows && isVerifierIssue) {
     return new Error('auth_overlapping_email_flows');

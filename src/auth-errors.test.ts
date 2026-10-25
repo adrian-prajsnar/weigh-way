@@ -62,4 +62,12 @@ describe('formatAuthLinkError', () => {
       }),
     ).toContain('confirmation link');
   });
+
+  it('maps network exchange failures to the offline message', () => {
+    expect(
+      formatAuthLinkError(new Error('Network request failed'), {
+        isPasswordRecovery: false,
+      }),
+    ).toContain('internet connection');
+  });
 });
