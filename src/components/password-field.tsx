@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+  Platform,
   Pressable,
   Text,
   TextInput,
@@ -43,9 +44,13 @@ export function PasswordField({
   return (
     <View style={styles.passwordFieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.passwordField, isFocused && styles.inputFocused]}>
+      <View
+        style={[styles.passwordField, isFocused && styles.inputFocused]}
+        {...(Platform.OS === 'web' ? { dataSet: { wwFieldGroup: 'true' } } : {})}
+      >
         <TextInput
           style={styles.passwordInput}
+          {...(Platform.OS === 'web' ? { dataSet: { wwFieldInput: 'true' } } : {})}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={!isVisible}

@@ -7,6 +7,7 @@ import { DEMO_PHONE_CORNER_RADIUS } from './demo-viewport';
 export const DEMO_WEB_DESKTOP_STYLE_ID = 'weigh-way-demo-web-desktop';
 
 const DESKTOP_POINTER_QUERY = '(hover: hover) and (pointer: fine)';
+const TOUCH_POINTER_QUERY = '(hover: none), (pointer: coarse)';
 
 /** Pulls the confirm-overlay ring inside the phone corner clip without shrinking the overlay. */
 const CONFIRM_OVERLAY_RING_INSET = 8;
@@ -42,6 +43,10 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
     : '';
 
   return `
+    [data-ww-stepper-button="true"] {
+      touch-action: manipulation;
+    }
+
     :root {
       --ww-accent: ${colors.accent};
       --ww-accent-soft: ${colors.accentSoft};
@@ -211,6 +216,48 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
       textarea,
       select {
         transition: none;
+      }
+    }
+
+    @media ${TOUCH_POINTER_QUERY} {
+      input,
+      textarea,
+      select {
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      input[data-ww-field-input="true"] {
+        border-width: 0;
+        border-style: none;
+        border-color: transparent;
+        background-color: transparent;
+        box-shadow: none;
+      }
+
+      input:focus,
+      input:focus-visible,
+      textarea:focus,
+      textarea:focus-visible,
+      select:focus,
+      select:focus-visible {
+        outline: none;
+        box-shadow: none !important;
+        border-color: var(--ww-accent);
+        background-color: var(--ww-surface);
+      }
+
+      input[data-ww-field-input="true"]:focus,
+      input[data-ww-field-input="true"]:focus-visible {
+        border-color: transparent;
+        background-color: transparent;
+      }
+
+      [data-ww-weight-field="true"]:focus-within,
+      [data-ww-field-group="true"]:focus-within {
+        box-shadow: none !important;
+        border-color: var(--ww-accent);
+        background-color: var(--ww-surface);
       }
     }
   `;

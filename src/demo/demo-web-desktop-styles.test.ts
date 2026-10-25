@@ -7,6 +7,7 @@ describe('buildDemoWebDesktopCss', () => {
     const css = buildDemoWebDesktopCss(palettes.light);
 
     expect(css).toContain('(hover: hover) and (pointer: fine)');
+    expect(css).toContain('(hover: none), (pointer: coarse)');
     expect(css).toContain('--ww-accent: #4F46E5');
     expect(css).toContain('--ww-focus-ring-control');
     expect(css).toContain('--ww-focus-ring-button');
@@ -65,5 +66,14 @@ describe('buildDemoWebDesktopCss', () => {
     expect(css).toContain('[data-ww-segmented-item="true"]:focus-visible');
     expect(css).toContain('[data-ww-switch="true"]:focus-within');
     expect(css).toContain('box-shadow: var(--ww-focus-ring-switch)');
+  });
+
+  it('uses native-like borders instead of desktop focus rings on touch devices', () => {
+    const css = buildDemoWebDesktopCss(palettes.light);
+
+    expect(css).toContain('-webkit-tap-highlight-color: transparent');
+    expect(css).toContain('[data-ww-field-group="true"]:focus-within');
+    expect(css).toContain('input[data-ww-field-input="true"]');
+    expect(css).toContain('box-shadow: none !important');
   });
 });

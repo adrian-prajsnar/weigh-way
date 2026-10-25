@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEMO_EMBEDDED_CLASS,
   DEMO_EMBEDDED_DRAGGING_CLASS,
+  isDemoWebEmbeddedInteractiveTarget,
   markDemoEmbeddedDocument,
   resolveDragAxis,
 } from './demo-web-embedded-scroll';
@@ -31,6 +32,20 @@ describe('markDemoEmbeddedDocument', () => {
 
     expect(html.classList.contains(DEMO_EMBEDDED_CLASS)).toBe(false);
     expect(html.classList.contains(DEMO_EMBEDDED_DRAGGING_CLASS)).toBe(false);
+  });
+});
+
+describe('isDemoWebEmbeddedInteractiveTarget', () => {
+  it('treats stepper buttons as interactive so drag-scroll does not swallow clicks', () => {
+    const stepper = {
+      closest: (selector: string) =>
+        selector.includes('data-ww-stepper-button') ? stepper : null,
+    };
+    const icon = {
+      closest: (selector: string) => stepper.closest(selector),
+    };
+
+    expect(isDemoWebEmbeddedInteractiveTarget(icon as unknown as EventTarget)).toBe(true);
   });
 });
 

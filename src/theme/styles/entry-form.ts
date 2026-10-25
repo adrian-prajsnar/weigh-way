@@ -19,6 +19,8 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
     },
     weightInputWrapper: {
       flex: 1,
+      flexShrink: 1,
+      minWidth: 0,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
@@ -27,6 +29,12 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
       borderRadius: radius.md,
       backgroundColor: colors.surfaceMuted,
       paddingHorizontal: spacing.md,
+      ...(Platform.OS === 'web'
+        ? {
+            position: 'relative',
+            zIndex: 0,
+          }
+        : null),
     },
     weightInputWrapperFocused: {
       ...(Platform.OS === 'web'
@@ -53,6 +61,7 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
     },
     stepperButton: {
       width: 52,
+      flexShrink: 0,
       borderRadius: radius.md,
       alignItems: 'center',
       justifyContent: 'center',
@@ -62,7 +71,7 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
       ...(Platform.OS === 'web'
         ? {
             position: 'relative',
-            zIndex: 0,
+            zIndex: 2,
           }
         : null),
     },

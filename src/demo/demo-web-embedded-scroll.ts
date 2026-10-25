@@ -11,10 +11,15 @@ export type ScrollAxes = {
 
 export type DragAxis = 'x' | 'y';
 
-function isInteractiveTarget(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    Boolean(target.closest('input, textarea, select, button, a, [role="button"], [contenteditable="true"]'))
+export function isDemoWebEmbeddedInteractiveTarget(target: EventTarget | null): boolean {
+  if (!target || typeof (target as Element).closest !== 'function') {
+    return false;
+  }
+
+  return Boolean(
+    (target as Element).closest(
+      'input, textarea, select, button, a, [role="button"], [contenteditable="true"], [data-ww-stepper-button="true"]',
+    ),
   );
 }
 
@@ -88,7 +93,11 @@ export function bindDemoWebEmbeddedScroll(targetWindow: Window = window): () => 
   let suppressClick = false;
 
   const onPointerDown = (event: PointerEvent) => {
-    if (event.pointerType !== 'mouse' || event.button !== 0 || isInteractiveTarget(event.target)) {
+    if (
+      event.pointerType !== 'mouse' ||
+      event.button !== 0 ||
+      isDemoWebEmbeddedInteractiveTarget(event.target)
+    ) {
       return;
     }
 

@@ -26,6 +26,7 @@ import { lbToKg, WEIGHT_STEP_KG, WEIGHT_STEP_LB } from '../units';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { spacing } from '../theme/tokens';
+import { webStepperPressProps } from '../theme/web-stepper-press';
 
 type WeightEntryFormBodyProps = {
   entries: WeightEntry[];
@@ -68,6 +69,7 @@ export function WeightEntryFormBody({
     () => entries.find((entry) => entry.date === selectedDateKey),
     [entries, selectedDateKey],
   );
+  const existingEntryWeightKg = existingEntryForDate?.weightKg;
   const weightPlaceholder = units === 'imperial' ? '0.0' : '0.00';
   const heightAtDate = getHeightAtDate(heightEntries, selectedDateKey);
   const parsedWeightKg = useMemo(
@@ -94,9 +96,9 @@ export function WeightEntryFormBody({
 
   useEffect(() => {
     setWeightInput(
-      existingEntryForDate ? formatWeightValue(existingEntryForDate.weightKg, units) : '',
+      existingEntryWeightKg !== undefined ? formatWeightValue(existingEntryWeightKg, units) : '',
     );
-  }, [existingEntryForDate, units]);
+  }, [selectedDateKey, existingEntryWeightKg, units]);
 
   useEffect(() => {
     if (!autoFocusWeight) {
@@ -109,6 +111,10 @@ export function WeightEntryFormBody({
   const isDisabled = isSaving || isDataLoading || isProfileLoading;
 
   const adjustWeight = (direction: -1 | 1) => {
+    if (Platform.OS === 'web') {
+      weightInputRef.current?.blur();
+    }
+
     const current =
       parseWeightInput(weightInput, units) ?? getLatestChange(entries).latest?.weightKg ?? null;
     if (current === null) {
@@ -170,10 +176,10 @@ export function WeightEntryFormBody({
           <View style={styles.weightEntryRow}>
             <Pressable
               style={({ pressed }) => [styles.stepperButton, pressed && styles.buttonPressed]}
-              onPress={() => adjustWeight(-1)}
               disabled={isDisabled}
               accessibilityRole="button"
               accessibilityLabel={t('entryForm.decreaseWeight')}
+              {...webStepperPressProps(() => adjustWeight(-1))}
               {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
             >
               <Ionicons name="remove" size={22} color={colors.textMuted} />
@@ -201,10 +207,10 @@ export function WeightEntryFormBody({
 
             <Pressable
               style={({ pressed }) => [styles.stepperButton, pressed && styles.buttonPressed]}
-              onPress={() => adjustWeight(1)}
               disabled={isDisabled}
               accessibilityRole="button"
               accessibilityLabel={t('entryForm.increaseWeight')}
+              {...webStepperPressProps(() => adjustWeight(1))}
               {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
             >
               <Ionicons name="add" size={22} color={colors.textMuted} />
