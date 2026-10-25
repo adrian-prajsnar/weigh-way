@@ -1,6 +1,7 @@
 import { HeightEntry } from '../types';
 import { getUserId } from './auth-user';
 import { supabase } from './client';
+import { fetchAllRows } from './fetch-all-rows';
 import { withAuthRetry } from './with-auth-retry';
 
 type HeightEntryRow = {
@@ -18,17 +19,27 @@ function mapRow(row: HeightEntryRow): HeightEntry {
 export async function getHeightEntries(): Promise<HeightEntry[]> {
   return withAuthRetry(async () => {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('height_entries')
-      .select('effective_date, height_cm')
-      .eq('user_id', userId)
-      .order('effective_date', { ascending: false });
+    const rows = await fetchAllRows<HeightEntryRow>(async (limit, after) => {
+      let query = supabase
+        .from('height_entries')
+        .select('effective_date, height_cm')
+        .eq('user_id', userId)
+        .order('effective_date', { ascending: false });
 
-    if (error) {
-      throw error;
-    }
+      if (after) {
+        query = query.lt('effective_date', after.effective_date);
+      }
 
-    return (data ?? []).map(mapRow);
+      const { data, error } = await query.limit(limit);
+
+      if (error) {
+        throw error;
+      }
+
+      return data ?? [];
+    });
+
+    return rows.map(mapRow);
   });
 }
 

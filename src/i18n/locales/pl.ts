@@ -96,6 +96,18 @@ const pl = {
     showPassword: 'Pokaż hasło',
     hidePassword: 'Ukryj hasło',
     resetLinkInvalid: 'Ten link resetujący jest nieprawidłowy lub wygasł. Poproś o nowy.',
+    confirmationLinkInvalid:
+      'Ten link potwierdzający jest nieprawidłowy lub wygasł. Poproś o nowy.',
+    confirmationLinkWrongDevice:
+      'Otwórz ten link potwierdzający na telefonie, na którym się rejestrowałeś, lub zaloguj się po potwierdzeniu e-maila.',
+    resetLinkWrongDevice:
+      'Otwórz ten link resetujący na telefonie, na którym poprosiłeś o reset, lub poproś o nowy e-mail.',
+    unexpectedAuthLink:
+      'Ten link nie pasuje do aktywnej rejestracji ani resetu hasła na tym urządzeniu. Otwórz go na telefonie, na którym zacząłeś, lub zaloguj się po potwierdzeniu e-maila.',
+    oauthLinkMismatch:
+      'Ten link logowania nie pasuje do rozpoczętego logowania Google. Spróbuj ponownie.',
+    overlappingEmailFlows:
+      'Na tym telefonie oczekuje zarówno potwierdzenie rejestracji, jak i reset hasła. Poproś o nowy e-mail dla linku, który chcesz otworzyć, i spróbuj ponownie.',
     emailAlreadyRegistered: 'Konto z tym adresem e-mail już istnieje.',
     rateLimited: 'Osiągnięto limit e-maili — spróbuj ponownie za godzinę.',
   },
@@ -339,6 +351,8 @@ const pl = {
   },
   errors: {
     couldNotLoadData: 'Nie udało się załadować danych',
+    dataTooLarge:
+      'To konto ma więcej historii, niż aplikacja może teraz załadować. Skontaktuj się z pomocą, jeśli problem się powtarza.',
     couldNotLoadEntries: 'Nie udało się załadować pomiarów.',
     couldNotLoadProfile: 'Nie udało się załadować profilu.',
     mustBeSignedIn: 'Zaloguj się, aby kontynuować.',

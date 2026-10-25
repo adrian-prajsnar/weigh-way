@@ -1,6 +1,7 @@
 import { WeightEntry } from '../types';
 import { getUserId } from './auth-user';
 import { supabase } from './client';
+import { fetchAllRows } from './fetch-all-rows';
 import { withAuthRetry } from './with-auth-retry';
 
 type WeightEntryRow = {
@@ -22,17 +23,27 @@ function mapRow(row: WeightEntryRow): WeightEntry {
 export async function getEntries(): Promise<WeightEntry[]> {
   return withAuthRetry(async () => {
     const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('weight_entries')
-      .select('entry_date, weight_kg, created_at, updated_at')
-      .eq('user_id', userId)
-      .order('entry_date', { ascending: false });
+    const rows = await fetchAllRows<WeightEntryRow>(async (limit, after) => {
+      let query = supabase
+        .from('weight_entries')
+        .select('entry_date, weight_kg, created_at, updated_at')
+        .eq('user_id', userId)
+        .order('entry_date', { ascending: false });
 
-    if (error) {
-      throw error;
-    }
+      if (after) {
+        query = query.lt('entry_date', after.entry_date);
+      }
 
-    return (data ?? []).map(mapRow);
+      const { data, error } = await query.limit(limit);
+
+      if (error) {
+        throw error;
+      }
+
+      return data ?? [];
+    });
+
+    return rows.map(mapRow);
   });
 }
 

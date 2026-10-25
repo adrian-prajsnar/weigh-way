@@ -1,7 +1,15 @@
 import { t } from './i18n';
+import type { AuthLinkErrorContext } from './storage/auth-pending-flow';
 import { isLocalSupabaseEnvUrl } from './supabase/local-supabase-env';
 
 function getErrorMessage(error: unknown): string {
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    const message = String((error as { message: unknown }).message).trim();
+    if (message.length > 0) {
+      return message.toLowerCase();
+    }
+  }
+
   return error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
 }
 
@@ -201,15 +209,64 @@ export function formatDeleteAccountError(error: unknown): string {
   return t('profile.deleteFailed');
 }
 
-export function formatAuthLinkError(error: unknown): string {
+function getAuthLinkErrorCode(error: unknown): string | null {
+  const message = getErrorMessage(error);
+  if (message.includes('auth_callback_not_expected')) {
+    return 'auth_callback_not_expected';
+  }
+  if (message.includes('auth_oauth_flow_mismatch')) {
+    return 'auth_oauth_flow_mismatch';
+  }
+  if (message.includes('auth_overlapping_email_flows')) {
+    return 'auth_overlapping_email_flows';
+  }
+  if (message.includes('auth_pkce_verifier_missing')) {
+    return 'auth_pkce_verifier_missing';
+  }
+  if (message.includes('auth_recovery_link_exchange_failed')) {
+    return 'auth_recovery_link_exchange_failed';
+  }
+  if (message.includes('auth_signup_link_exchange_failed')) {
+    return 'auth_signup_link_exchange_failed';
+  }
+  return null;
+}
+
+export function formatAuthLinkError(error: unknown, context: AuthLinkErrorContext = {}): string {
   const network = mapNetworkError(error);
   if (network) {
     return network;
   }
 
-  if (isInvalidResetLinkError(error)) {
+  const code = getAuthLinkErrorCode(error);
+  if (code === 'auth_callback_not_expected') {
+    return t('auth.unexpectedAuthLink');
+  }
+  if (code === 'auth_oauth_flow_mismatch') {
+    return t('auth.oauthLinkMismatch');
+  }
+  if (code === 'auth_overlapping_email_flows') {
+    return t('auth.overlappingEmailFlows');
+  }
+  if (code === 'auth_pkce_verifier_missing') {
+    return context.isPasswordRecovery
+      ? t('auth.resetLinkWrongDevice')
+      : t('auth.confirmationLinkWrongDevice');
+  }
+  if (code === 'auth_recovery_link_exchange_failed') {
+    return t('auth.resetLinkInvalid');
+  }
+  if (code === 'auth_signup_link_exchange_failed') {
+    return t('auth.confirmationLinkInvalid');
+  }
+
+  if (context.isPasswordRecovery) {
     return t('auth.resetLinkInvalid');
   }
 
-  return t('auth.resetLinkInvalid');
+  if (isInvalidResetLinkError(error)) {
+    return t('auth.confirmationLinkInvalid');
+  }
+
+  return t('auth.confirmationLinkInvalid');
 }

@@ -1,14 +1,25 @@
-import { getAuthQueryParams } from './auth-query-params';
+import { getAuthCallbackErrorMessage, getAuthQueryParams } from './auth-query-params';
+import { isAuthCallbackUrl } from './auth-callback-url';
+
+export { isAuthCallbackUrl } from './auth-callback-url';
 
 export function isOAuthCallbackUrl(url: string): boolean {
-  if (!url.includes('auth/callback')) {
+  if (!isAuthCallbackUrl(url)) {
     return false;
   }
 
-  const { params, errorCode } = getAuthQueryParams(url);
-  if (errorCode) {
+  if (getAuthCallbackErrorMessage(url)) {
     return true;
   }
 
-  return Boolean(params.code || (params.access_token && params.refresh_token));
+  const { params } = getAuthQueryParams(url);
+  return Boolean(params.code);
+}
+
+export function isPasswordRecoveryCallback(url: string): boolean {
+  if (!isAuthCallbackUrl(url)) {
+    return false;
+  }
+  const { params } = getAuthQueryParams(url);
+  return params.type === 'recovery';
 }

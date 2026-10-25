@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatAuthLinkError,
   formatSignInError,
   formatSignUpError,
   isEmailNotConfirmedError,
@@ -40,5 +41,33 @@ describe('formatSignUpError', () => {
     expect(formatSignUpError(new Error('User already registered'))).toBe(
       'An account with this email already exists.',
     );
+  });
+});
+
+describe('formatAuthLinkError', () => {
+  it('maps overlapping email flows to a dedicated message', () => {
+    expect(
+      formatAuthLinkError(new Error('auth_overlapping_email_flows'), {
+        hasOverlappingEmailFlows: true,
+        isPasswordRecovery: false,
+      }),
+    ).toContain('sign-up confirmation and a password reset');
+  });
+
+  it('maps failed signup exchange errors to confirmation wording', () => {
+    expect(
+      formatAuthLinkError(new Error('auth_signup_link_exchange_failed'), {
+        isPasswordRecovery: false,
+        hasOverlappingEmailFlows: false,
+      }),
+    ).toContain('confirmation link');
+  });
+
+  it('maps network exchange failures to the offline message', () => {
+    expect(
+      formatAuthLinkError(new Error('Network request failed'), {
+        isPasswordRecovery: false,
+      }),
+    ).toContain('internet connection');
   });
 });

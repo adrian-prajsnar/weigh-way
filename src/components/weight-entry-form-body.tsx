@@ -34,7 +34,7 @@ import { lbToKg, WEIGHT_STEP_KG, WEIGHT_STEP_LB } from '../units';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { spacing } from '../theme/tokens';
-import { webStepperPressProps } from '../theme/web-stepper-press';
+import { useWebStepperPress } from '../theme/use-web-stepper-press';
 
 type WeightEntryFormBodyProps = {
   entries: WeightEntry[];
@@ -134,6 +134,9 @@ export function WeightEntryFormBody({
     setWeightInput(formatWeightValue(Math.round((current + deltaKg) * 100) / 100, units));
   };
 
+  const decreaseWeightStepper = useWebStepperPress(() => adjustWeight(-1));
+  const increaseWeightStepper = useWebStepperPress(() => adjustWeight(1));
+
   const handleSave = async () => {
     const weightKg = parseWeightInput(weightInput, units);
     if (weightKg === null) {
@@ -187,7 +190,7 @@ export function WeightEntryFormBody({
               disabled={isDisabled}
               accessibilityRole="button"
               accessibilityLabel={t('entryForm.decreaseWeight')}
-              {...webStepperPressProps(() => adjustWeight(-1))}
+              {...decreaseWeightStepper}
               {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
             >
               <Ionicons name="remove" size={22} color={colors.textMuted} />
@@ -195,7 +198,6 @@ export function WeightEntryFormBody({
 
             <View
               style={[styles.weightInputWrapper, isFocused && styles.weightInputWrapperFocused]}
-              {...(Platform.OS === 'web' ? { dataSet: { wwWeightField: 'true' } } : {})}
             >
               <TextInput
                 ref={weightInputRef}
@@ -218,7 +220,7 @@ export function WeightEntryFormBody({
               disabled={isDisabled}
               accessibilityRole="button"
               accessibilityLabel={t('entryForm.increaseWeight')}
-              {...webStepperPressProps(() => adjustWeight(1))}
+              {...increaseWeightStepper}
               {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
             >
               <Ionicons name="add" size={22} color={colors.textMuted} />

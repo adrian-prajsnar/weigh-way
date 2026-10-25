@@ -105,6 +105,16 @@ export default {
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     resetLinkInvalid: 'This reset link is invalid or has expired. Request a new one.',
+    confirmationLinkInvalid: 'This confirmation link is invalid or has expired. Request a new one.',
+    confirmationLinkWrongDevice:
+      'Open this confirmation link on the phone where you signed up, or sign in after confirming your email.',
+    resetLinkWrongDevice:
+      'Open this reset link on the phone where you requested it, or request a new reset email.',
+    unexpectedAuthLink:
+      'This link does not match an active sign-up or reset on this device. Open it on the phone where you started, or sign in after confirming your email.',
+    oauthLinkMismatch: 'This sign-in link does not match the Google sign-in you started. Try again.',
+    overlappingEmailFlows:
+      'Both a sign-up confirmation and a password reset are pending on this phone. Request a fresh email for the link you want to open, then try again.',
     emailAlreadyRegistered: 'An account with this email already exists.',
     rateLimited: 'Email limit reached — try again in an hour.',
   },
@@ -330,6 +340,8 @@ export default {
   },
   errors: {
     couldNotLoadData: 'Could not load data',
+    dataTooLarge:
+      'This account has more history than the app can load right now. Contact support if this keeps happening.',
     couldNotLoadEntries: 'Could not load weigh-ins.',
     couldNotLoadProfile: 'Could not load profile.',
     mustBeSignedIn: 'You must be signed in.',

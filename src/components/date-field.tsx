@@ -6,7 +6,7 @@ import { useTranslation } from '../i18n/language-context';
 import type { TranslationKey } from '../i18n/translation-keys';
 import { useAppStyles } from '../theme/styles';
 import { webFocusTarget } from '../theme/web-focus-target';
-import { webStepperPressProps } from '../theme/web-stepper-press';
+import { useWebStepperPress } from '../theme/use-web-stepper-press';
 import { useColors } from '../theme/theme-context';
 import { DatePickerSheet } from './date-picker-sheet';
 
@@ -71,6 +71,9 @@ export function DateField({
     onChange(next);
   };
 
+  const decreaseDayStepper = useWebStepperPress(() => adjustDay(-1));
+  const increaseDayStepper = useWebStepperPress(() => adjustDay(1));
+
   const dateLabel = value
     ? formatDateLabel(toDateKey(value))
     : optional
@@ -134,7 +137,7 @@ export function DateField({
             disabled={!canDecreaseDay}
             accessibilityRole="button"
             accessibilityLabel={t('dateField.decreaseDay')}
-            {...webStepperPressProps(() => adjustDay(-1))}
+            {...decreaseDayStepper}
             {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
           >
             <Ionicons name="remove" size={22} color={colors.textMuted} />
@@ -149,7 +152,7 @@ export function DateField({
             disabled={!canIncreaseDay}
             accessibilityRole="button"
             accessibilityLabel={t('dateField.increaseDay')}
-            {...webStepperPressProps(() => adjustDay(1))}
+            {...increaseDayStepper}
             {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
           >
             <Ionicons name="add" size={22} color={colors.textMuted} />

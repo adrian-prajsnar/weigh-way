@@ -14,13 +14,17 @@ import {
 } from '../auth-errors';
 import { isOAuthCallbackUrl } from '../auth-oauth-callback';
 import {
+  clearAuthPendingFlows,
   createSessionFromUrl,
   getAuthRedirectUrl,
   isOAuthFlowActive,
-  isPasswordRecoveryUrl,
+  markEmailConfirmationPending,
+  markPasswordResetPending,
   performOAuthSignIn,
   resetOAuthRedirectState,
 } from '../auth-redirect';
+import { getAuthLinkErrorContext } from '../storage/auth-pending-flow';
+import { clearPkceVerifierBackups } from '../storage/pkce-verifier-backup';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { createDemoSession } from '../demo/demo-session';
@@ -73,16 +77,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const isRecovery = isPasswordRecoveryUrl(url);
+    const linkContext = await getAuthLinkErrorContext();
     try {
       await createSessionFromUrl(url);
-      if (isRecovery) {
+      if (linkContext.isPasswordRecovery) {
         setIsPasswordRecovery(true);
       }
     } catch (error) {
-      if (isRecovery) {
-        setAuthLinkError(formatAuthLinkError(error));
-      }
+      setAuthLinkError(formatAuthLinkError(error, linkContext));
     }
   }, []);
 
@@ -130,6 +132,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
       if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false);
+        void clearAuthPendingFlows();
+        resetOAuthRedirectState();
+      }
+      if (event === 'SIGNED_IN' && activeSession) {
+        void clearAuthPendingFlows();
       }
     });
 
@@ -155,6 +162,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw new Error(formatSignInError(error));
     }
+    await clearAuthPendingFlows();
+    resetOAuthRedirectState();
   }, []);
 
   const signInWithGoogle = useCallback(async (): Promise<boolean> => {
@@ -197,9 +206,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
 
       const needsEmailConfirmation = Boolean(data.user && !data.session);
+      if (needsEmailConfirmation) {
+        await markEmailConfirmationPending(email);
+      }
 
       // Supabase may auto-login when email confirmation is disabled — sign out so the user logs in manually.
-      await supabase.auth.signOut();
+      if (data.session) {
+        await supabase.auth.signOut();
+      }
 
       return { needsEmailConfirmation };
     } finally {
@@ -218,6 +232,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     resetOAuthRedirectState();
+    await clearAuthPendingFlows();
+    await clearPkceVerifierBackups();
   }, []);
 
   const deleteAccount = useCallback(async () => {
@@ -231,6 +247,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     await supabase.auth.signOut({ scope: 'local' });
+    resetOAuthRedirectState();
+    await clearAuthPendingFlows();
+    await clearPkceVerifierBackups();
   }, []);
 
   const resendConfirmationEmail = useCallback(async (email: string) => {
@@ -245,6 +264,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw new Error(formatResendConfirmationError(error));
     }
+
+    await markEmailConfirmationPending(email);
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
@@ -255,6 +276,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw new Error(formatResetPasswordError(error));
     }
+
+    await markPasswordResetPending(email);
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {
