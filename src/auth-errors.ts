@@ -201,10 +201,23 @@ export function formatDeleteAccountError(error: unknown): string {
   return t('profile.deleteFailed');
 }
 
+function isUnexpectedAuthCallbackError(error: unknown): boolean {
+  const message = getErrorMessage(error);
+  return (
+    message.includes('auth_callback_not_expected') ||
+    message.includes('auth_oauth_flow_mismatch') ||
+    message.includes('auth_oauth_flow_not_expected')
+  );
+}
+
 export function formatAuthLinkError(error: unknown): string {
   const network = mapNetworkError(error);
   if (network) {
     return network;
+  }
+
+  if (isUnexpectedAuthCallbackError(error)) {
+    return t('auth.unexpectedAuthLink');
   }
 
   if (isInvalidResetLinkError(error)) {

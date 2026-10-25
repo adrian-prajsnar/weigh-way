@@ -21,3 +21,24 @@ export function getAuthQueryParams(input: string): {
     params,
   };
 }
+
+export function getAuthCallbackErrorMessage(url: string): string | null {
+  const { params, errorCode } = getAuthQueryParams(url);
+  if (errorCode) {
+    return errorCode;
+  }
+
+  const description = params.error_description?.trim();
+  if (description) {
+    return description;
+  }
+
+  const error = params.error?.trim();
+  if (error) {
+    const code = params.error_code?.trim();
+    return code ? `${error} (${code})` : error;
+  }
+
+  const code = params.error_code?.trim();
+  return code ?? null;
+}

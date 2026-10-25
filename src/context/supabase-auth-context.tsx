@@ -14,10 +14,13 @@ import {
 } from '../auth-errors';
 import { isOAuthCallbackUrl } from '../auth-oauth-callback';
 import {
+  clearAuthPendingFlows,
   createSessionFromUrl,
   getAuthRedirectUrl,
   isOAuthFlowActive,
   isPasswordRecoveryUrl,
+  markEmailConfirmationPending,
+  markPasswordResetPending,
   performOAuthSignIn,
   resetOAuthRedirectState,
 } from '../auth-redirect';
@@ -80,9 +83,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         setIsPasswordRecovery(true);
       }
     } catch (error) {
-      if (isRecovery) {
-        setAuthLinkError(formatAuthLinkError(error));
-      }
+      setAuthLinkError(formatAuthLinkError(error));
     }
   }, []);
 
@@ -197,9 +198,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
 
       const needsEmailConfirmation = Boolean(data.user && !data.session);
+      if (needsEmailConfirmation) {
+        await markEmailConfirmationPending();
+      }
 
       // Supabase may auto-login when email confirmation is disabled — sign out so the user logs in manually.
-      await supabase.auth.signOut();
+      if (data.session) {
+        await supabase.auth.signOut();
+      }
 
       return { needsEmailConfirmation };
     } finally {
@@ -218,6 +224,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     resetOAuthRedirectState();
+    await clearAuthPendingFlows();
   }, []);
 
   const deleteAccount = useCallback(async () => {
@@ -245,6 +252,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw new Error(formatResendConfirmationError(error));
     }
+
+    await markEmailConfirmationPending();
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
@@ -255,6 +264,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw new Error(formatResetPasswordError(error));
     }
+
+    await markPasswordResetPending();
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {

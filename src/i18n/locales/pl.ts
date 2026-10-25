@@ -96,6 +96,8 @@ const pl = {
     showPassword: 'Pokaż hasło',
     hidePassword: 'Ukryj hasło',
     resetLinkInvalid: 'Ten link resetujący jest nieprawidłowy lub wygasł. Poproś o nowy.',
+    unexpectedAuthLink:
+      'Ten link nie pasuje do aktywnej rejestracji ani resetu hasła na tym urządzeniu. Otwórz go na telefonie, na którym zacząłeś, lub zaloguj się po potwierdzeniu e-maila.',
     emailAlreadyRegistered: 'Konto z tym adresem e-mail już istnieje.',
     rateLimited: 'Osiągnięto limit e-maili — spróbuj ponownie za godzinę.',
   },

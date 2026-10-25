@@ -105,6 +105,8 @@ export default {
     showPassword: 'Show password',
     hidePassword: 'Hide password',
     resetLinkInvalid: 'This reset link is invalid or has expired. Request a new one.',
+    unexpectedAuthLink:
+      'This link does not match an active sign-up or reset on this device. Open it on the phone where you started, or sign in after confirming your email.',
     emailAlreadyRegistered: 'An account with this email already exists.',
     rateLimited: 'Email limit reached — try again in an hour.',
   },
