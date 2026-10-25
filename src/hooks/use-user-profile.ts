@@ -24,6 +24,7 @@ export function useUserProfile() {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingEffectiveDate, setDeletingEffectiveDate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const hasLoadedRef = useRef(false);
 
   const refreshProfile = useCallback(async () => {
@@ -35,6 +36,7 @@ export function useUserProfile() {
         setSex(profile.sex);
         setError(null);
         hasLoadedRef.current = true;
+        setHasLoaded(true);
       } catch (loadError) {
         const message = loadError instanceof Error ? loadError.message : t('errors.couldNotLoadProfile');
         setError(message);
@@ -57,6 +59,7 @@ export function useUserProfile() {
       setIsRefreshing(false);
       setError(null);
       hasLoadedRef.current = false;
+      setHasLoaded(false);
       return;
     }
 
@@ -73,6 +76,7 @@ export function useUserProfile() {
       setSex(profile.sex);
       setError(null);
       hasLoadedRef.current = true;
+      setHasLoaded(true);
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : t('errors.couldNotLoadProfile');
       setError(message);
@@ -193,6 +197,7 @@ export function useUserProfile() {
     isSaving,
     deletingEffectiveDate,
     error,
+    hasLoaded,
     refreshProfile,
     saveBirthDateEntry,
     saveSexEntry,

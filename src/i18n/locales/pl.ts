@@ -36,6 +36,7 @@ const pl = {
     offlineSubtitle:
       'Ta aplikacja wymaga połączenia z internetem, aby synchronizować Twoje dane. Sprawdź połączenie i spróbuj ponownie.',
     offlineRefresh: 'Odśwież',
+    offlineBanner: 'Jesteś offline. Synchronizacja i zapisywanie wymagają połączenia.',
   },
   demo: {
     sessionHint: 'Wylogowanie i usunięcie konta są wyłączone w wersji demonstracyjnej.',
@@ -84,7 +85,7 @@ const pl = {
     accountCreated: 'Konto utworzone. Zaloguj się, aby kontynuować.',
     signUpFailed: 'Nie udało się założyć konta.',
     resetSent:
-      'Jeśli konto istnieje, wysłaliśmy link resetujący. Otwórz go na tym telefonie.',
+      'Jeśli konto istnieje, wysłaliśmy link resetujący. Otwórz go na tym urządzeniu.',
     couldNotSendReset: 'Nie udało się wysłać e-maila resetującego.',
     passwordUpdated: 'Hasło zaktualizowane. Zalogowano.',
     couldNotUpdatePassword: 'Nie udało się zaktualizować hasła.',
@@ -99,15 +100,18 @@ const pl = {
     confirmationLinkInvalid:
       'Ten link potwierdzający jest nieprawidłowy lub wygasł. Poproś o nowy.',
     confirmationLinkWrongDevice:
-      'Otwórz ten link potwierdzający na telefonie, na którym się rejestrowałeś, lub zaloguj się po potwierdzeniu e-maila.',
+      'Otwórz ten link potwierdzający na urządzeniu, na którym się rejestrowałeś, lub zaloguj się po potwierdzeniu e-maila.',
     resetLinkWrongDevice:
-      'Otwórz ten link resetujący na telefonie, na którym poprosiłeś o reset, lub poproś o nowy e-mail.',
+      'Otwórz ten link resetujący na urządzeniu, na którym poprosiłeś o reset, lub poproś o nowy e-mail.',
     unexpectedAuthLink:
-      'Ten link nie pasuje do aktywnej rejestracji ani resetu hasła na tym urządzeniu. Otwórz go na telefonie, na którym zacząłeś, lub zaloguj się po potwierdzeniu e-maila.',
+      'Ten link nie pasuje do aktywnej rejestracji ani resetu hasła na tym urządzeniu. Otwórz go na urządzeniu, na którym zacząłeś, lub zaloguj się po potwierdzeniu e-maila.',
     oauthLinkMismatch:
       'Ten link logowania nie pasuje do rozpoczętego logowania Google. Spróbuj ponownie.',
+    oauthLinkInvalid:
+      'Ten link logowania Google jest nieprawidłowy lub wygasł. Spróbuj zalogować się przez Google ponownie.',
+    invalidEmail: 'Wpisz prawidłowy adres e-mail.',
     overlappingEmailFlows:
-      'Na tym telefonie oczekuje zarówno potwierdzenie rejestracji, jak i reset hasła. Poproś o nowy e-mail dla linku, który chcesz otworzyć, i spróbuj ponownie.',
+      'Na tym urządzeniu oczekuje zarówno potwierdzenie rejestracji, jak i reset hasła. Poproś o nowy e-mail dla linku, który chcesz otworzyć, i spróbuj ponownie.',
     emailAlreadyRegistered: 'Konto z tym adresem e-mail już istnieje.',
     rateLimited: 'Osiągnięto limit e-maili — spróbuj ponownie za godzinę.',
   },
@@ -140,6 +144,12 @@ const pl = {
     saved: 'Waga zapisana.',
     savedRefreshFailed: 'Waga zapisana, ale nie udało się odświeżyć listy.',
     saveFailed: 'Nie udało się zapisać wagi.',
+    invalidWeight: 'Wpisz wagę w dozwolonym zakresie.',
+    replaceExistingTitle: 'Zastąpić istniejący wpis?',
+    replaceExistingMessage:
+      'Masz już pomiar z dnia %{date}. Zapisanie zastąpi ten wpis.',
+    replaceExistingConfirm: 'Zastąp wpis',
+    offlineSaveBlocked: 'Jesteś offline. Połącz się z internetem, aby zapisać wagę.',
   },
   hero: {
     currentWeight: 'Ostatnia waga',
@@ -310,6 +320,8 @@ const pl = {
     exportJournal: 'Eksportuj swoje pomiary',
     exportReady: 'Eksport pomiarów gotowy.',
     exportFailed: 'Nie udało się wyeksportować pomiarów.',
+    exportDataNotLoaded:
+      'Nie można wyeksportować, bo dane nie zostały załadowane. Spróbuj ponownie, gdy będziesz online.',
     signOut: 'Wyloguj się',
     signOutConfirm: 'Wylogować się z konta?',
     signedOut: 'Wylogowano.',

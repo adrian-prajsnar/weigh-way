@@ -18,6 +18,7 @@ export function useWeightEntries() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [deletingDate, setDeletingDate] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const hasLoadedRef = useRef(false);
 
   const refreshEntries = useCallback(async () => {
@@ -27,6 +28,7 @@ export function useWeightEntries() {
         setEntries(loaded);
         setError(null);
         hasLoadedRef.current = true;
+        setHasLoaded(true);
       } catch (loadError) {
         const message = loadError instanceof Error ? loadError.message : t('errors.couldNotLoadEntries');
         setError(message);
@@ -47,6 +49,7 @@ export function useWeightEntries() {
       setIsRefreshing(false);
       setError(null);
       hasLoadedRef.current = false;
+      setHasLoaded(false);
       return;
     }
 
@@ -61,6 +64,7 @@ export function useWeightEntries() {
       setEntries(loaded);
       setError(null);
       hasLoadedRef.current = true;
+      setHasLoaded(true);
     } catch (loadError) {
       const message = loadError instanceof Error ? loadError.message : t('errors.couldNotLoadEntries');
       setError(message);
@@ -120,6 +124,7 @@ export function useWeightEntries() {
     isRefreshing,
     deletingDate,
     error,
+    hasLoaded,
     refreshEntries,
     removeEntry,
     upsertEntry,

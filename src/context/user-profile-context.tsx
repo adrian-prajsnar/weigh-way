@@ -12,6 +12,7 @@ type UserProfileContextValue = {
   isSaving: boolean;
   deletingEffectiveDate: string | null;
   error: string | null;
+  hasLoaded: boolean;
   refreshProfile: () => Promise<void>;
   saveBirthDateEntry: (birthDate: string | null) => Promise<void>;
   saveSexEntry: (sex: BiologicalSex | null) => Promise<void>;

@@ -15,15 +15,22 @@ import { DateField } from './date-field';
 import { useBmiDetails } from '../context/bmi-details-context';
 import { useSharedBmiDisplay } from '../context/bmi-display-context';
 import { useUnits } from '../context/unit-context';
+import { useConfirm } from '../context/confirm-context';
 import { useToast } from '../context/toast-context';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
+import { isDemoMode } from '../demo/is-demo-mode';
+import { useNetworkStatus } from '../hooks/use-network-status';
+import { shouldBlockSaveForOffline } from '../network/connectivity';
 import {
+  formatDateLabel,
   formatWeightValue,
   getTodayDate,
   getWeightRangeMessage,
   getWeightUnitLabel,
+  normalizeWeightInputText,
   parseWeightInput,
+  resolveWeightKgForSave,
   toDateKey,
 } from '../format';
 import { getHeightAtDate } from '../height';
@@ -65,11 +72,15 @@ export function WeightEntryFormBody({
   const { showBmi } = useSharedBmiDisplay();
   const { openWeighIn } = useBmiDetails();
   const { showError, showSuccess } = useToast();
+  const { confirm } = useConfirm();
+  const { isOffline } = useNetworkStatus();
   const { upsertEntry } = useSharedWeightEntries();
   const [selectedDate, setSelectedDate] = useState(initialDate ?? getTodayDate);
   const [weightInput, setWeightInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
+  const [weightValidationMessage, setWeightValidationMessage] = useState<string | null>(null);
+  const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
   const weightInputRef = useRef<TextInputInstance>(null);
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
@@ -81,8 +92,10 @@ export function WeightEntryFormBody({
   const weightPlaceholder = units === 'imperial' ? '0.0' : '0.00';
   const heightAtDate = getHeightAtDate(heightEntries, selectedDateKey);
   const parsedWeightKg = useMemo(
-    () => parseWeightInput(weightInput, units),
-    [weightInput, units],
+    () =>
+      resolveWeightKgForSave(weightInput, units, existingEntryWeightKg) ??
+      parseWeightInput(weightInput, units),
+    [weightInput, units, existingEntryWeightKg],
   );
 
   const previewBmi = useMemo(() => {
@@ -138,15 +151,53 @@ export function WeightEntryFormBody({
   const increaseWeightStepper = useWebStepperPress(() => adjustWeight(1));
 
   const handleSave = async () => {
-    const weightKg = parseWeightInput(weightInput, units);
-    if (weightKg === null) {
-      showError(getWeightRangeMessage(units));
+    if (isSaving || isConfirmingReplace) {
       return;
     }
+
+    if (shouldBlockSaveForOffline(isOffline, isDemoMode())) {
+      showError(t('entryForm.offlineSaveBlocked'));
+      return;
+    }
+
+    const weightKg = resolveWeightKgForSave(weightInput, units, existingEntryWeightKg);
+    if (weightKg === null) {
+      const message = normalizeWeightInputText(weightInput)
+        ? getWeightRangeMessage(units)
+        : t('entryForm.invalidWeight');
+      setWeightValidationMessage(message);
+      showError(message);
+      return;
+    }
+
+    setWeightValidationMessage(null);
 
     if (existingEntryForDate !== undefined && existingEntryForDate.weightKg === weightKg) {
       onSaveSuccess?.();
       return;
+    }
+
+    if (
+      !dateReadOnly &&
+      existingEntryForDate !== undefined &&
+      existingEntryForDate.weightKg !== weightKg
+    ) {
+      const dateLabel = formatDateLabel(selectedDateKey);
+      setIsConfirmingReplace(true);
+      let confirmed = false;
+      try {
+        confirmed = await confirm({
+          title: t('entryForm.replaceExistingTitle'),
+          message: t('entryForm.replaceExistingMessage', { date: dateLabel }),
+          confirmLabel: t('entryForm.replaceExistingConfirm'),
+          destructive: true,
+        });
+      } finally {
+        setIsConfirmingReplace(false);
+      }
+      if (!confirmed) {
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -203,7 +254,12 @@ export function WeightEntryFormBody({
                 ref={weightInputRef}
                 style={styles.weightInput}
                 value={weightInput}
-                onChangeText={setWeightInput}
+                onChangeText={(value) => {
+                  setWeightInput(value);
+                  if (weightValidationMessage) {
+                    setWeightValidationMessage(null);
+                  }
+                }}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 keyboardType="decimal-pad"
@@ -226,6 +282,9 @@ export function WeightEntryFormBody({
               <Ionicons name="add" size={22} color={colors.textMuted} />
             </Pressable>
           </View>
+          {weightValidationMessage ? (
+            <Text style={styles.fieldErrorText}>{weightValidationMessage}</Text>
+          ) : null}
         </View>
 
         {showBmi && parsedWeightKg !== null ? (

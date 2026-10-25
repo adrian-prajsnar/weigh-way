@@ -8,6 +8,7 @@ type WeightEntriesContextValue = {
   isRefreshing: boolean;
   deletingDate: string | null;
   error: string | null;
+  hasLoaded: boolean;
   refreshEntries: () => Promise<void>;
   removeEntry: (date: string) => Promise<void>;
   upsertEntry: (date: string, weightKg: number) => Promise<void>;

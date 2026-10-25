@@ -10,6 +10,7 @@ import { PasswordField } from '../components/password-field';
 import { useToast } from '../context/toast-context';
 import { useTranslation } from '../i18n/language-context';
 import { AuthStackParamList } from '../navigation/types';
+import { isValidEmail } from '../email';
 import { isValidPassword } from '../password';
 import { useAppStyles } from '../theme/styles';
 import { webFocusTarget } from '../theme/web-focus-target';
@@ -28,10 +29,26 @@ export function SignUpScreen({ navigation }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
   const [isGoogleBusy, setIsGoogleBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+
+  const validateEmailField = (value: string): boolean => {
+    if (!value.trim()) {
+      setEmailError(t('auth.enterEmail'));
+      return false;
+    }
+    if (!isValidEmail(value)) {
+      setEmailError(t('auth.invalidEmail'));
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
 
   const handleSignUp = async () => {
-    if (!email.trim() || !password) {
-      showError(t('auth.enterEmailPassword'));
+    if (!validateEmailField(email) || !password) {
+      if (!password) {
+        showError(t('auth.enterEmailPassword'));
+      }
       return;
     }
 
@@ -73,7 +90,21 @@ export function SignUpScreen({ navigation }: Props) {
         </Pressable>
       }
     >
-      <EmailField value={email} onChangeText={setEmail} />
+      <EmailField
+        value={email}
+        onChangeText={(value) => {
+          setEmail(value);
+          if (emailError) {
+            setEmailError(null);
+          }
+        }}
+        onBlur={() => {
+          if (email.trim()) {
+            validateEmailField(email);
+          }
+        }}
+        errorText={emailError}
+      />
 
       <PasswordField
         label={t('auth.password')}

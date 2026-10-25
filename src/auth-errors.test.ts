@@ -63,6 +63,14 @@ describe('formatAuthLinkError', () => {
     ).toContain('confirmation link');
   });
 
+  it('maps expired OAuth exchange errors to OAuth wording', () => {
+    expect(
+      formatAuthLinkError(new Error('auth_oauth_link_exchange_failed'), {
+        isPasswordRecovery: false,
+      }),
+    ).toContain('Google');
+  });
+
   it('maps network exchange failures to the offline message', () => {
     expect(
       formatAuthLinkError(new Error('Network request failed'), {

@@ -27,8 +27,33 @@ export function formatWeightValue(weightKg: number, units: UnitSystem): string {
   return weightKg.toFixed(2);
 }
 
+export function normalizeWeightInputText(input: string): string {
+  return input.trim().replace(',', '.');
+}
+
+/** Resolves kg for save, preserving stored kg when the field still shows the formatted value. */
+export function resolveWeightKgForSave(
+  input: string,
+  units: UnitSystem,
+  existingWeightKg?: number,
+): number | null {
+  const normalized = normalizeWeightInputText(input);
+  if (!normalized) {
+    return null;
+  }
+
+  if (existingWeightKg !== undefined) {
+    const formattedExisting = formatWeightValue(existingWeightKg, units);
+    if (normalized === formattedExisting) {
+      return existingWeightKg;
+    }
+  }
+
+  return parseWeightInput(input, units);
+}
+
 export function parseWeightInput(input: string, units: UnitSystem): number | null {
-  const trimmed = input.trim().replace(',', '.');
+  const trimmed = normalizeWeightInputText(input);
   if (!trimmed) {
     return null;
   }

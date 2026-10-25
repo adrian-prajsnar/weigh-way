@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatWeightValue,
   fromDateKey,
   getHistoryDateRangeFieldHighlight,
   getTrendDateRangeFieldHighlight,
   parseWeightInput,
+  resolveWeightKgForSave,
   toDateKey,
   validateHistoryDateRange,
   validateTrendDateRange,
@@ -27,6 +29,13 @@ describe('parseWeightInput', () => {
 
   it('accepts valid imperial weights', () => {
     expect(parseWeightInput('165.5', 'imperial')).not.toBeNull();
+  });
+
+  it('preserves stored kg when imperial display is unchanged', () => {
+    const storedKg = 73.1;
+    const display = formatWeightValue(storedKg, 'imperial');
+    expect(resolveWeightKgForSave(display, 'imperial', storedKg)).toBe(storedKg);
+    expect(parseWeightInput(display, 'imperial')).not.toBe(storedKg);
   });
 });
 

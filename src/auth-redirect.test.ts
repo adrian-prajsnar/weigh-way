@@ -63,6 +63,20 @@ vi.mock('expo-web-browser', () => ({
   maybeCompleteAuthSession: vi.fn(),
 }));
 
+const exchangedCodeState = vi.hoisted(() => ({
+  remembered: new Set<string>(),
+}));
+
+vi.mock('./storage/auth-last-exchanged-code', () => ({
+  isAuthCodeAlreadyExchanged: vi.fn(async (code: string) => exchangedCodeState.remembered.has(code)),
+  rememberExchangedAuthCode: vi.fn(async (code: string) => {
+    exchangedCodeState.remembered.add(code);
+  }),
+  clearRememberedAuthCode: vi.fn(async () => {
+    exchangedCodeState.remembered.clear();
+  }),
+}));
+
 // eslint-disable-next-line import/first -- load after vi.mock
 import { formatAuthLinkError } from './auth-errors';
 import {
@@ -78,6 +92,7 @@ const PKCE_VERIFIER_MISMATCH = {
 
 describe('auth deep link handling', () => {
   beforeEach(() => {
+    exchangedCodeState.remembered.clear();
     resetOAuthRedirectState();
     authState.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
     pendingState.isEmailConfirmationPending.mockResolvedValue(false);
@@ -94,6 +109,18 @@ describe('auth deep link handling', () => {
   afterEach(() => {
     vi.clearAllMocks();
     resetOAuthRedirectState();
+  });
+
+  it('dedupes in-flight exchange for the same code across callback URLs', async () => {
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+    authState.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
+
+    await Promise.all([
+      createSessionFromUrl('weigh-way://auth/callback?code=shared-code'),
+      createSessionFromUrl('weigh-way://auth/callback?code=shared-code&state=x'),
+    ]);
+
+    expect(authState.exchangeCodeForSession).toHaveBeenCalledTimes(1);
   });
 
   it('treats duplicate codes as a no-op before pending checks', async () => {
@@ -178,7 +205,7 @@ describe('auth deep link handling', () => {
 
     await expect(
       createSessionFromUrl('weigh-way://auth/callback?code=expired-code'),
-    ).rejects.toThrow('auth_signup_link_exchange_failed');
+    ).rejects.toThrow('auth_oauth_link_exchange_failed');
 
     expect(authState.exchangeCodeForSession).toHaveBeenCalledTimes(1);
     expect(pkceState.restoreLegacyVerifierForFlow).not.toHaveBeenCalled();

@@ -43,6 +43,22 @@ export function createLayoutStyles({ colors, scheme }: StyleContext) {
       color: colors.accentText,
       textAlign: 'center',
     },
+    offlineBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingHorizontal: spacing.xl,
+      paddingBottom: spacing.sm,
+      backgroundColor: colors.warningSoft,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.warningBorder,
+    },
+    offlineBannerText: {
+      flex: 1,
+      fontSize: 13,
+      color: colors.warningText,
+      fontFamily: fontFamily.medium,
+    },
 
     card: {
       backgroundColor: colors.surface,

@@ -14,7 +14,8 @@ import { useEffect, useMemo } from 'react';
 import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppUpdatePromptHandler } from './src/components/app-update-prompt-handler';
-import { OfflineScreen } from './src/components/offline-screen';
+import { OfflineConnectivityBanner } from './src/components/offline-connectivity-banner';
+import { ReconnectDataSync } from './src/components/reconnect-data-sync';
 import { SupabaseAuthProvider, useSupabaseAuth } from './src/context/supabase-auth-context';
 import { useToast, ToastProvider } from './src/context/toast-context';
 import { useNetworkStatus } from './src/hooks/use-network-status';
@@ -94,6 +95,7 @@ function ThemedApp({ fontsLoaded }: { fontsLoaded: boolean }) {
               <UserProfileProvider>
                 <BmiDisplayProvider>
                   <WeightEntriesProvider>
+                    <ReconnectDataSync />
                     <BmiDetailsProvider>
                       <AppNavigation fontsLoaded={fontsLoaded} />
                     </BmiDetailsProvider>
@@ -108,14 +110,20 @@ function ThemedApp({ fontsLoaded }: { fontsLoaded: boolean }) {
   );
 }
 
-function NetworkGate({ children }: { children: React.ReactNode }) {
+function ConnectivityShell({ children }: { children: React.ReactNode }) {
   const { isOffline, isRefreshing, refresh } = useNetworkStatus();
 
-  if (isOffline) {
-    return <OfflineScreen isRefreshing={isRefreshing} onRefresh={() => void refresh()} />;
-  }
-
-  return <>{children}</>;
+  return (
+    <>
+      {isOffline ? (
+        <OfflineConnectivityBanner
+          isRefreshing={isRefreshing}
+          onRefresh={() => void refresh()}
+        />
+      ) : null}
+      {children}
+    </>
+  );
 }
 
 function AppShell() {
@@ -132,9 +140,9 @@ function AppShell() {
   return isDemoMode() ? (
     <ThemedApp fontsLoaded={isReady} />
   ) : (
-    <NetworkGate>
+    <ConnectivityShell>
       <ThemedApp fontsLoaded={isReady} />
-    </NetworkGate>
+    </ConnectivityShell>
   );
 }
 
