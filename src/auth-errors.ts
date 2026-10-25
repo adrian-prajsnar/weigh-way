@@ -229,6 +229,9 @@ function getAuthLinkErrorCode(error: unknown): string | null {
   if (message.includes('auth_signup_link_exchange_failed')) {
     return 'auth_signup_link_exchange_failed';
   }
+  if (message.includes('auth_oauth_link_exchange_failed')) {
+    return 'auth_oauth_link_exchange_failed';
+  }
   return null;
 }
 
@@ -258,6 +261,9 @@ export function formatAuthLinkError(error: unknown, context: AuthLinkErrorContex
   }
   if (code === 'auth_signup_link_exchange_failed') {
     return t('auth.confirmationLinkInvalid');
+  }
+  if (code === 'auth_oauth_link_exchange_failed') {
+    return t('auth.oauthLinkInvalid');
   }
 
   if (context.isPasswordRecovery) {

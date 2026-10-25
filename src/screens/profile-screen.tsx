@@ -41,6 +41,7 @@ import { hasAnyHeight } from '../height';
 import {
   buildJournalJson,
   buildWeighInsCsv,
+  canExportJournalData,
   EXPORT_JSON_FILENAME,
   WEIGH_INS_CSV_FILENAME,
 } from '../journal-export';
@@ -111,7 +112,7 @@ export function ProfileScreen({
   const { preference, setPreference } = useTheme();
   const { units, preference: unitPreference, setPreference: setUnitPreference } = useUnits();
   const { session, signOut, deleteAccount } = useSupabaseAuth();
-  const { entries } = useSharedWeightEntries();
+  const { entries, error: entriesError } = useSharedWeightEntries();
   const { heightEntries, birthDate, sex, isLoading, isRefreshing, isSaving, error, refreshProfile, saveBirthDateEntry, saveSexEntry } =
     useSharedUserProfile();
   const { showBmi, setShowBmi } = useSharedBmiDisplay();
@@ -183,6 +184,11 @@ export function ProfileScreen({
       setIsExporting(true);
       await waitForExportUi();
       try {
+        if (!canExportJournalData({ weightEntriesError: entriesError, profileError: error })) {
+          showError(t('profile.exportDataNotLoaded'));
+          return;
+        }
+
         const json = buildJournalJson({
           weightEntries: entries,
           heightEntries,

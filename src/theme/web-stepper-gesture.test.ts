@@ -85,6 +85,20 @@ describe('createWebStepperPressHandlers', () => {
     expect(onPress).toHaveBeenCalledTimes(2);
   });
 
+  it('suppresses repeated Enter clicks until keyup', () => {
+    platform.OS = 'web';
+
+    const onPress = vi.fn();
+    const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
+
+    props.onKeyDown?.({ preventDefault: vi.fn(), nativeEvent: { key: 'Enter' } } as never);
+    expect(onPress).toHaveBeenCalledTimes(1);
+    props.onPress?.();
+    props.onPress?.();
+    expect(onPress).toHaveBeenCalledTimes(1);
+    props.onKeyUp?.({ preventDefault: vi.fn(), nativeEvent: { key: 'Enter' } } as never);
+  });
+
   it('ignores OS key repeat for Enter and Space', () => {
     platform.OS = 'web';
 
@@ -155,6 +169,7 @@ describe('createWebStepperPressHandlers', () => {
     const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
 
     props.onKeyDown?.({ preventDefault: vi.fn(), nativeEvent: { key: 'Enter' } } as never);
+    props.onKeyUp?.({ preventDefault: vi.fn(), nativeEvent: { key: 'Enter' } } as never);
     vi.advanceTimersByTime(100);
     props.onPress?.();
 

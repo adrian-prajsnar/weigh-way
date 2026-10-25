@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildJournalJson, buildWeighInsCsv } from './journal-export';
+import { buildJournalJson, buildWeighInsCsv, canExportJournalData } from './journal-export';
 import { HeightEntry, WeightEntry } from './types';
 
 describe('buildJournalJson', () => {
@@ -35,6 +35,14 @@ describe('buildJournalJson', () => {
     expect(parsed.sex).toBe('female');
     expect(parsed.heightEntries).toEqual(heightEntries);
     expect(parsed.weightEntries).toEqual(weightEntries);
+  });
+});
+
+describe('canExportJournalData', () => {
+  it('blocks export when weight or profile data failed to load', () => {
+    expect(canExportJournalData({ weightEntriesError: null, profileError: null })).toBe(true);
+    expect(canExportJournalData({ weightEntriesError: 'x', profileError: null })).toBe(false);
+    expect(canExportJournalData({ weightEntriesError: null, profileError: 'y' })).toBe(false);
   });
 });
 

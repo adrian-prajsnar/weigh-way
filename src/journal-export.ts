@@ -28,6 +28,13 @@ export function buildJournalJson({
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
+export function canExportJournalData(options: {
+  weightEntriesError: string | null;
+  profileError: string | null;
+}): boolean {
+  return !options.weightEntriesError && !options.profileError;
+}
+
 export function buildWeighInsCsv(weightEntries: WeightEntry[]): string {
   const sorted = [...weightEntries].sort((a, b) => a.date.localeCompare(b.date));
   const lines = ['date,weight_kg', ...sorted.map((entry) => `${entry.date},${entry.weightKg}`)];

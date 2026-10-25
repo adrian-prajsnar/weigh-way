@@ -10,6 +10,11 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
       color: colors.textMuted,
       fontFamily: fontFamily.medium,
     },
+    fieldErrorText: {
+      fontSize: 13,
+      color: colors.dangerText,
+      fontFamily: fontFamily.regular,
+    },
     input: {
       borderWidth: 1,
       borderColor: colors.border,

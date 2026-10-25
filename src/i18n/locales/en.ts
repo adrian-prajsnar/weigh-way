@@ -36,6 +36,7 @@ export default {
     offlineSubtitle:
       'This app needs an internet connection to sync your weight data. Check your connection and try again.',
     offlineRefresh: 'Refresh',
+    offlineBanner: 'You’re offline. Changes are kept on this screen until you’re back online.',
   },
   demo: {
     sessionHint: 'Sign-out and delete account are disabled in the demo version.',
@@ -113,6 +114,9 @@ export default {
     unexpectedAuthLink:
       'This link does not match an active sign-up or reset on this device. Open it on the phone where you started, or sign in after confirming your email.',
     oauthLinkMismatch: 'This sign-in link does not match the Google sign-in you started. Try again.',
+    oauthLinkInvalid:
+      'This Google sign-in link is invalid or has expired. Try signing in with Google again.',
+    invalidEmail: 'Enter a valid email address.',
     overlappingEmailFlows:
       'Both a sign-up confirmation and a password reset are pending on this phone. Request a fresh email for the link you want to open, then try again.',
     emailAlreadyRegistered: 'An account with this email already exists.',
@@ -147,6 +151,12 @@ export default {
     saved: 'Weight saved.',
     savedRefreshFailed: 'Weight saved, but the list could not be refreshed.',
     saveFailed: 'Could not save weight.',
+    invalidWeight: 'Enter a weight within the allowed range.',
+    replaceExistingTitle: 'Replace existing entry?',
+    replaceExistingMessage:
+      'You already have a weigh-in on %{date}. Saving will replace that entry.',
+    replaceExistingConfirm: 'Replace entry',
+    offlineSaveBlocked: 'You’re offline. Connect to save this weigh-in.',
   },
   hero: {
     currentWeight: 'Latest weight',
@@ -310,6 +320,7 @@ export default {
     exportJournal: 'Export your weigh-ins',
     exportReady: 'Weigh-ins export ready.',
     exportFailed: 'Could not export weigh-ins.',
+    exportDataNotLoaded: 'Could not export because your data did not load. Try again when online.',
     signOut: 'Sign out',
     signOutConfirm: 'Sign out of your account?',
     signedOut: 'Signed out.',

@@ -23,6 +23,11 @@ import {
 } from './storage/oauth-flow-expectation';
 import * as WebBrowser from 'expo-web-browser';
 import { isNetworkError } from './auth-errors';
+import {
+  clearRememberedAuthCode,
+  isAuthCodeAlreadyExchanged,
+  rememberExchangedAuthCode,
+} from './storage/auth-last-exchanged-code';
 import { supabase } from './supabase/client';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -98,6 +103,7 @@ export function resetOAuthRedirectState(): void {
   activeOAuthUrl = null;
   lastExchangedCode = null;
   void clearOAuthFlowExpectationStorage();
+  void clearRememberedAuthCode();
 }
 
 async function buildExchangeCandidates(params: Record<string, string>): Promise<CallbackFlowKind[]> {
@@ -208,7 +214,11 @@ function getAuthApiErrorCode(error: unknown): string | null {
 
 function isVerifierExchangeError(error: unknown): boolean {
   const code = getAuthApiErrorCode(error);
-  if (code === 'bad_code_verifier' || code === 'AuthPKCECodeVerifierMissingError') {
+  if (
+    code === 'bad_code_verifier' ||
+    code === 'pkce_code_verifier_not_found' ||
+    code === 'AuthPKCECodeVerifierMissingError'
+  ) {
     return true;
   }
 
@@ -251,6 +261,9 @@ function mapExchangeError(
   const isVerifierIssue = isVerifierExchangeError(error);
 
   if (isInvalidOrExpiredFlowStateError(error)) {
+    if (context.flowKind === 'oauth') {
+      return new Error('auth_oauth_link_exchange_failed');
+    }
     if (context.flowKind === 'recovery') {
       return new Error('auth_recovery_link_exchange_failed');
     }
@@ -265,6 +278,9 @@ function mapExchangeError(
     return new Error('auth_pkce_verifier_missing');
   }
 
+  if (context.flowKind === 'oauth') {
+    return new Error('auth_oauth_link_exchange_failed');
+  }
   if (context.flowKind === 'recovery') {
     return new Error('auth_recovery_link_exchange_failed');
   }
@@ -321,6 +337,18 @@ async function exchangeForFlowKind(
   }
 }
 
+async function isDuplicateAuthCode(authCode: string): Promise<boolean> {
+  if (authCode === lastExchangedCode) {
+    return true;
+  }
+  return await isAuthCodeAlreadyExchanged(authCode);
+}
+
+async function markAuthCodeExchanged(authCode: string): Promise<void> {
+  lastExchangedCode = authCode;
+  await rememberExchangedAuthCode(authCode);
+}
+
 async function clearPendingForSuccessfulKind(kind: CallbackFlowKind): Promise<void> {
   if (kind === 'oauth') {
     await clearOAuthFlowExpectationStorage();
@@ -352,7 +380,7 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
     throw new Error('missing_auth_callback_params');
   }
 
-  if (authCode === lastExchangedCode) {
+  if (await isDuplicateAuthCode(authCode)) {
     return;
   }
 
@@ -370,7 +398,7 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
 
     try {
       await exchangeForFlowKind(flowKind, authCode, params);
-      lastExchangedCode = authCode;
+      await markAuthCodeExchanged(authCode);
       await clearPendingForSuccessfulKind(flowKind);
       return;
     } catch (error) {
@@ -404,7 +432,7 @@ export async function createSessionFromUrl(url: string): Promise<void> {
   const authCode = params.code;
   const hasCallbackError = Boolean(getAuthCallbackErrorMessage(url));
 
-  if (authCode && authCode === lastExchangedCode) {
+  if (authCode && (await isDuplicateAuthCode(authCode))) {
     return;
   }
 

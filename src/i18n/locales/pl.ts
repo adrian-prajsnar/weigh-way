@@ -36,6 +36,8 @@ const pl = {
     offlineSubtitle:
       'Ta aplikacja wymaga połączenia z internetem, aby synchronizować Twoje dane. Sprawdź połączenie i spróbuj ponownie.',
     offlineRefresh: 'Odśwież',
+    offlineBanner:
+      'Jesteś offline. Zmiany na tym ekranie zostaną do czasu powrotu połączenia.',
   },
   demo: {
     sessionHint: 'Wylogowanie i usunięcie konta są wyłączone w wersji demonstracyjnej.',
@@ -106,6 +108,9 @@ const pl = {
       'Ten link nie pasuje do aktywnej rejestracji ani resetu hasła na tym urządzeniu. Otwórz go na telefonie, na którym zacząłeś, lub zaloguj się po potwierdzeniu e-maila.',
     oauthLinkMismatch:
       'Ten link logowania nie pasuje do rozpoczętego logowania Google. Spróbuj ponownie.',
+    oauthLinkInvalid:
+      'Ten link logowania Google jest nieprawidłowy lub wygasł. Spróbuj zalogować się przez Google ponownie.',
+    invalidEmail: 'Wpisz prawidłowy adres e-mail.',
     overlappingEmailFlows:
       'Na tym telefonie oczekuje zarówno potwierdzenie rejestracji, jak i reset hasła. Poproś o nowy e-mail dla linku, który chcesz otworzyć, i spróbuj ponownie.',
     emailAlreadyRegistered: 'Konto z tym adresem e-mail już istnieje.',
@@ -140,6 +145,12 @@ const pl = {
     saved: 'Waga zapisana.',
     savedRefreshFailed: 'Waga zapisana, ale nie udało się odświeżyć listy.',
     saveFailed: 'Nie udało się zapisać wagi.',
+    invalidWeight: 'Wpisz wagę w dozwolonym zakresie.',
+    replaceExistingTitle: 'Zastąpić istniejący wpis?',
+    replaceExistingMessage:
+      'Masz już pomiar z dnia %{date}. Zapisanie zastąpi ten wpis.',
+    replaceExistingConfirm: 'Zastąp wpis',
+    offlineSaveBlocked: 'Jesteś offline. Połącz się z internetem, aby zapisać wagę.',
   },
   hero: {
     currentWeight: 'Ostatnia waga',
@@ -310,6 +321,8 @@ const pl = {
     exportJournal: 'Eksportuj swoje pomiary',
     exportReady: 'Eksport pomiarów gotowy.',
     exportFailed: 'Nie udało się wyeksportować pomiarów.',
+    exportDataNotLoaded:
+      'Nie można wyeksportować, bo dane nie zostały załadowane. Spróbuj ponownie, gdy będziesz online.',
     signOut: 'Wyloguj się',
     signOutConfirm: 'Wylogować się z konta?',
     signedOut: 'Wylogowano.',
