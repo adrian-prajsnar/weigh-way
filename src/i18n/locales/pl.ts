@@ -96,8 +96,16 @@ const pl = {
     showPassword: 'Pokaż hasło',
     hidePassword: 'Ukryj hasło',
     resetLinkInvalid: 'Ten link resetujący jest nieprawidłowy lub wygasł. Poproś o nowy.',
+    confirmationLinkInvalid:
+      'Ten link potwierdzający jest nieprawidłowy lub wygasł. Poproś o nowy.',
+    confirmationLinkWrongDevice:
+      'Otwórz ten link potwierdzający na telefonie, na którym się rejestrowałeś, lub zaloguj się po potwierdzeniu e-maila.',
+    resetLinkWrongDevice:
+      'Otwórz ten link resetujący na telefonie, na którym poprosiłeś o reset, lub poproś o nowy e-mail.',
     unexpectedAuthLink:
       'Ten link nie pasuje do aktywnej rejestracji ani resetu hasła na tym urządzeniu. Otwórz go na telefonie, na którym zacząłeś, lub zaloguj się po potwierdzeniu e-maila.',
+    oauthLinkMismatch:
+      'Ten link logowania nie pasuje do rozpoczętego logowania Google. Spróbuj ponownie.',
     emailAlreadyRegistered: 'Konto z tym adresem e-mail już istnieje.',
     rateLimited: 'Osiągnięto limit e-maili — spróbuj ponownie za godzinę.',
   },

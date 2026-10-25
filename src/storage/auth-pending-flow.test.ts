@@ -37,19 +37,19 @@ describe('auth pending flow storage', () => {
   });
 
   it('marks email confirmation as pending within the TTL', async () => {
-    await markEmailConfirmationPending();
+    await markEmailConfirmationPending('user@example.com');
     expect(await isEmailConfirmationPending()).toBe(true);
   });
 
   it('expires pending flows after the TTL', async () => {
-    await markEmailConfirmationPending();
+    await markEmailConfirmationPending('user@example.com');
     vi.setSystemTime(new Date(Date.now() + AUTH_PENDING_FLOW_TTL_MS + 1));
     expect(await isEmailConfirmationPending()).toBe(false);
   });
 
   it('clears all pending flows', async () => {
-    await markEmailConfirmationPending();
-    await markPasswordResetPending();
+    await markEmailConfirmationPending('user@example.com');
+    await markPasswordResetPending('user@example.com');
     await clearAuthPendingFlows();
     expect(await isEmailConfirmationPending()).toBe(false);
   });

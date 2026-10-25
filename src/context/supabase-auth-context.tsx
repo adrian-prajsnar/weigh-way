@@ -83,7 +83,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         setIsPasswordRecovery(true);
       }
     } catch (error) {
-      setAuthLinkError(formatAuthLinkError(error));
+      setAuthLinkError(formatAuthLinkError(error, { isPasswordRecovery: isRecovery }));
     }
   }, []);
 
@@ -131,6 +131,11 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
       if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false);
+        void clearAuthPendingFlows();
+        resetOAuthRedirectState();
+      }
+      if (event === 'SIGNED_IN' && activeSession) {
+        void clearAuthPendingFlows();
       }
     });
 
@@ -156,6 +161,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       throw new Error(formatSignInError(error));
     }
+    await clearAuthPendingFlows();
+    resetOAuthRedirectState();
   }, []);
 
   const signInWithGoogle = useCallback(async (): Promise<boolean> => {
@@ -199,7 +206,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       const needsEmailConfirmation = Boolean(data.user && !data.session);
       if (needsEmailConfirmation) {
-        await markEmailConfirmationPending();
+        await markEmailConfirmationPending(email);
       }
 
       // Supabase may auto-login when email confirmation is disabled — sign out so the user logs in manually.
@@ -238,6 +245,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     await supabase.auth.signOut({ scope: 'local' });
+    resetOAuthRedirectState();
+    await clearAuthPendingFlows();
   }, []);
 
   const resendConfirmationEmail = useCallback(async (email: string) => {
@@ -253,7 +262,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatResendConfirmationError(error));
     }
 
-    await markEmailConfirmationPending();
+    await markEmailConfirmationPending(email);
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
@@ -265,7 +274,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatResetPasswordError(error));
     }
 
-    await markPasswordResetPending();
+    await markPasswordResetPending(email);
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {

@@ -201,28 +201,50 @@ export function formatDeleteAccountError(error: unknown): string {
   return t('profile.deleteFailed');
 }
 
-function isUnexpectedAuthCallbackError(error: unknown): boolean {
+function getAuthLinkErrorCode(error: unknown): string | null {
   const message = getErrorMessage(error);
-  return (
-    message.includes('auth_callback_not_expected') ||
-    message.includes('auth_oauth_flow_mismatch') ||
-    message.includes('auth_oauth_flow_not_expected')
-  );
+  if (message.includes('auth_callback_not_expected')) {
+    return 'auth_callback_not_expected';
+  }
+  if (message.includes('auth_oauth_flow_mismatch')) {
+    return 'auth_oauth_flow_mismatch';
+  }
+  if (message.includes('auth_pkce_verifier_missing')) {
+    return 'auth_pkce_verifier_missing';
+  }
+  return null;
 }
 
-export function formatAuthLinkError(error: unknown): string {
+export type AuthLinkErrorContext = {
+  isPasswordRecovery?: boolean;
+};
+
+export function formatAuthLinkError(error: unknown, context: AuthLinkErrorContext = {}): string {
   const network = mapNetworkError(error);
   if (network) {
     return network;
   }
 
-  if (isUnexpectedAuthCallbackError(error)) {
+  const code = getAuthLinkErrorCode(error);
+  if (code === 'auth_callback_not_expected') {
     return t('auth.unexpectedAuthLink');
   }
+  if (code === 'auth_oauth_flow_mismatch') {
+    return t('auth.oauthLinkMismatch');
+  }
+  if (code === 'auth_pkce_verifier_missing') {
+    return context.isPasswordRecovery
+      ? t('auth.resetLinkWrongDevice')
+      : t('auth.confirmationLinkWrongDevice');
+  }
 
-  if (isInvalidResetLinkError(error)) {
+  if (context.isPasswordRecovery) {
     return t('auth.resetLinkInvalid');
   }
 
-  return t('auth.resetLinkInvalid');
+  if (isInvalidResetLinkError(error)) {
+    return t('auth.confirmationLinkInvalid');
+  }
+
+  return t('auth.confirmationLinkInvalid');
 }

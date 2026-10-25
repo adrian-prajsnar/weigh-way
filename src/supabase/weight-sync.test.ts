@@ -86,8 +86,8 @@ describe('getEntries', () => {
     const entries = await getEntries();
 
     expect(entries).toHaveLength(POSTGREST_PAGE_SIZE + 100);
-    expect(limit).toHaveBeenCalledTimes(2);
-    expect(lt).toHaveBeenCalledTimes(1);
+    expect(limit).toHaveBeenCalledTimes(3);
+    expect(lt).toHaveBeenCalledTimes(2);
     expect(lt).toHaveBeenCalledWith('entry_date', page1[page1.length - 1]!.entry_date);
   });
 

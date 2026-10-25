@@ -21,18 +21,16 @@ describe('isOAuthCallbackUrl', () => {
     expect(isOAuthCallbackUrl('weigh-way://auth/callback?code=abc123')).toBe(true);
   });
 
-  it('detects implicit token callbacks for guarded handling', () => {
+  it('does not treat implicit token callbacks as OAuth callback URLs', () => {
     expect(
       isOAuthCallbackUrl(
         'weigh-way://auth/callback#access_token=token&refresh_token=refresh',
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it('rejects unrelated paths even when codes are present', () => {
-    expect(
-      isOAuthCallbackUrl('weigh-way://totally/unrelated?code=evil'),
-    ).toBe(false);
+    expect(isOAuthCallbackUrl('weigh-way://totally/unrelated?code=evil')).toBe(false);
   });
 
   it('rejects callback paths without auth parameters', () => {

@@ -40,7 +40,7 @@ function isExpoDevAuthCallback(parsed: ParsedAuthCallbackUrl): boolean {
     return false;
   }
   const path = normalizePath(parsed.path);
-  return path === '/--/auth/callback' || path.endsWith('/auth/callback');
+  return path === '/--/auth/callback';
 }
 
 export function isAuthCallbackUrl(url: string): boolean {

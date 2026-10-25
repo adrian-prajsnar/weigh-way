@@ -16,8 +16,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
     flowType: 'pkce',
-    experimental: {
-      appendPkceFlowIdToRedirects: true,
-    },
   },
 });

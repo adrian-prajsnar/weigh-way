@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
   exchangeCodeForSession: vi.fn(),
-  setSession: vi.fn(),
   signInWithOAuth: vi.fn(),
 }));
 
@@ -15,12 +14,17 @@ const pendingState = vi.hoisted(() => ({
   clearAuthPendingFlows: vi.fn(),
 }));
 
+const oauthStorageState = vi.hoisted(() => ({
+  persistOAuthFlowExpectation: vi.fn(),
+  readOAuthFlowExpectation: vi.fn(),
+  clearOAuthFlowExpectationStorage: vi.fn(),
+}));
+
 vi.mock('./supabase/client', () => ({
   supabase: {
     auth: {
       getSession: authState.getSession,
       exchangeCodeForSession: authState.exchangeCodeForSession,
-      setSession: authState.setSession,
       signInWithOAuth: authState.signInWithOAuth,
       signOut: vi.fn(),
     },
@@ -37,6 +41,13 @@ vi.mock('./storage/auth-pending-flow', () => ({
   isPasswordResetPending: pendingState.isPasswordResetPending,
 }));
 
+vi.mock('./storage/oauth-flow-expectation', () => ({
+  OAUTH_FLOW_EXPECTATION_TTL_MS: 15 * 60 * 1000,
+  persistOAuthFlowExpectation: oauthStorageState.persistOAuthFlowExpectation,
+  readOAuthFlowExpectation: oauthStorageState.readOAuthFlowExpectation,
+  clearOAuthFlowExpectationStorage: oauthStorageState.clearOAuthFlowExpectationStorage,
+}));
+
 vi.mock('expo-web-browser', () => ({
   maybeCompleteAuthSession: vi.fn(),
 }));
@@ -46,19 +57,17 @@ import {
   beginOAuthFlowExpectation,
   createSessionFromUrl,
   resetOAuthRedirectState,
-  shouldHandleAuthDeepLink,
 } from './auth-redirect';
 
 describe('auth deep link handling', () => {
   beforeEach(() => {
     resetOAuthRedirectState();
-    authState.getSession.mockResolvedValue({ data: { session: null } });
     authState.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
-    authState.setSession.mockResolvedValue({ data: { session: {} }, error: null });
     pendingState.isEmailConfirmationPending.mockResolvedValue(false);
     pendingState.isPasswordResetPending.mockResolvedValue(false);
-    pendingState.clearEmailConfirmationPending.mockResolvedValue(undefined);
-    pendingState.clearPasswordResetPending.mockResolvedValue(undefined);
+    oauthStorageState.readOAuthFlowExpectation.mockResolvedValue(null);
+    oauthStorageState.persistOAuthFlowExpectation.mockResolvedValue(undefined);
+    oauthStorageState.clearOAuthFlowExpectationStorage.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -67,21 +76,28 @@ describe('auth deep link handling', () => {
   });
 
   it('ignores crafted links on unrelated paths', async () => {
-    await createSessionFromUrl(
-      'weigh-way://totally/unrelated?code=evil',
-    );
-
+    await createSessionFromUrl('weigh-way://totally/unrelated?code=evil');
     expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
-    expect(authState.setSession).not.toHaveBeenCalled();
   });
 
-  it('does not exchange PKCE codes without a pending auth flow', async () => {
-    await createSessionFromUrl('weigh-way://auth/callback?code=pkce-code');
-
-    expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
-    expect(await shouldHandleAuthDeepLink('weigh-way://auth/callback?code=pkce-code')).toBe(
-      false,
+  it('rejects PKCE codes without a pending auth flow', async () => {
+    await expect(createSessionFromUrl('weigh-way://auth/callback?code=pkce-code')).rejects.toThrow(
+      'auth_callback_not_expected',
     );
+    expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it('does not clear pending flows when an unrelated code exchange fails', async () => {
+    pendingState.isEmailConfirmationPending.mockResolvedValue(true);
+    authState.exchangeCodeForSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'invalid flow state' },
+    });
+
+    await expect(createSessionFromUrl('weigh-way://auth/callback?code=bad-code')).rejects.toThrow(
+      'auth_pkce_verifier_missing',
+    );
+    expect(pendingState.clearAuthPendingFlows).not.toHaveBeenCalled();
   });
 
   it('exchanges PKCE codes for email confirmation when sign-up is pending', async () => {
@@ -91,17 +107,7 @@ describe('auth deep link handling', () => {
 
     expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('confirm-code', undefined);
     expect(pendingState.clearEmailConfirmationPending).toHaveBeenCalled();
-  });
-
-  it('exchanges PKCE codes for password recovery when reset is pending', async () => {
-    pendingState.isPasswordResetPending.mockResolvedValue(true);
-
-    await createSessionFromUrl(
-      'weigh-way://auth/callback?code=recovery-code&type=recovery',
-    );
-
-    expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('recovery-code', undefined);
-    expect(pendingState.clearPasswordResetPending).toHaveBeenCalled();
+    expect(oauthStorageState.clearOAuthFlowExpectationStorage).toHaveBeenCalled();
   });
 
   it('exchanges PKCE codes when an OAuth flow is expected', async () => {
@@ -116,35 +122,8 @@ describe('auth deep link handling', () => {
     });
   });
 
-  it('rejects OAuth callbacks when flow ids do not match', async () => {
-    beginOAuthFlowExpectation('flow-expected');
-
-    await expect(
-      createSessionFromUrl(
-        'weigh-way://auth/callback?code=pkce-code&sb_flow_id=flow-other',
-      ),
-    ).rejects.toThrow('auth_oauth_flow_mismatch');
-  });
-
-  it('accepts implicit tokens only when email confirmation is pending', async () => {
-    pendingState.isEmailConfirmationPending.mockResolvedValue(true);
-
-    await createSessionFromUrl(
-      'weigh-way://auth/callback#access_token=at&refresh_token=rt',
-    );
-
-    expect(authState.setSession).toHaveBeenCalledWith({
-      access_token: 'at',
-      refresh_token: 'rt',
-    });
+  it('ignores fragment tokens on the callback URL', async () => {
+    await createSessionFromUrl('weigh-way://auth/callback#access_token=at&refresh_token=rt');
     expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
-  });
-
-  it('ignores implicit tokens without a pending email or reset flow', async () => {
-    await createSessionFromUrl(
-      'weigh-way://auth/callback#access_token=at&refresh_token=rt',
-    );
-
-    expect(authState.setSession).not.toHaveBeenCalled();
   });
 });

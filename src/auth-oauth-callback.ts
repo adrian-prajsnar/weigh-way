@@ -13,9 +13,7 @@ export function isOAuthCallbackUrl(url: string): boolean {
   }
 
   const { params } = getAuthQueryParams(url);
-  return Boolean(
-    params.code || (params.access_token && params.refresh_token),
-  );
+  return Boolean(params.code);
 }
 
 export function isPasswordRecoveryCallback(url: string): boolean {

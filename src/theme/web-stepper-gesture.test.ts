@@ -54,12 +54,23 @@ describe('createWebStepperPressHandlers', () => {
   it('steps once for short and long pointer clicks on web', () => {
     platform.OS = 'web';
 
-    for (const holdMs of [30, 150, 250, 400]) {
+    for (const holdMs of [10, 30, 80, 150, 250, 400]) {
       const onPress = vi.fn();
       const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
       pointerClick(props, holdMs);
       expect(onPress).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it('steps on a quick tap when only press in and press out fire', () => {
+    platform.OS = 'web';
+    const onPress = vi.fn();
+    const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
+
+    props.onPressIn?.(pressEvent());
+    props.onPressOut?.(pressEvent());
+
+    expect(onPress).toHaveBeenCalledTimes(1);
   });
 
   it('supports keyboard Enter and Space through onKeyDown', () => {
@@ -88,7 +99,7 @@ describe('createWebStepperPressHandlers', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not swallow the next keyboard activation after a focused-field tap', () => {
+  it('allows click then Enter after a focused-field tap', () => {
     platform.OS = 'web';
     vi.stubGlobal('document', {
       activeElement: { dataset: { wwFieldInput: 'true' } },
@@ -103,7 +114,7 @@ describe('createWebStepperPressHandlers', () => {
     expect(onPress).toHaveBeenCalledTimes(2);
   });
 
-  it('does not swallow a pointerless click after a focused-field tap', () => {
+  it('allows click then a pointerless press after a focused-field tap', () => {
     platform.OS = 'web';
     vi.stubGlobal('document', {
       activeElement: { dataset: { wwFieldInput: 'true' } },
@@ -113,6 +124,20 @@ describe('createWebStepperPressHandlers', () => {
     const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
 
     pointerClick(props, 150);
+    vi.advanceTimersByTime(100);
+    props.onPress?.();
+
+    expect(onPress).toHaveBeenCalledTimes(2);
+  });
+
+  it('allows Enter then a pointerless press', () => {
+    platform.OS = 'web';
+
+    const onPress = vi.fn();
+    const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
+
+    props.onKeyDown?.({ preventDefault: vi.fn(), nativeEvent: { key: 'Enter' } } as never);
+    vi.advanceTimersByTime(100);
     props.onPress?.();
 
     expect(onPress).toHaveBeenCalledTimes(2);
@@ -156,9 +181,8 @@ describe('createWebStepperPressHandlers', () => {
 
     props.onPressIn?.(pressEvent());
     props.onPressOut?.(pressEvent());
+    expect(onPress).toHaveBeenCalledTimes(1);
     props.onPress?.();
-    props.onPress?.();
-
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 

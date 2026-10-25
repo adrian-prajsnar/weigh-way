@@ -3,48 +3,81 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const EMAIL_CONFIRMATION_PENDING_KEY = '@weigh-way/auth-email-confirmation-pending';
 const PASSWORD_RESET_PENDING_KEY = '@weigh-way/auth-password-reset-pending';
 
-/** How long an in-app sign-up / reset request remains valid for deep-link completion. */
-export const AUTH_PENDING_FLOW_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+/** Matches typical Supabase email link lifetime (1 hour). */
+export const AUTH_PENDING_FLOW_TTL_MS = 60 * 60 * 1000;
 
-function isTimestampValid(raw: string | null): boolean {
+type PendingFlowRecord = {
+  startedAt: number;
+  email: string;
+};
+
+function parsePendingRecord(raw: string | null): PendingFlowRecord | null {
   if (!raw) {
-    return false;
+    return null;
   }
-  const startedAt = Number(raw);
-  if (!Number.isFinite(startedAt)) {
-    return false;
+
+  try {
+    const parsed = JSON.parse(raw) as PendingFlowRecord;
+    if (!Number.isFinite(parsed.startedAt) || typeof parsed.email !== 'string') {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
   }
-  return Date.now() - startedAt < AUTH_PENDING_FLOW_TTL_MS;
 }
 
-export async function markEmailConfirmationPending(): Promise<void> {
-  await AsyncStorage.setItem(EMAIL_CONFIRMATION_PENDING_KEY, String(Date.now()));
+function isRecordValid(record: PendingFlowRecord | null): boolean {
+  if (!record) {
+    return false;
+  }
+  return Date.now() - record.startedAt < AUTH_PENDING_FLOW_TTL_MS;
 }
 
-export async function markPasswordResetPending(): Promise<void> {
-  await AsyncStorage.setItem(PASSWORD_RESET_PENDING_KEY, String(Date.now()));
+async function writePending(key: string, email: string): Promise<void> {
+  const payload: PendingFlowRecord = {
+    startedAt: Date.now(),
+    email: email.trim().toLowerCase(),
+  };
+  await AsyncStorage.setItem(key, JSON.stringify(payload));
+}
+
+async function readPending(key: string): Promise<PendingFlowRecord | null> {
+  const raw = await AsyncStorage.getItem(key);
+  const record = parsePendingRecord(raw);
+  if (!isRecordValid(record)) {
+    if (raw) {
+      await AsyncStorage.removeItem(key);
+    }
+    return null;
+  }
+  return record;
+}
+
+export async function markEmailConfirmationPending(email: string): Promise<void> {
+  await writePending(EMAIL_CONFIRMATION_PENDING_KEY, email);
+}
+
+export async function markPasswordResetPending(email: string): Promise<void> {
+  await writePending(PASSWORD_RESET_PENDING_KEY, email);
 }
 
 export async function isEmailConfirmationPending(): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(EMAIL_CONFIRMATION_PENDING_KEY);
-  if (!isTimestampValid(raw)) {
-    if (raw) {
-      await AsyncStorage.removeItem(EMAIL_CONFIRMATION_PENDING_KEY);
-    }
-    return false;
-  }
-  return true;
+  return (await readPending(EMAIL_CONFIRMATION_PENDING_KEY)) !== null;
 }
 
 export async function isPasswordResetPending(): Promise<boolean> {
-  const raw = await AsyncStorage.getItem(PASSWORD_RESET_PENDING_KEY);
-  if (!isTimestampValid(raw)) {
-    if (raw) {
-      await AsyncStorage.removeItem(PASSWORD_RESET_PENDING_KEY);
-    }
-    return false;
-  }
-  return true;
+  return (await readPending(PASSWORD_RESET_PENDING_KEY)) !== null;
+}
+
+export async function getEmailConfirmationPendingEmail(): Promise<string | null> {
+  const record = await readPending(EMAIL_CONFIRMATION_PENDING_KEY);
+  return record?.email ?? null;
+}
+
+export async function getPasswordResetPendingEmail(): Promise<string | null> {
+  const record = await readPending(PASSWORD_RESET_PENDING_KEY);
+  return record?.email ?? null;
 }
 
 export async function clearEmailConfirmationPending(): Promise<void> {
