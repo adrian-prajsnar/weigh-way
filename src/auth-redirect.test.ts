@@ -10,13 +10,13 @@ const pendingState = vi.hoisted(() => ({
   isPasswordResetPending: vi.fn(),
   hasOverlappingEmailFlows: vi.fn(),
   resolveEmailCallbackFlowKind: vi.fn(),
-  clearAuthPendingFlows: vi.fn(),
+  clearEmailConfirmationPending: vi.fn(),
+  clearPasswordResetPending: vi.fn(),
 }));
 
 const pkceState = vi.hoisted(() => ({
   backupLegacyVerifierForRollback: vi.fn(),
   restoreLegacyVerifierForFlow: vi.fn(),
-  clearPkceVerifierBackups: vi.fn(),
 }));
 
 const oauthStorageState = vi.hoisted(() => ({
@@ -38,7 +38,9 @@ vi.mock('./supabase/client', () => ({
 vi.mock('./storage/auth-pending-flow', () => ({
   markEmailConfirmationPending: vi.fn(),
   markPasswordResetPending: vi.fn(),
-  clearAuthPendingFlows: pendingState.clearAuthPendingFlows,
+  clearAuthPendingFlows: vi.fn(),
+  clearEmailConfirmationPending: pendingState.clearEmailConfirmationPending,
+  clearPasswordResetPending: pendingState.clearPasswordResetPending,
   isEmailConfirmationPending: pendingState.isEmailConfirmationPending,
   isPasswordResetPending: pendingState.isPasswordResetPending,
   hasOverlappingEmailFlows: pendingState.hasOverlappingEmailFlows,
@@ -48,7 +50,6 @@ vi.mock('./storage/auth-pending-flow', () => ({
 vi.mock('./storage/pkce-verifier-backup', () => ({
   backupLegacyVerifierForRollback: pkceState.backupLegacyVerifierForRollback,
   restoreLegacyVerifierForFlow: pkceState.restoreLegacyVerifierForFlow,
-  clearPkceVerifierBackups: pkceState.clearPkceVerifierBackups,
 }));
 
 vi.mock('./storage/oauth-flow-expectation', () => ({
@@ -77,10 +78,10 @@ describe('auth deep link handling', () => {
     pendingState.isPasswordResetPending.mockResolvedValue(false);
     pendingState.hasOverlappingEmailFlows.mockResolvedValue(false);
     pendingState.resolveEmailCallbackFlowKind.mockResolvedValue(null);
-    pendingState.clearAuthPendingFlows.mockResolvedValue(undefined);
+    pendingState.clearEmailConfirmationPending.mockResolvedValue(undefined);
+    pendingState.clearPasswordResetPending.mockResolvedValue(undefined);
     pkceState.backupLegacyVerifierForRollback.mockResolvedValue(null);
     pkceState.restoreLegacyVerifierForFlow.mockResolvedValue(true);
-    pkceState.clearPkceVerifierBackups.mockResolvedValue(undefined);
     oauthStorageState.readOAuthFlowExpectation.mockResolvedValue(null);
   });
 
@@ -89,15 +90,8 @@ describe('auth deep link handling', () => {
     resetOAuthRedirectState();
   });
 
-  it('rejects PKCE codes without a pending auth flow', async () => {
-    await expect(createSessionFromUrl('weigh-way://auth/callback?code=pkce-code')).rejects.toThrow(
-      'auth_callback_not_expected',
-    );
-  });
-
   it('treats duplicate codes as a no-op before pending checks', async () => {
     pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
-    pendingState.isEmailConfirmationPending.mockResolvedValue(true);
 
     await createSessionFromUrl('weigh-way://auth/callback?code=duplicate');
     await createSessionFromUrl('weigh-way://auth/callback?code=duplicate');
@@ -105,51 +99,63 @@ describe('auth deep link handling', () => {
     expect(authState.exchangeCodeForSession).toHaveBeenCalledTimes(1);
   });
 
-  it('restores the signup verifier and clears both pending flags on success', async () => {
+  it('clears only the signup pending flag after a successful confirmation exchange', async () => {
     pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
 
     await createSessionFromUrl('weigh-way://auth/callback?code=confirm-code');
 
     expect(pkceState.restoreLegacyVerifierForFlow).toHaveBeenCalledWith('signup');
-    expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('confirm-code', undefined);
-    expect(pendingState.clearAuthPendingFlows).toHaveBeenCalled();
-    expect(pkceState.clearPkceVerifierBackups).toHaveBeenCalled();
+    expect(pendingState.clearEmailConfirmationPending).toHaveBeenCalled();
+    expect(pendingState.clearPasswordResetPending).not.toHaveBeenCalled();
   });
 
-  it('rolls back the legacy verifier when exchange fails', async () => {
-    const rollback = vi.fn();
-    pkceState.backupLegacyVerifierForRollback.mockResolvedValue(rollback);
-    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
-    authState.exchangeCodeForSession.mockResolvedValue({
-      data: { session: null },
-      error: { message: 'otp_expired' },
-    });
-
-    await expect(createSessionFromUrl('weigh-way://auth/callback?code=bad')).rejects.toThrow(
-      'auth_signup_link_exchange_failed',
-    );
-    expect(rollback).toHaveBeenCalled();
-    expect(pendingState.clearAuthPendingFlows).not.toHaveBeenCalled();
-  });
-
-  it('prefers email flows over a recent OAuth expectation when no flow id is present', async () => {
+  it('prefers OAuth when an expectation is active and email is also pending', async () => {
     beginOAuthFlowExpectation('oauth-flow');
     pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
 
-    await createSessionFromUrl('weigh-way://auth/callback?code=email-code');
+    await createSessionFromUrl('weigh-way://auth/callback?code=oauth-code');
 
-    expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('email-code', undefined);
+    expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('oauth-code', {
+      flowId: 'oauth-flow',
+    });
+    expect(pkceState.restoreLegacyVerifierForFlow).not.toHaveBeenCalled();
+    expect(oauthStorageState.clearOAuthFlowExpectationStorage).toHaveBeenCalled();
+    expect(pendingState.clearEmailConfirmationPending).not.toHaveBeenCalled();
   });
 
-  it('exchanges OAuth callbacks with an explicit flow id', async () => {
-    beginOAuthFlowExpectation('flow-123');
+  it('falls back to the email verifier when OAuth exchange fails with a verifier error', async () => {
+    beginOAuthFlowExpectation('oauth-flow');
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+    authState.exchangeCodeForSession
+      .mockResolvedValueOnce({
+        data: { session: null },
+        error: { message: 'invalid flow state' },
+      })
+      .mockResolvedValueOnce({ data: { session: {} }, error: null });
 
-    await createSessionFromUrl(
-      'weigh-way://auth/callback?code=pkce-code&sb_flow_id=flow-123',
-    );
+    await createSessionFromUrl('weigh-way://auth/callback?code=email-code');
 
-    expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('pkce-code', {
-      flowId: 'flow-123',
+    expect(authState.exchangeCodeForSession).toHaveBeenNthCalledWith(1, 'email-code', {
+      flowId: 'oauth-flow',
     });
+    expect(authState.exchangeCodeForSession).toHaveBeenNthCalledWith(2, 'email-code', undefined);
+    expect(pkceState.restoreLegacyVerifierForFlow).toHaveBeenCalledWith('signup');
+    expect(pendingState.clearEmailConfirmationPending).toHaveBeenCalled();
+  });
+
+  it('completes an email link when OAuth is active but the code belongs to email', async () => {
+    beginOAuthFlowExpectation('oauth-flow');
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('recovery');
+    authState.exchangeCodeForSession
+      .mockResolvedValueOnce({
+        data: { session: null },
+        error: { message: 'code verifier not found' },
+      })
+      .mockResolvedValueOnce({ data: { session: {} }, error: null });
+
+    await createSessionFromUrl('weigh-way://auth/callback?code=reset-code');
+
+    expect(pkceState.restoreLegacyVerifierForFlow).toHaveBeenCalledWith('recovery');
+    expect(pendingState.clearPasswordResetPending).toHaveBeenCalled();
   });
 });

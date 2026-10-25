@@ -32,6 +32,15 @@ describe('pkce verifier backup', () => {
     storage.clear();
   });
 
+  it('removes a stale backup when there is no legacy verifier to snapshot', async () => {
+    const backupKey = '@weigh-way/pkce-verifier-backup/signup';
+    storage.set(backupKey, 'stale-verifier/challenge');
+
+    await snapshotLegacyVerifierForFlow('signup');
+
+    expect(storage.has(backupKey)).toBe(false);
+  });
+
   it('restores the signup verifier after a reset overwrote the legacy key', async () => {
     const legacyKey = 'sb-test-auth-token-code-verifier';
     storage.set(legacyKey, 'signup-verifier/challenge');

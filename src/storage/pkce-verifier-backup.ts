@@ -14,6 +14,7 @@ async function readLegacyVerifier(): Promise<string | null> {
 export async function snapshotLegacyVerifierForFlow(kind: PkceBackupKind): Promise<void> {
   const verifier = await readLegacyVerifier();
   if (!verifier) {
+    await AsyncStorage.removeItem(backupStorageKey(kind));
     return;
   }
   await AsyncStorage.setItem(backupStorageKey(kind), verifier);
@@ -39,9 +40,10 @@ export async function backupLegacyVerifierForRollback(): Promise<(() => Promise<
   };
 }
 
+export async function clearPkceVerifierBackup(kind: PkceBackupKind): Promise<void> {
+  await AsyncStorage.removeItem(backupStorageKey(kind));
+}
+
 export async function clearPkceVerifierBackups(): Promise<void> {
-  await Promise.all([
-    AsyncStorage.removeItem(backupStorageKey('signup')),
-    AsyncStorage.removeItem(backupStorageKey('recovery')),
-  ]);
+  await Promise.all([clearPkceVerifierBackup('signup'), clearPkceVerifierBackup('recovery')]);
 }

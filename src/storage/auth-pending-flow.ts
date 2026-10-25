@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { snapshotLegacyVerifierForFlow } from './pkce-verifier-backup';
+import {
+  clearPkceVerifierBackup,
+  clearPkceVerifierBackups,
+  snapshotLegacyVerifierForFlow,
+  type PkceBackupKind,
+} from './pkce-verifier-backup';
 
 const EMAIL_CONFIRMATION_PENDING_KEY = '@weigh-way/auth-email-confirmation-pending';
 const PASSWORD_RESET_PENDING_KEY = '@weigh-way/auth-password-reset-pending';
@@ -43,12 +48,16 @@ async function writePending(key: string, email: string): Promise<void> {
   await AsyncStorage.setItem(key, JSON.stringify(payload));
 }
 
-async function readPending(key: string): Promise<PendingFlowRecord | null> {
+async function readPending(
+  key: string,
+  backupKind: PkceBackupKind,
+): Promise<PendingFlowRecord | null> {
   const raw = await AsyncStorage.getItem(key);
   const record = parsePendingRecord(raw);
   if (!isRecordValid(record)) {
     if (raw) {
       await AsyncStorage.removeItem(key);
+      await clearPkceVerifierBackup(backupKind);
     }
     return null;
   }
@@ -66,11 +75,11 @@ export async function markPasswordResetPending(email: string): Promise<void> {
 }
 
 export async function isEmailConfirmationPending(): Promise<boolean> {
-  return (await readPending(EMAIL_CONFIRMATION_PENDING_KEY)) !== null;
+  return (await readPending(EMAIL_CONFIRMATION_PENDING_KEY, 'signup')) !== null;
 }
 
 export async function isPasswordResetPending(): Promise<boolean> {
-  return (await readPending(PASSWORD_RESET_PENDING_KEY)) !== null;
+  return (await readPending(PASSWORD_RESET_PENDING_KEY, 'recovery')) !== null;
 }
 
 export async function hasOverlappingEmailFlows(): Promise<boolean> {
@@ -78,8 +87,8 @@ export async function hasOverlappingEmailFlows(): Promise<boolean> {
 }
 
 export async function resolveEmailCallbackFlowKind(): Promise<'signup' | 'recovery' | null> {
-  const emailRecord = await readPending(EMAIL_CONFIRMATION_PENDING_KEY);
-  const resetRecord = await readPending(PASSWORD_RESET_PENDING_KEY);
+  const emailRecord = await readPending(EMAIL_CONFIRMATION_PENDING_KEY, 'signup');
+  const resetRecord = await readPending(PASSWORD_RESET_PENDING_KEY, 'recovery');
   if (!emailRecord && !resetRecord) {
     return null;
   }
@@ -116,10 +125,12 @@ export async function getAuthLinkErrorContext(): Promise<AuthLinkErrorContext> {
 
 export async function clearEmailConfirmationPending(): Promise<void> {
   await AsyncStorage.removeItem(EMAIL_CONFIRMATION_PENDING_KEY);
+  await clearPkceVerifierBackup('signup');
 }
 
 export async function clearPasswordResetPending(): Promise<void> {
   await AsyncStorage.removeItem(PASSWORD_RESET_PENDING_KEY);
+  await clearPkceVerifierBackup('recovery');
 }
 
 export async function clearAuthPendingFlows(): Promise<void> {

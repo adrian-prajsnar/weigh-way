@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { registerErrorReporter } from '../report-error';
-import { toSupabaseError } from './errors';
+import { FetchAllRowsLimitError } from './fetch-all-rows';
+import { toSupabaseError, toSupabaseErrorFromUnknown } from './errors';
 
 describe('mapped supabase failures', () => {
   afterEach(() => {
@@ -25,6 +26,11 @@ describe('mapped supabase failures', () => {
     });
 
     expect(codes).toEqual(['PGRST303']);
+  });
+
+  it('maps fetch row cap errors through toSupabaseErrorFromUnknown', () => {
+    const message = toSupabaseErrorFromUnknown(new FetchAllRowsLimitError()).message;
+    expect(message).toContain('more history than the app can load');
   });
 
   it('does not report an offline network failure', () => {

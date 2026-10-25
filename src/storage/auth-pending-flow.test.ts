@@ -18,6 +18,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 
 vi.mock('./pkce-verifier-backup', () => ({
   snapshotLegacyVerifierForFlow: vi.fn(),
+  clearPkceVerifierBackup: vi.fn(),
 }));
 
 // eslint-disable-next-line import/first -- load after vi.mock

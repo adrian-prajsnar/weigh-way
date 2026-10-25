@@ -186,6 +186,21 @@ describe('createWebStepperPressHandlers', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  it('does not double-step when a slow main thread delays the synthetic press', () => {
+    platform.OS = 'web';
+
+    const onPress = vi.fn();
+    const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
+
+    props.onPressIn?.(pressEvent());
+    props.onPressOut?.(pressEvent());
+    expect(onPress).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(120);
+    props.onPress?.();
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
   it('does not double-step when keydown preventDefault suppresses the native click', () => {
     platform.OS = 'web';
 

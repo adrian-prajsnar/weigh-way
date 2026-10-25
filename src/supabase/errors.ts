@@ -86,6 +86,10 @@ export function toSupabaseError(error: SupabaseRequestError | unknown): Error {
 }
 
 export function toSupabaseErrorFromUnknown(error: unknown): Error {
+  if (error instanceof FetchAllRowsLimitError) {
+    return toSupabaseError(error);
+  }
+
   if (error instanceof Error) {
     if (isNetworkError(error)) {
       return new Error(t('errors.noConnection'));

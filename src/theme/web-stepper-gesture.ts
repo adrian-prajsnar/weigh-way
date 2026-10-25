@@ -22,6 +22,7 @@ export type WebStepperGestureState = {
   phase: GesturePhase;
   pressInX: number;
   pressInY: number;
+  skipNextSyntheticPointerPress: boolean;
   ignorePointerPressUntilMs: number;
   ignoreIdlePressUntilMs: number;
   suppressSpaceClickUntilKeyUp: boolean;
@@ -49,6 +50,7 @@ export function createInitialWebStepperGestureState(): WebStepperGestureState {
     phase: 'idle',
     pressInX: 0,
     pressInY: 0,
+    skipNextSyntheticPointerPress: false,
     ignorePointerPressUntilMs: 0,
     ignoreIdlePressUntilMs: 0,
     suppressSpaceClickUntilKeyUp: false,
@@ -91,6 +93,7 @@ export function createWebStepperPressHandlers(
 
   const completeValidPointerRelease = () => {
     activateFromPointer();
+    gesture.skipNextSyntheticPointerPress = true;
     gesture.ignorePointerPressUntilMs = Date.now() + SYNTHETIC_POINTER_PRESS_MS;
     resetGesture();
   };
@@ -104,6 +107,7 @@ export function createWebStepperPressHandlers(
         return;
       }
 
+      gesture.skipNextSyntheticPointerPress = false;
       gesture.ignorePointerPressUntilMs = 0;
       gesture.ignoreIdlePressUntilMs = 0;
       gesture.suppressSpaceClickUntilKeyUp = false;
@@ -116,7 +120,15 @@ export function createWebStepperPressHandlers(
         return;
       }
 
-      if (Date.now() < gesture.ignorePointerPressUntilMs) {
+      if (gesture.skipNextSyntheticPointerPress) {
+        gesture.skipNextSyntheticPointerPress = false;
+        return;
+      }
+
+      if (
+        Date.now() < gesture.ignorePointerPressUntilMs &&
+        gesture.phase === 'idle'
+      ) {
         return;
       }
 
@@ -175,6 +187,7 @@ export function createWebStepperPressHandlers(
     },
     onTouchCancel: () => {
       gesture.phase = 'cancelled';
+      gesture.skipNextSyntheticPointerPress = false;
       gesture.ignorePointerPressUntilMs = 0;
       gesture.ignoreIdlePressUntilMs = 0;
       gesture.suppressSpaceClickUntilKeyUp = false;
