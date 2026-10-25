@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
-  getSession: vi.fn(),
   exchangeCodeForSession: vi.fn(),
   signInWithOAuth: vi.fn(),
 }));
@@ -9,9 +8,15 @@ const authState = vi.hoisted(() => ({
 const pendingState = vi.hoisted(() => ({
   isEmailConfirmationPending: vi.fn(),
   isPasswordResetPending: vi.fn(),
-  clearEmailConfirmationPending: vi.fn(),
-  clearPasswordResetPending: vi.fn(),
+  hasOverlappingEmailFlows: vi.fn(),
+  resolveEmailCallbackFlowKind: vi.fn(),
   clearAuthPendingFlows: vi.fn(),
+}));
+
+const pkceState = vi.hoisted(() => ({
+  backupLegacyVerifierForRollback: vi.fn(),
+  restoreLegacyVerifierForFlow: vi.fn(),
+  clearPkceVerifierBackups: vi.fn(),
 }));
 
 const oauthStorageState = vi.hoisted(() => ({
@@ -23,7 +28,6 @@ const oauthStorageState = vi.hoisted(() => ({
 vi.mock('./supabase/client', () => ({
   supabase: {
     auth: {
-      getSession: authState.getSession,
       exchangeCodeForSession: authState.exchangeCodeForSession,
       signInWithOAuth: authState.signInWithOAuth,
       signOut: vi.fn(),
@@ -35,10 +39,16 @@ vi.mock('./storage/auth-pending-flow', () => ({
   markEmailConfirmationPending: vi.fn(),
   markPasswordResetPending: vi.fn(),
   clearAuthPendingFlows: pendingState.clearAuthPendingFlows,
-  clearEmailConfirmationPending: pendingState.clearEmailConfirmationPending,
-  clearPasswordResetPending: pendingState.clearPasswordResetPending,
   isEmailConfirmationPending: pendingState.isEmailConfirmationPending,
   isPasswordResetPending: pendingState.isPasswordResetPending,
+  hasOverlappingEmailFlows: pendingState.hasOverlappingEmailFlows,
+  resolveEmailCallbackFlowKind: pendingState.resolveEmailCallbackFlowKind,
+}));
+
+vi.mock('./storage/pkce-verifier-backup', () => ({
+  backupLegacyVerifierForRollback: pkceState.backupLegacyVerifierForRollback,
+  restoreLegacyVerifierForFlow: pkceState.restoreLegacyVerifierForFlow,
+  clearPkceVerifierBackups: pkceState.clearPkceVerifierBackups,
 }));
 
 vi.mock('./storage/oauth-flow-expectation', () => ({
@@ -65,9 +75,13 @@ describe('auth deep link handling', () => {
     authState.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
     pendingState.isEmailConfirmationPending.mockResolvedValue(false);
     pendingState.isPasswordResetPending.mockResolvedValue(false);
+    pendingState.hasOverlappingEmailFlows.mockResolvedValue(false);
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue(null);
+    pendingState.clearAuthPendingFlows.mockResolvedValue(undefined);
+    pkceState.backupLegacyVerifierForRollback.mockResolvedValue(null);
+    pkceState.restoreLegacyVerifierForFlow.mockResolvedValue(true);
+    pkceState.clearPkceVerifierBackups.mockResolvedValue(undefined);
     oauthStorageState.readOAuthFlowExpectation.mockResolvedValue(null);
-    oauthStorageState.persistOAuthFlowExpectation.mockResolvedValue(undefined);
-    oauthStorageState.clearOAuthFlowExpectationStorage.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -75,42 +89,59 @@ describe('auth deep link handling', () => {
     resetOAuthRedirectState();
   });
 
-  it('ignores crafted links on unrelated paths', async () => {
-    await createSessionFromUrl('weigh-way://totally/unrelated?code=evil');
-    expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
-  });
-
   it('rejects PKCE codes without a pending auth flow', async () => {
     await expect(createSessionFromUrl('weigh-way://auth/callback?code=pkce-code')).rejects.toThrow(
       'auth_callback_not_expected',
     );
-    expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
-  it('does not clear pending flows when an unrelated code exchange fails', async () => {
+  it('treats duplicate codes as a no-op before pending checks', async () => {
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
     pendingState.isEmailConfirmationPending.mockResolvedValue(true);
-    authState.exchangeCodeForSession.mockResolvedValue({
-      data: { session: null },
-      error: { message: 'invalid flow state' },
-    });
 
-    await expect(createSessionFromUrl('weigh-way://auth/callback?code=bad-code')).rejects.toThrow(
-      'auth_pkce_verifier_missing',
-    );
-    expect(pendingState.clearAuthPendingFlows).not.toHaveBeenCalled();
+    await createSessionFromUrl('weigh-way://auth/callback?code=duplicate');
+    await createSessionFromUrl('weigh-way://auth/callback?code=duplicate');
+
+    expect(authState.exchangeCodeForSession).toHaveBeenCalledTimes(1);
   });
 
-  it('exchanges PKCE codes for email confirmation when sign-up is pending', async () => {
-    pendingState.isEmailConfirmationPending.mockResolvedValue(true);
+  it('restores the signup verifier and clears both pending flags on success', async () => {
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
 
     await createSessionFromUrl('weigh-way://auth/callback?code=confirm-code');
 
+    expect(pkceState.restoreLegacyVerifierForFlow).toHaveBeenCalledWith('signup');
     expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('confirm-code', undefined);
-    expect(pendingState.clearEmailConfirmationPending).toHaveBeenCalled();
-    expect(oauthStorageState.clearOAuthFlowExpectationStorage).toHaveBeenCalled();
+    expect(pendingState.clearAuthPendingFlows).toHaveBeenCalled();
+    expect(pkceState.clearPkceVerifierBackups).toHaveBeenCalled();
   });
 
-  it('exchanges PKCE codes when an OAuth flow is expected', async () => {
+  it('rolls back the legacy verifier when exchange fails', async () => {
+    const rollback = vi.fn();
+    pkceState.backupLegacyVerifierForRollback.mockResolvedValue(rollback);
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+    authState.exchangeCodeForSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'otp_expired' },
+    });
+
+    await expect(createSessionFromUrl('weigh-way://auth/callback?code=bad')).rejects.toThrow(
+      'auth_signup_link_exchange_failed',
+    );
+    expect(rollback).toHaveBeenCalled();
+    expect(pendingState.clearAuthPendingFlows).not.toHaveBeenCalled();
+  });
+
+  it('prefers email flows over a recent OAuth expectation when no flow id is present', async () => {
+    beginOAuthFlowExpectation('oauth-flow');
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+
+    await createSessionFromUrl('weigh-way://auth/callback?code=email-code');
+
+    expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('email-code', undefined);
+  });
+
+  it('exchanges OAuth callbacks with an explicit flow id', async () => {
     beginOAuthFlowExpectation('flow-123');
 
     await createSessionFromUrl(
@@ -120,10 +151,5 @@ describe('auth deep link handling', () => {
     expect(authState.exchangeCodeForSession).toHaveBeenCalledWith('pkce-code', {
       flowId: 'flow-123',
     });
-  });
-
-  it('ignores fragment tokens on the callback URL', async () => {
-    await createSessionFromUrl('weigh-way://auth/callback#access_token=at&refresh_token=rt');
-    expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,10 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
+vi.mock('./pkce-verifier-backup', () => ({
+  snapshotLegacyVerifierForFlow: vi.fn(),
+}));
+
 // eslint-disable-next-line import/first -- load after vi.mock
 import {
   AUTH_PENDING_FLOW_TTL_MS,
@@ -23,6 +27,7 @@ import {
   isEmailConfirmationPending,
   markEmailConfirmationPending,
   markPasswordResetPending,
+  resolveEmailCallbackFlowKind,
 } from './auth-pending-flow';
 
 describe('auth pending flow storage', () => {
@@ -52,5 +57,13 @@ describe('auth pending flow storage', () => {
     await markPasswordResetPending('user@example.com');
     await clearAuthPendingFlows();
     expect(await isEmailConfirmationPending()).toBe(false);
+  });
+
+  it('prefers the most recently started flow when both are pending', async () => {
+    await markEmailConfirmationPending('signup@example.com');
+    vi.advanceTimersByTime(1_000);
+    await markPasswordResetPending('reset@example.com');
+
+    expect(await resolveEmailCallbackFlowKind()).toBe('recovery');
   });
 });

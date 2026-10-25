@@ -3,13 +3,19 @@ import { getAuthCallbackErrorMessage, getAuthQueryParams } from './auth-query-pa
 import { isAuthCallbackUrl } from './auth-callback-url';
 import {
   clearAuthPendingFlows,
-  clearEmailConfirmationPending,
-  clearPasswordResetPending,
+  hasOverlappingEmailFlows,
   isEmailConfirmationPending,
   isPasswordResetPending,
   markEmailConfirmationPending,
   markPasswordResetPending,
+  resolveEmailCallbackFlowKind,
 } from './storage/auth-pending-flow';
+import {
+  backupLegacyVerifierForRollback,
+  clearPkceVerifierBackups,
+  restoreLegacyVerifierForFlow,
+  type PkceBackupKind,
+} from './storage/pkce-verifier-backup';
 import {
   clearOAuthFlowExpectationStorage,
   OAUTH_FLOW_EXPECTATION_TTL_MS,
@@ -22,6 +28,8 @@ import { supabase } from './supabase/client';
 WebBrowser.maybeCompleteAuthSession();
 
 const PKCE_FLOW_ID_PARAM = 'sb_flow_id';
+
+type CallbackFlowKind = 'oauth' | 'signup' | 'recovery';
 
 let oauthFlowActive = false;
 let oauthFlowExpectedUntil = 0;
@@ -88,20 +96,27 @@ export function resetOAuthRedirectState(): void {
   void clearOAuthFlowExpectationStorage();
 }
 
-async function isCodeExchangeAllowed(): Promise<boolean> {
-  if (oauthFlowActive) {
-    return true;
+async function resolveCallbackFlowKind(
+  params: Record<string, string>,
+): Promise<CallbackFlowKind | null> {
+  if (params[PKCE_FLOW_ID_PARAM]) {
+    return 'oauth';
   }
-  if (await isOAuthFlowExpectationActive()) {
-    return true;
+
+  const emailKind = await resolveEmailCallbackFlowKind();
+  if (emailKind) {
+    return emailKind;
   }
-  if (await isEmailConfirmationPending()) {
-    return true;
+
+  if (oauthFlowActive || (await isOAuthFlowExpectationActive())) {
+    return 'oauth';
   }
-  if (await isPasswordResetPending()) {
-    return true;
-  }
-  return false;
+
+  return null;
+}
+
+async function isCodeExchangeAllowed(params: Record<string, string>): Promise<boolean> {
+  return (await resolveCallbackFlowKind(params)) !== null;
 }
 
 export async function shouldHandleAuthDeepLink(url: string): Promise<boolean> {
@@ -115,7 +130,7 @@ export async function shouldHandleAuthDeepLink(url: string): Promise<boolean> {
 
   const { params } = getAuthQueryParams(url);
   if (params.code) {
-    return await isCodeExchangeAllowed();
+    return await isCodeExchangeAllowed(params);
   }
 
   return false;
@@ -175,54 +190,46 @@ export function isPasswordRecoveryUrl(url: string): boolean {
   return params.type === 'recovery';
 }
 
-async function assertPkceCodeExchangeAllowed(params: Record<string, string>): Promise<void> {
-  if (oauthFlowActive || (await isOAuthFlowExpectationActive())) {
-    const callbackFlowId = params[PKCE_FLOW_ID_PARAM] ?? null;
-    if (expectedOAuthFlowId && callbackFlowId && callbackFlowId !== expectedOAuthFlowId) {
-      throw new Error('auth_oauth_flow_mismatch');
-    }
-    return;
-  }
-
-  if (await isEmailConfirmationPending()) {
-    return;
-  }
-
-  if (await isPasswordResetPending()) {
-    return;
-  }
-
-  throw new Error('auth_callback_not_expected');
-}
-
-async function clearPendingFlowsForCallback(params: Record<string, string>): Promise<void> {
-  if (params.type === 'recovery') {
-    await clearPasswordResetPending();
-    return;
-  }
-  if (await isPasswordResetPending()) {
-    await clearPasswordResetPending();
-    return;
-  }
-  await clearEmailConfirmationPending();
-}
-
-function mapExchangeError(error: unknown): Error {
+function mapExchangeError(
+  error: unknown,
+  context: { flowKind: CallbackFlowKind; overlappingEmailFlows: boolean },
+): Error {
   const message =
     typeof error === 'object' && error !== null && 'message' in error
       ? String((error as { message: unknown }).message).toLowerCase()
       : error instanceof Error
         ? error.message.toLowerCase()
         : String(error).toLowerCase();
-  if (
+
+  const isVerifierIssue =
     message.includes('code verifier') ||
     message.includes('pkce') ||
     message.includes('flow state') ||
-    message.includes('invalid flow state')
-  ) {
+    message.includes('invalid flow state');
+
+  if (context.overlappingEmailFlows && isVerifierIssue) {
+    return new Error('auth_overlapping_email_flows');
+  }
+
+  if (isVerifierIssue) {
     return new Error('auth_pkce_verifier_missing');
   }
+
+  if (context.flowKind === 'recovery') {
+    return new Error('auth_recovery_link_exchange_failed');
+  }
+  if (context.flowKind === 'signup') {
+    return new Error('auth_signup_link_exchange_failed');
+  }
+
   return error instanceof Error ? error : new Error(String(error));
+}
+
+async function restoreVerifierForFlowKind(kind: PkceBackupKind): Promise<void> {
+  const restored = await restoreLegacyVerifierForFlow(kind);
+  if (!restored) {
+    throw new Error('auth_pkce_verifier_missing');
+  }
 }
 
 async function handleAuthCallbackUrl(url: string): Promise<void> {
@@ -245,19 +252,49 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
     return;
   }
 
-  await assertPkceCodeExchangeAllowed(params);
+  const flowKind = await resolveCallbackFlowKind(params);
+  if (!flowKind) {
+    throw new Error('auth_callback_not_expected');
+  }
 
-  const flowId = params[PKCE_FLOW_ID_PARAM] ?? expectedOAuthFlowId ?? undefined;
-  const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
-    authCode,
-    flowId ? { flowId } : undefined,
-  );
-  if (exchangeError) {
-    throw mapExchangeError(exchangeError);
+  if (flowKind === 'oauth') {
+    const callbackFlowId = params[PKCE_FLOW_ID_PARAM] ?? null;
+    if (expectedOAuthFlowId && callbackFlowId && callbackFlowId !== expectedOAuthFlowId) {
+      throw new Error('auth_oauth_flow_mismatch');
+    }
+  }
+
+  const overlappingEmailFlows = await hasOverlappingEmailFlows();
+  const rollback = await backupLegacyVerifierForRollback();
+
+  try {
+    if (flowKind === 'signup' || flowKind === 'recovery') {
+      await restoreVerifierForFlowKind(flowKind);
+    }
+
+    const flowId =
+      flowKind === 'oauth'
+        ? params[PKCE_FLOW_ID_PARAM] ?? expectedOAuthFlowId ?? undefined
+        : undefined;
+
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+      authCode,
+      flowId ? { flowId } : undefined,
+    );
+
+    if (exchangeError) {
+      throw mapExchangeError(exchangeError, { flowKind, overlappingEmailFlows });
+    }
+  } catch (error) {
+    if (rollback) {
+      await rollback();
+    }
+    throw error;
   }
 
   lastExchangedCode = authCode;
-  await clearPendingFlowsForCallback(params);
+  await clearAuthPendingFlows();
+  await clearPkceVerifierBackups();
   await clearOAuthFlowExpectationStorage();
   clearInMemoryOAuthFlowExpectation();
 }
@@ -268,14 +305,18 @@ export async function createSessionFromUrl(url: string): Promise<void> {
   }
 
   const { params } = getAuthQueryParams(url);
-  const hasCode = Boolean(params.code);
+  const authCode = params.code;
   const hasCallbackError = Boolean(getAuthCallbackErrorMessage(url));
 
-  if (hasCode && !(await isCodeExchangeAllowed())) {
+  if (authCode && authCode === lastExchangedCode) {
+    return;
+  }
+
+  if (authCode && !(await isCodeExchangeAllowed(params))) {
     throw new Error('auth_callback_not_expected');
   }
 
-  if (!hasCallbackError && !hasCode) {
+  if (!hasCallbackError && !authCode) {
     return;
   }
 

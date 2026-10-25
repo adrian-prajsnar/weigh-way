@@ -34,7 +34,9 @@ export async function fetchAllRows<T>(
   if (pageCount >= MAX_FETCH_PAGES) {
     const probe = await fetchPage(POSTGREST_PAGE_SIZE, after);
     if (probe.length > 0) {
-      reportUnhandled(new FetchAllRowsLimitError());
+      const limitError = new FetchAllRowsLimitError();
+      reportUnhandled(limitError);
+      throw limitError;
     }
   }
 

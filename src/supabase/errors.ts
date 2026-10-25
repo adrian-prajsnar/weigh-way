@@ -1,6 +1,7 @@
 import { isNetworkError } from '../auth-errors';
 import { t } from '../i18n';
 import { reportSupabaseFailure } from '../report-error';
+import { FetchAllRowsLimitError } from './fetch-all-rows';
 
 type SupabaseRequestError = {
   message: string;
@@ -54,24 +55,30 @@ function reportMappedFailure(error: SupabaseRequestError): void {
   reportSupabaseFailure(code);
 }
 
-export function toSupabaseError(error: SupabaseRequestError): Error {
-  reportMappedFailure(error);
+export function toSupabaseError(error: SupabaseRequestError | unknown): Error {
+  if (error instanceof FetchAllRowsLimitError) {
+    reportMappedFailure({ message: 'fetch_all_rows_limit_exceeded', code: 'fetch_all_rows_limit' });
+    return new Error(t('errors.dataTooLarge'));
+  }
 
-  if (isNetworkError(error)) {
+  const requestError = error as SupabaseRequestError;
+  reportMappedFailure(requestError);
+
+  if (isNetworkError(requestError)) {
     return new Error(t('errors.noConnection'));
   }
 
-  if (error.message.toLowerCase().includes('permission denied')) {
+  if (requestError.message?.toLowerCase().includes('permission denied')) {
     return new Error(
       __DEV__ ? t('errors.databasePermissionDev') : t('errors.databasePermission'),
     );
   }
 
-  if (isJwtClockSkewError(error)) {
+  if (isJwtClockSkewError(requestError)) {
     return new Error(t('errors.jwtClockSkew'));
   }
 
-  if (isSessionExpiredError(error)) {
+  if (isSessionExpiredError(requestError)) {
     return new Error(t('errors.sessionExpired'));
   }
 

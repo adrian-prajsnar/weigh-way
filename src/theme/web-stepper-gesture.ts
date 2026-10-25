@@ -8,10 +8,13 @@ export type StepperPressProps = {
   onPressOut?: (event: GestureResponderEvent) => void;
   onTouchCancel?: () => void;
   onKeyDown?: (event: KeyPressEvent) => void;
+  onKeyUp?: (event: KeyPressEvent) => void;
 };
 
 const SCROLL_CANCEL_MOVE_PX = 10;
 const SCROLL_CANCEL_MOVE_PX_SQ = SCROLL_CANCEL_MOVE_PX * SCROLL_CANCEL_MOVE_PX;
+const SYNTHETIC_POINTER_PRESS_MS = 50;
+const SYNTHETIC_KEYBOARD_CLICK_MS = 50;
 
 type GesturePhase = 'idle' | 'armed' | 'activated' | 'cancelled';
 
@@ -19,10 +22,9 @@ export type WebStepperGestureState = {
   phase: GesturePhase;
   pressInX: number;
   pressInY: number;
-  /** Suppresses the synthetic `onPress` that follows `onPressOut` on React Native Web. */
-  skipNextPointerPress: boolean;
-  /** Ignores idle `onPress` until this timestamp (synthetic click after keyboard). */
+  ignorePointerPressUntilMs: number;
   ignoreIdlePressUntilMs: number;
+  suppressSpaceClickUntilKeyUp: boolean;
 };
 
 function isNearbyFieldFocused(): boolean {
@@ -47,8 +49,9 @@ export function createInitialWebStepperGestureState(): WebStepperGestureState {
     phase: 'idle',
     pressInX: 0,
     pressInY: 0,
-    skipNextPointerPress: false,
+    ignorePointerPressUntilMs: 0,
     ignoreIdlePressUntilMs: 0,
+    suppressSpaceClickUntilKeyUp: false,
   };
 }
 
@@ -88,7 +91,7 @@ export function createWebStepperPressHandlers(
 
   const completeValidPointerRelease = () => {
     activateFromPointer();
-    gesture.skipNextPointerPress = true;
+    gesture.ignorePointerPressUntilMs = Date.now() + SYNTHETIC_POINTER_PRESS_MS;
     resetGesture();
   };
 
@@ -101,15 +104,19 @@ export function createWebStepperPressHandlers(
         return;
       }
 
-      gesture.skipNextPointerPress = false;
+      gesture.ignorePointerPressUntilMs = 0;
       gesture.ignoreIdlePressUntilMs = 0;
+      gesture.suppressSpaceClickUntilKeyUp = false;
       gesture.phase = 'armed';
       gesture.pressInX = event.nativeEvent.pageX;
       gesture.pressInY = event.nativeEvent.pageY;
     },
     onPress: () => {
-      if (gesture.skipNextPointerPress) {
-        gesture.skipNextPointerPress = false;
+      if (gesture.suppressSpaceClickUntilKeyUp) {
+        return;
+      }
+
+      if (Date.now() < gesture.ignorePointerPressUntilMs) {
         return;
       }
 
@@ -168,8 +175,9 @@ export function createWebStepperPressHandlers(
     },
     onTouchCancel: () => {
       gesture.phase = 'cancelled';
-      gesture.skipNextPointerPress = false;
+      gesture.ignorePointerPressUntilMs = 0;
       gesture.ignoreIdlePressUntilMs = 0;
+      gesture.suppressSpaceClickUntilKeyUp = false;
     },
     onKeyDown: (event: KeyPressEvent) => {
       const key = event.nativeEvent.key;
@@ -177,9 +185,25 @@ export function createWebStepperPressHandlers(
         return;
       }
       event.preventDefault?.();
+      if (key === ' ') {
+        activateFromKeyboard();
+        gesture.suppressSpaceClickUntilKeyUp = true;
+        resetGesture();
+        return;
+      }
       activateFromKeyboard();
-      gesture.ignoreIdlePressUntilMs = Date.now() + 50;
+      gesture.ignoreIdlePressUntilMs = Date.now() + SYNTHETIC_KEYBOARD_CLICK_MS;
       resetGesture();
+    },
+    onKeyUp: (event: KeyPressEvent) => {
+      if (event.nativeEvent.key !== ' ') {
+        return;
+      }
+      event.preventDefault?.();
+      if (gesture.suppressSpaceClickUntilKeyUp) {
+        gesture.suppressSpaceClickUntilKeyUp = false;
+        gesture.ignoreIdlePressUntilMs = Date.now() + SYNTHETIC_KEYBOARD_CLICK_MS;
+      }
     },
   };
 }

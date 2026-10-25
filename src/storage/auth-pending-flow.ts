@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { snapshotLegacyVerifierForFlow } from './pkce-verifier-backup';
 
 const EMAIL_CONFIRMATION_PENDING_KEY = '@weigh-way/auth-email-confirmation-pending';
 const PASSWORD_RESET_PENDING_KEY = '@weigh-way/auth-password-reset-pending';
@@ -6,7 +7,7 @@ const PASSWORD_RESET_PENDING_KEY = '@weigh-way/auth-password-reset-pending';
 /** Matches typical Supabase email link lifetime (1 hour). */
 export const AUTH_PENDING_FLOW_TTL_MS = 60 * 60 * 1000;
 
-type PendingFlowRecord = {
+export type PendingFlowRecord = {
   startedAt: number;
   email: string;
 };
@@ -55,10 +56,12 @@ async function readPending(key: string): Promise<PendingFlowRecord | null> {
 }
 
 export async function markEmailConfirmationPending(email: string): Promise<void> {
+  await snapshotLegacyVerifierForFlow('signup');
   await writePending(EMAIL_CONFIRMATION_PENDING_KEY, email);
 }
 
 export async function markPasswordResetPending(email: string): Promise<void> {
+  await snapshotLegacyVerifierForFlow('recovery');
   await writePending(PASSWORD_RESET_PENDING_KEY, email);
 }
 
@@ -70,14 +73,45 @@ export async function isPasswordResetPending(): Promise<boolean> {
   return (await readPending(PASSWORD_RESET_PENDING_KEY)) !== null;
 }
 
-export async function getEmailConfirmationPendingEmail(): Promise<string | null> {
-  const record = await readPending(EMAIL_CONFIRMATION_PENDING_KEY);
-  return record?.email ?? null;
+export async function hasOverlappingEmailFlows(): Promise<boolean> {
+  return (await isEmailConfirmationPending()) && (await isPasswordResetPending());
 }
 
-export async function getPasswordResetPendingEmail(): Promise<string | null> {
-  const record = await readPending(PASSWORD_RESET_PENDING_KEY);
-  return record?.email ?? null;
+export async function resolveEmailCallbackFlowKind(): Promise<'signup' | 'recovery' | null> {
+  const emailRecord = await readPending(EMAIL_CONFIRMATION_PENDING_KEY);
+  const resetRecord = await readPending(PASSWORD_RESET_PENDING_KEY);
+  if (!emailRecord && !resetRecord) {
+    return null;
+  }
+  if (emailRecord && !resetRecord) {
+    return 'signup';
+  }
+  if (resetRecord && !emailRecord) {
+    return 'recovery';
+  }
+  return emailRecord!.startedAt >= resetRecord!.startedAt ? 'signup' : 'recovery';
+}
+
+export type AuthLinkErrorContext = {
+  isPasswordRecovery?: boolean;
+  hasOverlappingEmailFlows?: boolean;
+};
+
+export async function getAuthLinkErrorContext(): Promise<AuthLinkErrorContext> {
+  const emailPending = await isEmailConfirmationPending();
+  const resetPending = await isPasswordResetPending();
+  const overlapping = emailPending && resetPending;
+  if (overlapping) {
+    const kind = await resolveEmailCallbackFlowKind();
+    return {
+      isPasswordRecovery: kind === 'recovery',
+      hasOverlappingEmailFlows: true,
+    };
+  }
+  return {
+    isPasswordRecovery: resetPending,
+    hasOverlappingEmailFlows: false,
+  };
 }
 
 export async function clearEmailConfirmationPending(): Promise<void> {

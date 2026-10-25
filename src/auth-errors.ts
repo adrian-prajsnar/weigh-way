@@ -1,4 +1,5 @@
 import { t } from './i18n';
+import type { AuthLinkErrorContext } from './storage/auth-pending-flow';
 import { isLocalSupabaseEnvUrl } from './supabase/local-supabase-env';
 
 function getErrorMessage(error: unknown): string {
@@ -209,15 +210,20 @@ function getAuthLinkErrorCode(error: unknown): string | null {
   if (message.includes('auth_oauth_flow_mismatch')) {
     return 'auth_oauth_flow_mismatch';
   }
+  if (message.includes('auth_overlapping_email_flows')) {
+    return 'auth_overlapping_email_flows';
+  }
   if (message.includes('auth_pkce_verifier_missing')) {
     return 'auth_pkce_verifier_missing';
   }
+  if (message.includes('auth_recovery_link_exchange_failed')) {
+    return 'auth_recovery_link_exchange_failed';
+  }
+  if (message.includes('auth_signup_link_exchange_failed')) {
+    return 'auth_signup_link_exchange_failed';
+  }
   return null;
 }
-
-export type AuthLinkErrorContext = {
-  isPasswordRecovery?: boolean;
-};
 
 export function formatAuthLinkError(error: unknown, context: AuthLinkErrorContext = {}): string {
   const network = mapNetworkError(error);
@@ -232,10 +238,19 @@ export function formatAuthLinkError(error: unknown, context: AuthLinkErrorContex
   if (code === 'auth_oauth_flow_mismatch') {
     return t('auth.oauthLinkMismatch');
   }
+  if (code === 'auth_overlapping_email_flows') {
+    return t('auth.overlappingEmailFlows');
+  }
   if (code === 'auth_pkce_verifier_missing') {
     return context.isPasswordRecovery
       ? t('auth.resetLinkWrongDevice')
       : t('auth.confirmationLinkWrongDevice');
+  }
+  if (code === 'auth_recovery_link_exchange_failed') {
+    return t('auth.resetLinkInvalid');
+  }
+  if (code === 'auth_signup_link_exchange_failed') {
+    return t('auth.confirmationLinkInvalid');
   }
 
   if (context.isPasswordRecovery) {

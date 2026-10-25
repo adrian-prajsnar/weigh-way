@@ -29,7 +29,7 @@ describe('fetchAllRows', () => {
     expect(fetchPage).toHaveBeenNthCalledWith(2, POSTGREST_PAGE_SIZE, { id: 499 });
   });
 
-  it('reports to Sentry when more data exists beyond the page cap', async () => {
+  it('throws when more data exists beyond the page cap and reports to Sentry', async () => {
     const fullPage = Array.from({ length: POSTGREST_PAGE_SIZE }, (_, index) => ({ id: index }));
     const fetchPage = vi.fn();
     for (let index = 0; index < MAX_FETCH_PAGES; index += 1) {
@@ -37,15 +37,13 @@ describe('fetchAllRows', () => {
     }
     fetchPage.mockResolvedValueOnce(fullPage);
 
-    const rows = await fetchAllRows(fetchPage);
-    expect(rows).toHaveLength(POSTGREST_PAGE_SIZE * MAX_FETCH_PAGES);
+    await expect(fetchAllRows(fetchPage)).rejects.toBeInstanceOf(FetchAllRowsLimitError);
     expect(reportUnhandled).toHaveBeenCalledWith(expect.any(FetchAllRowsLimitError));
   });
 
-  it('does not report when data ends exactly on a full final page', async () => {
+  it('does not throw when data ends exactly on a full final page', async () => {
     const fullPage = Array.from({ length: POSTGREST_PAGE_SIZE }, (_, index) => ({ id: index }));
     const fetchPage = vi.fn();
-
     for (let index = 0; index < MAX_FETCH_PAGES; index += 1) {
       fetchPage.mockResolvedValueOnce(fullPage);
     }

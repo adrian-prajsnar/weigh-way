@@ -124,7 +124,7 @@ describe('createWebStepperPressHandlers', () => {
     const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
 
     pointerClick(props, 150);
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(51);
     props.onPress?.();
 
     expect(onPress).toHaveBeenCalledTimes(2);
@@ -193,6 +193,19 @@ describe('createWebStepperPressHandlers', () => {
     const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
 
     props.onKeyDown?.({ preventDefault: vi.fn(), nativeEvent: { key: 'Enter' } } as never);
+    props.onPress?.();
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not double-step when Space fires a native click on keyup', () => {
+    platform.OS = 'web';
+
+    const onPress = vi.fn();
+    const props = createWebStepperPressHandlers(onPress, createInitialWebStepperGestureState());
+
+    props.onKeyDown?.({ preventDefault: vi.fn(), nativeEvent: { key: ' ' } } as never);
+    props.onKeyUp?.({ preventDefault: vi.fn(), nativeEvent: { key: ' ' } } as never);
     props.onPress?.();
 
     expect(onPress).toHaveBeenCalledTimes(1);
