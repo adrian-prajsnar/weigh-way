@@ -15,6 +15,7 @@ const SCROLL_CANCEL_MOVE_PX = 10;
 const SCROLL_CANCEL_MOVE_PX_SQ = SCROLL_CANCEL_MOVE_PX * SCROLL_CANCEL_MOVE_PX;
 const SYNTHETIC_POINTER_PRESS_MS = 50;
 const SYNTHETIC_KEYBOARD_CLICK_MS = 50;
+const KEYBOARD_SUPPRESS_FALLBACK_MS = 400;
 
 type GesturePhase = 'idle' | 'armed' | 'activated' | 'cancelled';
 
@@ -25,7 +26,7 @@ export type WebStepperGestureState = {
   skipNextSyntheticPointerPress: boolean;
   ignorePointerPressUntilMs: number;
   ignoreIdlePressUntilMs: number;
-  suppressKeyboardActivationUntilKeyUp: boolean;
+  suppressSyntheticActivationUntilMs: number;
 };
 
 function isNearbyFieldFocused(): boolean {
@@ -53,7 +54,7 @@ export function createInitialWebStepperGestureState(): WebStepperGestureState {
     skipNextSyntheticPointerPress: false,
     ignorePointerPressUntilMs: 0,
     ignoreIdlePressUntilMs: 0,
-    suppressKeyboardActivationUntilKeyUp: false,
+    suppressSyntheticActivationUntilMs: 0,
   };
 }
 
@@ -110,13 +111,13 @@ export function createWebStepperPressHandlers(
       gesture.skipNextSyntheticPointerPress = false;
       gesture.ignorePointerPressUntilMs = 0;
       gesture.ignoreIdlePressUntilMs = 0;
-      gesture.suppressKeyboardActivationUntilKeyUp = false;
+      gesture.suppressSyntheticActivationUntilMs = 0;
       gesture.phase = 'armed';
       gesture.pressInX = event.nativeEvent.pageX;
       gesture.pressInY = event.nativeEvent.pageY;
     },
     onPress: () => {
-      if (gesture.suppressKeyboardActivationUntilKeyUp) {
+      if (Date.now() < gesture.suppressSyntheticActivationUntilMs) {
         return;
       }
 
@@ -190,7 +191,7 @@ export function createWebStepperPressHandlers(
       gesture.skipNextSyntheticPointerPress = false;
       gesture.ignorePointerPressUntilMs = 0;
       gesture.ignoreIdlePressUntilMs = 0;
-      gesture.suppressKeyboardActivationUntilKeyUp = false;
+      gesture.suppressSyntheticActivationUntilMs = 0;
     },
     onKeyDown: (event: KeyPressEvent) => {
       const key = event.nativeEvent.key;
@@ -203,7 +204,8 @@ export function createWebStepperPressHandlers(
       }
       event.preventDefault?.();
       activateFromKeyboard();
-      gesture.suppressKeyboardActivationUntilKeyUp = true;
+      gesture.suppressSyntheticActivationUntilMs =
+        Date.now() + KEYBOARD_SUPPRESS_FALLBACK_MS;
       resetGesture();
     },
     onKeyUp: (event: KeyPressEvent) => {
@@ -212,10 +214,8 @@ export function createWebStepperPressHandlers(
         return;
       }
       event.preventDefault?.();
-      if (gesture.suppressKeyboardActivationUntilKeyUp) {
-        gesture.suppressKeyboardActivationUntilKeyUp = false;
-        gesture.ignoreIdlePressUntilMs = Date.now() + SYNTHETIC_KEYBOARD_CLICK_MS;
-      }
+      gesture.suppressSyntheticActivationUntilMs =
+        Date.now() + SYNTHETIC_KEYBOARD_CLICK_MS;
     },
   };
 }

@@ -11,5 +11,6 @@ describe('isValidEmail', () => {
     expect(isValidEmail('')).toBe(false);
     expect(isValidEmail('not-an-email')).toBe(false);
     expect(isValidEmail('@example.com')).toBe(false);
+    expect(isValidEmail('user@example..com')).toBe(false);
   });
 });

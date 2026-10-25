@@ -111,6 +111,18 @@ describe('auth deep link handling', () => {
     resetOAuthRedirectState();
   });
 
+  it('dedupes in-flight exchange for the same code across callback URLs', async () => {
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+    authState.exchangeCodeForSession.mockResolvedValue({ data: { session: {} }, error: null });
+
+    await Promise.all([
+      createSessionFromUrl('weigh-way://auth/callback?code=shared-code'),
+      createSessionFromUrl('weigh-way://auth/callback?code=shared-code&state=x'),
+    ]);
+
+    expect(authState.exchangeCodeForSession).toHaveBeenCalledTimes(1);
+  });
+
   it('treats duplicate codes as a no-op before pending checks', async () => {
     pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
 

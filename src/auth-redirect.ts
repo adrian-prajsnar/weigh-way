@@ -40,7 +40,7 @@ let oauthFlowActive = false;
 let oauthFlowExpectedUntil = 0;
 let expectedOAuthFlowId: string | null = null;
 let activeOAuthExchange: Promise<void> | null = null;
-let activeOAuthUrl: string | null = null;
+let activeOAuthCode: string | null = null;
 let lastExchangedCode: string | null = null;
 
 export function getAuthRedirectUrl(): string {
@@ -100,7 +100,7 @@ export function resetOAuthRedirectState(): void {
   oauthFlowActive = false;
   clearInMemoryOAuthFlowExpectation();
   activeOAuthExchange = null;
-  activeOAuthUrl = null;
+  activeOAuthCode = null;
   lastExchangedCode = null;
   void clearOAuthFlowExpectationStorage();
   void clearRememberedAuthCode();
@@ -448,14 +448,14 @@ export async function createSessionFromUrl(url: string): Promise<void> {
     return;
   }
 
-  if (activeOAuthUrl === url && activeOAuthExchange) {
+  if (authCode && activeOAuthCode === authCode && activeOAuthExchange) {
     return activeOAuthExchange;
   }
 
-  activeOAuthUrl = url;
+  activeOAuthCode = authCode ?? null;
   activeOAuthExchange = handleAuthCallbackUrl(url).finally(() => {
-    if (activeOAuthUrl === url) {
-      activeOAuthUrl = null;
+    if (activeOAuthCode === authCode) {
+      activeOAuthCode = null;
       activeOAuthExchange = null;
     }
   });

@@ -1,12 +1,6 @@
 import NetInfo, { useNetInfo } from '@react-native-community/netinfo';
 import { useCallback, useState } from 'react';
-
-function getIsOffline(
-  isConnected: boolean | null,
-  isInternetReachable: boolean | null,
-): boolean {
-  return isConnected === false || isInternetReachable === false;
-}
+import { resolveIsOffline } from '../network/connectivity';
 
 export function useNetworkStatus() {
   const { isConnected, isInternetReachable } = useNetInfo();
@@ -23,7 +17,7 @@ export function useNetworkStatus() {
 
   return {
     isChecking: isConnected === null,
-    isOffline: getIsOffline(isConnected, isInternetReachable),
+    isOffline: resolveIsOffline(isConnected, isInternetReachable),
     isRefreshing,
     refresh,
   };

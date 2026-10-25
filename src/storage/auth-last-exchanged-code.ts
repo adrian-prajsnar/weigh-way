@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { hashAuthCode } from './auth-code-hash';
 
 const STORAGE_KEY = '@weigh-way/auth-last-exchanged-code';
 /** Match Supabase email link / pending-flow TTL. */
 export const AUTH_LAST_EXCHANGED_CODE_TTL_MS = 60 * 60 * 1000;
 
 type StoredRecord = {
-  code: string;
+  codeHash: string;
   exchangedAt: number;
 };
 
@@ -16,15 +17,21 @@ async function readRecord(): Promise<StoredRecord | null> {
   }
 
   try {
-    const parsed = JSON.parse(raw) as StoredRecord;
-    if (typeof parsed.code !== 'string' || !Number.isFinite(parsed.exchangedAt)) {
+    const parsed = JSON.parse(raw) as StoredRecord & { code?: string };
+    const codeHash =
+      typeof parsed.codeHash === 'string'
+        ? parsed.codeHash
+        : typeof parsed.code === 'string'
+          ? hashAuthCode(parsed.code)
+          : null;
+    if (!codeHash || !Number.isFinite(parsed.exchangedAt)) {
       return null;
     }
     if (Date.now() - parsed.exchangedAt > AUTH_LAST_EXCHANGED_CODE_TTL_MS) {
       await AsyncStorage.removeItem(STORAGE_KEY);
       return null;
     }
-    return parsed;
+    return { codeHash, exchangedAt: parsed.exchangedAt };
   } catch {
     return null;
   }
@@ -32,11 +39,11 @@ async function readRecord(): Promise<StoredRecord | null> {
 
 export async function isAuthCodeAlreadyExchanged(code: string): Promise<boolean> {
   const record = await readRecord();
-  return record?.code === code;
+  return record?.codeHash === hashAuthCode(code);
 }
 
 export async function rememberExchangedAuthCode(code: string): Promise<void> {
-  const payload: StoredRecord = { code, exchangedAt: Date.now() };
+  const payload: StoredRecord = { codeHash: hashAuthCode(code), exchangedAt: Date.now() };
   await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }
 

@@ -19,7 +19,9 @@ import { useConfirm } from '../context/confirm-context';
 import { useToast } from '../context/toast-context';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
+import { isDemoMode } from '../demo/is-demo-mode';
 import { useNetworkStatus } from '../hooks/use-network-status';
+import { shouldBlockSaveForOffline } from '../network/connectivity';
 import {
   formatDateLabel,
   formatWeightValue,
@@ -78,6 +80,7 @@ export function WeightEntryFormBody({
   const [isSaving, setIsSaving] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [weightValidationMessage, setWeightValidationMessage] = useState<string | null>(null);
+  const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
   const weightInputRef = useRef<TextInputInstance>(null);
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
@@ -148,7 +151,11 @@ export function WeightEntryFormBody({
   const increaseWeightStepper = useWebStepperPress(() => adjustWeight(1));
 
   const handleSave = async () => {
-    if (isOffline) {
+    if (isSaving || isConfirmingReplace) {
+      return;
+    }
+
+    if (shouldBlockSaveForOffline(isOffline, isDemoMode())) {
       showError(t('entryForm.offlineSaveBlocked'));
       return;
     }
@@ -156,8 +163,8 @@ export function WeightEntryFormBody({
     const weightKg = resolveWeightKgForSave(weightInput, units, existingEntryWeightKg);
     if (weightKg === null) {
       const message = normalizeWeightInputText(weightInput)
-        ? t('entryForm.invalidWeight')
-        : getWeightRangeMessage(units);
+        ? getWeightRangeMessage(units)
+        : t('entryForm.invalidWeight');
       setWeightValidationMessage(message);
       showError(message);
       return;
@@ -176,12 +183,18 @@ export function WeightEntryFormBody({
       existingEntryForDate.weightKg !== weightKg
     ) {
       const dateLabel = formatDateLabel(selectedDateKey);
-      const confirmed = await confirm({
-        title: t('entryForm.replaceExistingTitle'),
-        message: t('entryForm.replaceExistingMessage', { date: dateLabel }),
-        confirmLabel: t('entryForm.replaceExistingConfirm'),
-        destructive: true,
-      });
+      setIsConfirmingReplace(true);
+      let confirmed = false;
+      try {
+        confirmed = await confirm({
+          title: t('entryForm.replaceExistingTitle'),
+          message: t('entryForm.replaceExistingMessage', { date: dateLabel }),
+          confirmLabel: t('entryForm.replaceExistingConfirm'),
+          destructive: true,
+        });
+      } finally {
+        setIsConfirmingReplace(false);
+      }
       if (!confirmed) {
         return;
       }

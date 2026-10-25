@@ -15,6 +15,7 @@ import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppUpdatePromptHandler } from './src/components/app-update-prompt-handler';
 import { OfflineConnectivityBanner } from './src/components/offline-connectivity-banner';
+import { ReconnectDataSync } from './src/components/reconnect-data-sync';
 import { SupabaseAuthProvider, useSupabaseAuth } from './src/context/supabase-auth-context';
 import { useToast, ToastProvider } from './src/context/toast-context';
 import { useNetworkStatus } from './src/hooks/use-network-status';
@@ -94,6 +95,7 @@ function ThemedApp({ fontsLoaded }: { fontsLoaded: boolean }) {
               <UserProfileProvider>
                 <BmiDisplayProvider>
                   <WeightEntriesProvider>
+                    <ReconnectDataSync />
                     <BmiDetailsProvider>
                       <AppNavigation fontsLoaded={fontsLoaded} />
                     </BmiDetailsProvider>

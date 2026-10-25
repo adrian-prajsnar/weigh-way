@@ -31,8 +31,15 @@ export function buildJournalJson({
 export function canExportJournalData(options: {
   weightEntriesError: string | null;
   profileError: string | null;
+  weightEntriesLoaded: boolean;
+  profileLoaded: boolean;
 }): boolean {
-  return !options.weightEntriesError && !options.profileError;
+  return (
+    options.weightEntriesLoaded &&
+    options.profileLoaded &&
+    !options.weightEntriesError &&
+    !options.profileError
+  );
 }
 
 export function buildWeighInsCsv(weightEntries: WeightEntry[]): string {

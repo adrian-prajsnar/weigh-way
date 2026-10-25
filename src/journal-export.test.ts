@@ -40,9 +40,38 @@ describe('buildJournalJson', () => {
 
 describe('canExportJournalData', () => {
   it('blocks export when weight or profile data failed to load', () => {
-    expect(canExportJournalData({ weightEntriesError: null, profileError: null })).toBe(true);
-    expect(canExportJournalData({ weightEntriesError: 'x', profileError: null })).toBe(false);
-    expect(canExportJournalData({ weightEntriesError: null, profileError: 'y' })).toBe(false);
+    expect(
+      canExportJournalData({
+        weightEntriesError: null,
+        profileError: null,
+        weightEntriesLoaded: true,
+        profileLoaded: true,
+      }),
+    ).toBe(true);
+    expect(
+      canExportJournalData({
+        weightEntriesError: null,
+        profileError: null,
+        weightEntriesLoaded: false,
+        profileLoaded: true,
+      }),
+    ).toBe(false);
+    expect(
+      canExportJournalData({
+        weightEntriesError: 'x',
+        profileError: null,
+        weightEntriesLoaded: true,
+        profileLoaded: true,
+      }),
+    ).toBe(false);
+    expect(
+      canExportJournalData({
+        weightEntriesError: null,
+        profileError: 'y',
+        weightEntriesLoaded: true,
+        profileLoaded: true,
+      }),
+    ).toBe(false);
   });
 });
 

@@ -36,7 +36,7 @@ export default {
     offlineSubtitle:
       'This app needs an internet connection to sync your weight data. Check your connection and try again.',
     offlineRefresh: 'Refresh',
-    offlineBanner: 'You’re offline. Changes are kept on this screen until you’re back online.',
+    offlineBanner: 'You’re offline. Sync and saving need a connection.',
   },
   demo: {
     sessionHint: 'Sign-out and delete account are disabled in the demo version.',
@@ -94,7 +94,7 @@ export default {
     accountCreatedConfirm: 'Account created. Check your email to confirm, then sign in.',
     accountCreated: 'Account created. Sign in to continue.',
     signUpFailed: 'Could not create account.',
-    resetSent: 'If an account exists, we sent a reset link. Open it on this phone.',
+    resetSent: 'If an account exists, we sent a reset link. Open it on this device.',
     couldNotSendReset: 'Could not send reset email.',
     passwordUpdated: 'Password updated. You’re signed in.',
     couldNotUpdatePassword: 'Could not update password.',
@@ -108,17 +108,17 @@ export default {
     resetLinkInvalid: 'This reset link is invalid or has expired. Request a new one.',
     confirmationLinkInvalid: 'This confirmation link is invalid or has expired. Request a new one.',
     confirmationLinkWrongDevice:
-      'Open this confirmation link on the phone where you signed up, or sign in after confirming your email.',
+      'Open this confirmation link on the device where you signed up, or sign in after confirming your email.',
     resetLinkWrongDevice:
-      'Open this reset link on the phone where you requested it, or request a new reset email.',
+      'Open this reset link on the device where you requested it, or request a new reset email.',
     unexpectedAuthLink:
-      'This link does not match an active sign-up or reset on this device. Open it on the phone where you started, or sign in after confirming your email.',
+      'This link does not match an active sign-up or reset on this device. Open it where you started, or sign in after confirming your email.',
     oauthLinkMismatch: 'This sign-in link does not match the Google sign-in you started. Try again.',
     oauthLinkInvalid:
       'This Google sign-in link is invalid or has expired. Try signing in with Google again.',
     invalidEmail: 'Enter a valid email address.',
     overlappingEmailFlows:
-      'Both a sign-up confirmation and a password reset are pending on this phone. Request a fresh email for the link you want to open, then try again.',
+      'Both a sign-up confirmation and a password reset are pending on this device. Request a fresh email for the link you want to open, then try again.',
     emailAlreadyRegistered: 'An account with this email already exists.',
     rateLimited: 'Email limit reached — try again in an hour.',
   },

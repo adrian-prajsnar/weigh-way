@@ -112,9 +112,25 @@ export function ProfileScreen({
   const { preference, setPreference } = useTheme();
   const { units, preference: unitPreference, setPreference: setUnitPreference } = useUnits();
   const { session, signOut, deleteAccount } = useSupabaseAuth();
-  const { entries, error: entriesError } = useSharedWeightEntries();
-  const { heightEntries, birthDate, sex, isLoading, isRefreshing, isSaving, error, refreshProfile, saveBirthDateEntry, saveSexEntry } =
-    useSharedUserProfile();
+  const {
+    entries,
+    error: entriesError,
+    hasLoaded: entriesLoaded,
+    isLoading: entriesLoading,
+  } = useSharedWeightEntries();
+  const {
+    heightEntries,
+    birthDate,
+    sex,
+    isLoading,
+    isRefreshing,
+    isSaving,
+    error,
+    hasLoaded: profileLoaded,
+    refreshProfile,
+    saveBirthDateEntry,
+    saveSexEntry,
+  } = useSharedUserProfile();
   const { showBmi, setShowBmi } = useSharedBmiDisplay();
   const { showError, showInfo, showSuccess } = useToast();
   const { confirm } = useConfirm();
@@ -125,6 +141,13 @@ export function ProfileScreen({
   const emDash = t('common.emDash');
   const appVersion = Constants.expoConfig?.version ?? emDash;
   const [isExporting, setIsExporting] = useState(false);
+  const canExport = canExportJournalData({
+    weightEntriesError: entriesError,
+    profileError: error,
+    weightEntriesLoaded: entriesLoaded,
+    profileLoaded,
+  });
+  const exportDisabled = isExporting || !canExport || entriesLoading || isLoading;
 
   const languageOptions = useMemo<SegmentedOption<LanguagePreference>[]>(
     () => [
@@ -184,7 +207,14 @@ export function ProfileScreen({
       setIsExporting(true);
       await waitForExportUi();
       try {
-        if (!canExportJournalData({ weightEntriesError: entriesError, profileError: error })) {
+        if (
+          !canExportJournalData({
+            weightEntriesError: entriesError,
+            profileError: error,
+            weightEntriesLoaded: entriesLoaded,
+            profileLoaded,
+          })
+        ) {
           showError(t('profile.exportDataNotLoaded'));
           return;
         }
@@ -455,11 +485,11 @@ export function ProfileScreen({
           <Pressable
             style={({ pressed }) => [
               styles.secondaryButton,
-              isExporting && styles.buttonDisabled,
-              pressed && !isExporting && styles.buttonPressed,
+              exportDisabled && styles.buttonDisabled,
+              pressed && !exportDisabled && styles.buttonPressed,
             ]}
             onPress={handleExportJournal}
-            disabled={isExporting}
+            disabled={exportDisabled}
           >
             {isExporting ? (
               <ActivityIndicator color={colors.accent} />
