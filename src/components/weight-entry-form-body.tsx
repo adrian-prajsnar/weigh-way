@@ -1,6 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  TextInputInstance,
+  View,
+} from 'react-native';
 import { calculateBmi } from '../bmi';
 import { BmiBadge } from './bmi-badge';
 import { DateField } from './date-field';
@@ -62,7 +70,7 @@ export function WeightEntryFormBody({
   const [weightInput, setWeightInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const weightInputRef = useRef<TextInput>(null);
+  const weightInputRef = useRef<TextInputInstance>(null);
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
   const existingEntryForDate = useMemo(

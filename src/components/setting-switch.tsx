@@ -1,11 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { Platform, Pressable, Switch, SwitchProps, View } from 'react-native';
+import { Platform, Pressable, PressableInstance, Switch, SwitchProps } from 'react-native';
 import { webFocusTarget } from '../theme/web-focus-target';
 
 type SettingSwitchProps = SwitchProps;
 
 function bindWebSwitchKeys(
-  element: View | null,
+  element: PressableInstance | null,
   onToggle: () => void,
 ): (() => void) | undefined {
   if (Platform.OS !== 'web' || !element) {
@@ -33,7 +33,7 @@ export function SettingSwitch({
   disabled,
   ...props
 }: SettingSwitchProps) {
-  const pressableRef = useRef<View>(null);
+  const pressableRef = useRef<PressableInstance>(null);
 
   const toggle = () => {
     if (disabled || value === undefined || !onValueChange) {

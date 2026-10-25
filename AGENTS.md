@@ -1,6 +1,6 @@
 # WeighWay — Agent Guide
 
-Personal Android app (Expo SDK 57). Supabase-backed, auth required.
+Personal Android app (Expo SDK 58). Supabase-backed, auth required.
 
 ## Stack
 

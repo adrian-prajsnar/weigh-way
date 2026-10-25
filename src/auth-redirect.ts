@@ -1,5 +1,5 @@
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import * as Linking from 'expo-linking';
+import { getAuthQueryParams } from './auth-query-params';
 import * as WebBrowser from 'expo-web-browser';
 import { supabase } from './supabase/client';
 
@@ -70,12 +70,12 @@ export async function performOAuthSignIn(provider: 'google'): Promise<OAuthSignI
 }
 
 export function isPasswordRecoveryUrl(url: string): boolean {
-  const { params } = QueryParams.getQueryParams(url);
+  const { params } = getAuthQueryParams(url);
   return params.type === 'recovery';
 }
 
 async function exchangeSessionFromUrl(url: string): Promise<void> {
-  const { params, errorCode } = QueryParams.getQueryParams(url);
+  const { params, errorCode } = getAuthQueryParams(url);
   if (errorCode) {
     throw new Error(errorCode);
   }

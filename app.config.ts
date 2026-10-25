@@ -35,6 +35,15 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     plugins: [
       ...(config.plugins ?? []),
       [
+        'expo-build-properties',
+        {
+          android: {
+            usesCleartextTraffic:
+              process.env.EXPO_PUBLIC_SUPABASE_URL?.startsWith('http://') === true,
+          },
+        },
+      ],
+      [
         'expo-splash-screen',
         {
           image: './assets/splash-icon.png',
@@ -47,7 +56,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ],
     android: {
       ...config.android,
-      usesCleartextTraffic: process.env.EXPO_PUBLIC_SUPABASE_URL?.startsWith('http://') === true,
       versionCode: 7,
       intentFilters: [
         {
