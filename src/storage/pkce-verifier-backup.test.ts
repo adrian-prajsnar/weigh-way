@@ -6,7 +6,7 @@ vi.mock('../supabase/auth-storage-key', () => ({
   getSupabaseLegacyPkceVerifierKey: () => 'sb-test-auth-token-code-verifier',
 }));
 
-vi.mock('../supabase/client', () => ({
+vi.mock('../supabase/auth-session-storage', () => ({
   getSupabaseAuthStorage: () => ({
     getItem: (key: string) => Promise.resolve(storage.get(key) ?? null),
     setItem: (key: string, value: string) => {

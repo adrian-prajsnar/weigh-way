@@ -47,6 +47,16 @@ describe('auth-last-exchanged-code', () => {
     expect(await isAuthCodeAlreadyExchanged('abc')).toBe(false);
   });
 
+  it('does not throw when storage rejects writes', async () => {
+    const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+    vi.mocked(AsyncStorage.setItem).mockRejectedValueOnce(
+      new DOMException('The operation is insecure.', 'SecurityError'),
+    );
+
+    await expect(rememberExchangedAuthCode('abc')).resolves.toBeUndefined();
+    expect(await isAuthCodeAlreadyExchanged('abc')).toBe(false);
+  });
+
   it('clears stored codes', async () => {
     await rememberExchangedAuthCode('abc');
     await clearRememberedAuthCode();

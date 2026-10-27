@@ -11,7 +11,12 @@ type StoredRecord = {
 };
 
 async function readRecord(): Promise<StoredRecord | null> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  let raw: string | null;
+  try {
+    raw = await AsyncStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
   if (!raw) {
     return null;
   }
@@ -28,7 +33,7 @@ async function readRecord(): Promise<StoredRecord | null> {
       return null;
     }
     if (Date.now() - parsed.exchangedAt > AUTH_LAST_EXCHANGED_CODE_TTL_MS) {
-      await AsyncStorage.removeItem(STORAGE_KEY);
+      await clearRememberedAuthCode();
       return null;
     }
     return { codeHash, exchangedAt: parsed.exchangedAt };
@@ -44,9 +49,17 @@ export async function isAuthCodeAlreadyExchanged(code: string): Promise<boolean>
 
 export async function rememberExchangedAuthCode(code: string): Promise<void> {
   const payload: StoredRecord = { codeHash: hashAuthCode(code), exchangedAt: Date.now() };
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Blocked storage must not break OAuth callback handling.
+  }
 }
 
 export async function clearRememberedAuthCode(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Best-effort when storage is blocked.
+  }
 }

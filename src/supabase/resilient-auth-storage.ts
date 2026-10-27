@@ -7,7 +7,18 @@ export type AuthSessionStorage = {
   removeItem: (key: string) => Promise<void>;
 };
 
+export type ResilientAuthStorage = AuthSessionStorage & {
+  consumeSignOutPersistWarning: () => boolean;
+};
+
 const PROBE_KEY = '@weigh-way/auth-storage-probe';
+const TOMBSTONE = Symbol('auth-storage-tombstone');
+
+type OverlayEntry = string | typeof TOMBSTONE;
+
+export function isPrimaryAuthSessionStorageKey(key: string): boolean {
+  return /^sb-.+-auth-token$/.test(key);
+}
 
 export async function probePersistentAuthStorage(): Promise<boolean> {
   try {
@@ -23,19 +34,12 @@ export async function probePersistentAuthStorage(): Promise<boolean> {
   }
 }
 
-async function removeFromDisk(key: string): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(key);
-  } catch {
-    // Best-effort: sign-out must still attempt disk even when storage is blocked.
-  }
-}
-
-/** Supabase auth storage: disk-first with session overlay when writes fail; remove always hits disk. */
-export function createResilientAuthStorage(): AuthSessionStorage {
-  const sessionOverlay = new Map<string, string>();
+/** Supabase auth storage: tombstones failed removals; disk-first reads with overlay for failed writes. */
+export function createResilientAuthStorage(): ResilientAuthStorage {
+  const overlay = new Map<string, OverlayEntry>();
   let probeSettled = false;
   let diskBlocked = false;
+  let signOutPersistWarning = false;
 
   const ensureProbe = async () => {
     if (probeSettled) {
@@ -45,43 +49,104 @@ export function createResilientAuthStorage(): AuthSessionStorage {
     diskBlocked = !(await probePersistentAuthStorage());
     if (diskBlocked && isDevWarningsEnabled()) {
       console.warn(
-        '[weigh-way] Persistent auth storage is blocked; sessions will not survive reload.',
+        '[weigh-way] Persistent auth storage probe failed; using in-memory overlay when needed.',
       );
     }
   };
 
+  const readOverlay = (key: string): string | null | undefined => {
+    if (!overlay.has(key)) {
+      return undefined;
+    }
+    const entry = overlay.get(key);
+    return entry === TOMBSTONE ? null : entry ?? null;
+  };
+
+  const markTombstone = (key: string) => {
+    overlay.set(key, TOMBSTONE);
+  };
+
+  const tryRemoveFromDisk = async (key: string): Promise<boolean> => {
+    try {
+      await AsyncStorage.removeItem(key);
+      diskBlocked = false;
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const tryReadFromDisk = async (key: string): Promise<string | null> => {
+    try {
+      const value = await AsyncStorage.getItem(key);
+      diskBlocked = false;
+      return value;
+    } catch {
+      return null;
+    }
+  };
+
+  const tryWriteToDisk = async (key: string, value: string): Promise<boolean> => {
+    try {
+      await AsyncStorage.setItem(key, value);
+      diskBlocked = false;
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   return {
+    consumeSignOutPersistWarning() {
+      if (!signOutPersistWarning) {
+        return false;
+      }
+      signOutPersistWarning = false;
+      return true;
+    },
     async getItem(key) {
       await ensureProbe();
-      if (sessionOverlay.has(key)) {
-        return sessionOverlay.get(key) ?? null;
+      const cached = readOverlay(key);
+      if (cached !== undefined) {
+        return cached;
       }
-      try {
-        return await AsyncStorage.getItem(key);
-      } catch {
-        // Transient read failure: do not cache; next call retries disk.
-        return null;
-      }
+      return tryReadFromDisk(key);
     },
     async setItem(key, value) {
       await ensureProbe();
+      const wasTombstone = overlay.get(key) === TOMBSTONE;
+      overlay.set(key, value);
+
+      if (wasTombstone) {
+        await tryRemoveFromDisk(key);
+      }
+
       if (diskBlocked) {
-        sessionOverlay.set(key, value);
-        await removeFromDisk(key);
         return;
       }
-      try {
-        await AsyncStorage.setItem(key, value);
-        sessionOverlay.delete(key);
-      } catch {
-        await removeFromDisk(key);
-        sessionOverlay.set(key, value);
+
+      const written = await tryWriteToDisk(key, value);
+      if (written) {
+        overlay.delete(key);
+        return;
       }
+
+      await tryRemoveFromDisk(key);
+      overlay.set(key, value);
     },
     async removeItem(key) {
       await ensureProbe();
-      sessionOverlay.delete(key);
-      await removeFromDisk(key);
+      markTombstone(key);
+
+      const removed = await tryRemoveFromDisk(key);
+      if (removed) {
+        overlay.delete(key);
+        return;
+      }
+
+      if (isPrimaryAuthSessionStorageKey(key)) {
+        signOutPersistWarning = true;
+      }
     },
   };
 }

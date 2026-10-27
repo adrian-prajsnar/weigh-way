@@ -200,6 +200,10 @@ export function formatSignOutError(error: unknown): string {
   return t('profile.signOutFailed');
 }
 
+export function formatSignOutPersistWarning(): string {
+  return t('profile.signOutPersistFailed');
+}
+
 export function formatDeleteAccountError(error: unknown): string {
   const network = mapNetworkError(error);
   if (network) {

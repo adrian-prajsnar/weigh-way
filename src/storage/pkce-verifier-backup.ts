@@ -1,4 +1,4 @@
-import { getSupabaseAuthStorage } from '../supabase/client';
+import { getSupabaseAuthStorage } from '../supabase/auth-session-storage';
 import { getSupabaseLegacyPkceVerifierKey } from '../supabase/auth-storage-key';
 
 export type PkceBackupKind = 'signup' | 'recovery';

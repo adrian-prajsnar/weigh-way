@@ -9,6 +9,7 @@ import {
   formatGoogleSignInError,
   formatSignInError,
   formatSignOutError,
+  formatSignOutPersistWarning,
   formatSignUpError,
   formatUpdatePasswordError,
 } from '../auth-errors';
@@ -26,6 +27,7 @@ import {
 import { getAuthLinkErrorContext } from '../storage/auth-pending-flow';
 import { clearPkceVerifierBackups } from '../storage/pkce-verifier-backup';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
+import { getSupabaseAuthStorage } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { createDemoSession } from '../demo/demo-session';
 import { isDemoMode } from '../demo/is-demo-mode';
@@ -229,6 +231,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signOut();
     if (error) {
       throw new Error(formatSignOutError(error));
+    }
+
+    if (getSupabaseAuthStorage().consumeSignOutPersistWarning()) {
+      throw new Error(formatSignOutPersistWarning());
     }
 
     resetOAuthRedirectState();

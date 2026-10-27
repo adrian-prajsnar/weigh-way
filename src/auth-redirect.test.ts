@@ -79,6 +79,7 @@ vi.mock('./storage/auth-last-exchanged-code', () => ({
 
 /* eslint-disable import/first -- load after vi.mock */
 import { formatAuthLinkError } from './auth-errors';
+import { rememberExchangedAuthCode } from './storage/auth-last-exchanged-code';
 import {
   beginOAuthFlowExpectation,
   createSessionFromUrl,
@@ -131,6 +132,20 @@ describe('auth deep link handling', () => {
     await createSessionFromUrl('weigh-way://auth/callback?code=duplicate');
 
     expect(authState.exchangeCodeForSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not roll back the verifier when remembering the exchanged code fails', async () => {
+    pendingState.resolveEmailCallbackFlowKind.mockResolvedValue('signup');
+    const rollback = vi.fn();
+    pkceState.backupLegacyVerifierForRollback.mockResolvedValue(rollback);
+    vi.mocked(rememberExchangedAuthCode).mockRejectedValueOnce(new Error('storage blocked'));
+
+    await expect(
+      createSessionFromUrl('weigh-way://auth/callback?code=confirm-code'),
+    ).rejects.toThrow('storage blocked');
+
+    expect(rollback).not.toHaveBeenCalled();
+    expect(pendingState.clearEmailConfirmationPending).not.toHaveBeenCalled();
   });
 
   it('clears only the signup pending flag after a successful confirmation exchange', async () => {

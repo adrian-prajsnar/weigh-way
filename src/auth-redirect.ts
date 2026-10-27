@@ -104,7 +104,7 @@ export function resetOAuthRedirectState(): void {
   activeOAuthCode = null;
   lastExchangedCode = null;
   void clearOAuthFlowExpectationStorage();
-  void clearRememberedAuthCode();
+  void clearRememberedAuthCode().catch(() => {});
 }
 
 async function buildExchangeCandidates(params: Record<string, string>): Promise<CallbackFlowKind[]> {
@@ -399,9 +399,6 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
 
     try {
       await exchangeForFlowKind(flowKind, authCode, params);
-      await markAuthCodeExchanged(authCode);
-      await clearPendingForSuccessfulKind(flowKind);
-      return;
     } catch (error) {
       if (rollback) {
         await rollback();
@@ -416,6 +413,10 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
 
       throw mapExchangeError(error, { flowKind, overlappingEmailFlows });
     }
+
+    await markAuthCodeExchanged(authCode);
+    await clearPendingForSuccessfulKind(flowKind);
+    return;
   }
 
   throw mapExchangeError(lastError, {
