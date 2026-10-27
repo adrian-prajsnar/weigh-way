@@ -33,10 +33,13 @@ export function AppCard({
   const reducedMotion = useReducedMotion();
   const hasHeader = Boolean(title || subtitle || right);
   const skipEnterAnimation = !animateEntry || reducedMotion;
-  const animatedStyle = useAppCardEnterAnimation(delay, skipEnterAnimation);
+  const { animatedStyle, pointerEvents } = useAppCardEnterAnimation(delay, skipEnterAnimation);
 
   return (
-    <Animated.View style={[styles.loadingCard, animatedStyle]}>
+    <Animated.View
+      pointerEvents={pointerEvents}
+      style={[styles.loadingCard, animatedStyle]}
+    >
       {isBusy ? (
         <LoadingCardOverlay
           style={{ borderRadius: elevated ? radius.xl : radius.lg }}

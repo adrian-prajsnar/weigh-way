@@ -1,38 +1,33 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { getAppCardEnterFallbackMs } from './app-card-enter-animation';
-import { applyAppCardEnterFallback } from './app-card-enter-animation';
+/** @vitest-environment happy-dom */
+import { renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 
-describe('enter animation fallback timing vs entry form', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
+vi.mock('react-native-reanimated', () => {
+  const useSharedValue = (initial: number) => ({ value: initial });
+  const useAnimatedStyle = (factory: () => Record<string, unknown>) => factory();
+  return {
+    useSharedValue,
+    useAnimatedStyle,
+    withDelay: (_delay: number, animation: number) => animation,
+    withTiming: (value: number) => value,
+    useReducedMotion: () => false,
+  };
+});
+
+/* eslint-disable import/first -- after vi.mock */
+import { useAppCardEnterAnimation } from './use-app-card-enter-animation';
+/* eslint-enable import/first */
+
+describe('useAppCardEnterAnimation', () => {
+  it('blocks pointer events while the delayed enter animation is active', () => {
+    const { result } = renderHook(() => useAppCardEnterAnimation(60, false));
+    expect(result.current.pointerEvents).toBe('none');
+    expect(result.current.animatedStyle).toMatchObject({ opacity: 0 });
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it('fallback fires after entry form delay without requiring a remount key change', () => {
-    const entryFormDelayMs = 60;
-    const fallbackMs = getAppCardEnterFallbackMs(entryFormDelayMs);
-    expect(fallbackMs).toBe(580);
-
-    const opacity = { value: 0 };
-    const translateY = { value: 12 };
-    let remountCount = 0;
-
-    const timer = setTimeout(() => {
-      applyAppCardEnterFallback(opacity, translateY);
-    }, fallbackMs);
-
-    vi.advanceTimersByTime(fallbackMs - 1);
-    expect(opacity.value).toBe(0);
-    expect(remountCount).toBe(0);
-
-    vi.advanceTimersByTime(1);
-    expect(opacity.value).toBe(1);
-    expect(translateY.value).toBe(0);
-    expect(remountCount).toBe(0);
-
-    clearTimeout(timer);
+  it('allows pointer events when enter animation is skipped', () => {
+    const { result } = renderHook(() => useAppCardEnterAnimation(60, true));
+    expect(result.current.pointerEvents).toBe('auto');
+    expect(result.current.animatedStyle).toMatchObject({ opacity: 1 });
   });
 });

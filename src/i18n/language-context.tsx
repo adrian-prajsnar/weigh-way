@@ -15,7 +15,12 @@ import {
   LanguagePreference,
   setStoredLanguagePreference,
 } from '../storage/language-preference';
-import { setI18nLocale, t as translate, TranslationKey, TranslateOptions } from './index';
+import {
+  setI18nLocale,
+  translateForLocale,
+  TranslationKey,
+  TranslateOptions,
+} from './index';
 import { AppLocale } from './resolve-locale';
 
 type LanguageContextValue = {
@@ -81,9 +86,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   );
 
   const t = useCallback(
-    (scope: TranslationKey, options?: TranslateOptions) => translate(scope, options),
-    // Locale in deps recreates `t` so useMemo(..., [t]) refreshes when language changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- locale is the intentional identity signal
+    (scope: TranslationKey, options?: TranslateOptions) =>
+      translateForLocale(scope, locale, options),
     [locale],
   );
 

@@ -39,7 +39,21 @@ export function getI18nLocale(): AppLocale {
 }
 
 export function t(scope: TranslationKey, options?: TranslateOptions): string {
+  const localeOverride = options?.locale;
+  if (localeOverride === 'en' || localeOverride === 'pl') {
+    const { locale: _locale, ...rest } = options ?? {};
+    return i18n.t(scope, { ...rest, locale: localeOverride });
+  }
   return i18n.t(scope, options);
+}
+
+export function translateForLocale(
+  scope: TranslationKey,
+  locale: AppLocale,
+  options?: TranslateOptions,
+): string {
+  const { locale: _locale, ...rest } = options ?? {};
+  return i18n.t(scope, { ...rest, locale });
 }
 
 export { i18n };

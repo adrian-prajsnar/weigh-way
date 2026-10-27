@@ -54,6 +54,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-web-browser',
       '@sentry/react-native',
     ],
+    ios: {
+      ...config.ios,
+      buildNumber: '7',
+    },
     android: {
       ...config.android,
       versionCode: 7,
