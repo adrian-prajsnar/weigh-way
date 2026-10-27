@@ -33,6 +33,7 @@ import {
   registerAuthStoragePersistenceRecovery,
 } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
+import { validateFlaggedRestoredSession } from '../supabase/bootstrap-session-validation';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
 import { isDemoMode } from '../demo/is-demo-mode';
@@ -74,7 +75,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [isRestoredSessionValidationPending, setIsRestoredSessionValidationPending] =
     useState(false);
   const completingSignUpRef = useRef(false);
-  const bootstrapCompleteRef = useRef(false);
+  const authEventGenerationRef = useRef(0);
 
   const isAuthenticated =
     Boolean(session) &&
@@ -115,7 +116,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     registerSupabaseAppLifecycle();
-    registerAuthStoragePersistenceRecovery();
+    const unregisterStorageRecovery = registerAuthStoragePersistenceRecovery();
 
     // Never block the splash on a slow or unreachable auth server: `getSession()`
     // retries a token refresh for up to 30s when the network is down.
@@ -126,7 +127,33 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
     }, SESSION_BOOTSTRAP_TIMEOUT_MS);
 
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
+      authEventGenerationRef.current += 1;
+      setSession(activeSession);
+      if (event === 'PASSWORD_RECOVERY' && activeSession) {
+        setIsPasswordRecovery(true);
+      }
+      if (event === 'SIGNED_OUT') {
+        setIsPasswordRecovery(false);
+        setIsRestoredSessionValidationPending(false);
+        getSupabaseAuthStorage().clearLastKnownAuthSessions();
+        void clearAuthPendingFlows();
+        resetOAuthRedirectState();
+      }
+      if (event === 'SIGNED_IN' && activeSession) {
+        setIsRestoredSessionValidationPending(false);
+        void clearAuthPendingFlows();
+      }
+    });
+
     void (async () => {
+      const bootstrapAuthGeneration = authEventGenerationRef.current;
+      const applyBootstrapSession = (nextSession: Session | null) => {
+        if (authEventGenerationRef.current === bootstrapAuthGeneration) {
+          setSession(nextSession);
+        }
+      };
+
       try {
         const {
           data: { session: activeSession },
@@ -134,43 +161,33 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         if (activeSession) {
           const needsValidationGate =
             await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
-          if (needsValidationGate) {
+          if (!needsValidationGate) {
+            applyBootstrapSession(activeSession);
+            void validateRestoredSessionInBackground();
+          } else {
             setIsRestoredSessionValidationPending(true);
+            await validateFlaggedRestoredSession(
+              () => validateRestoredSessionInBackground(),
+              async () => {
+                await supabase.auth.signOut({ scope: 'local' });
+              },
+            );
+            const {
+              data: { session: validatedSession },
+            } = await supabase.auth.getSession();
+            applyBootstrapSession(validatedSession);
           }
-          await validateRestoredSessionInBackground();
-          const {
-            data: { session: validatedSession },
-          } = await supabase.auth.getSession();
-          setSession(validatedSession);
+        } else {
+          applyBootstrapSession(null);
         }
       } finally {
         isBootstrapSettled = true;
-        bootstrapCompleteRef.current = true;
         clearTimeout(bootstrapTimeout);
         setIsRestoredSessionValidationPending(false);
         setIsLoading(false);
         void refreshSessionOnForeground();
       }
     })();
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
-      if (!bootstrapCompleteRef.current) {
-        return;
-      }
-      setSession(activeSession);
-      if (event === 'PASSWORD_RECOVERY' && activeSession) {
-        setIsPasswordRecovery(true);
-      }
-      if (event === 'SIGNED_OUT') {
-        setIsPasswordRecovery(false);
-        getSupabaseAuthStorage().clearLastKnownAuthSessions();
-        void clearAuthPendingFlows();
-        resetOAuthRedirectState();
-      }
-      if (event === 'SIGNED_IN' && activeSession) {
-        void clearAuthPendingFlows();
-      }
-    });
 
     void Linking.getInitialURL().then((url) => {
       if (url) {
@@ -184,6 +201,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       clearTimeout(bootstrapTimeout);
+      unregisterStorageRecovery();
       subscription.subscription.unsubscribe();
       linkSubscription.remove();
     };

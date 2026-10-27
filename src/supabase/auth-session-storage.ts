@@ -1,7 +1,7 @@
 import { createResilientAuthStorage, ResilientAuthStorage } from './resilient-auth-storage';
 
 let authStorage: ResilientAuthStorage | null = null;
-let persistenceRecoveryRegistered = false;
+let unregisterPersistenceRecovery: (() => void) | null = null;
 
 export function getSupabaseAuthStorage(): ResilientAuthStorage {
   authStorage ??= createResilientAuthStorage();
@@ -12,17 +12,28 @@ export function retryAuthStorageDiskPersistence(): void {
   void getSupabaseAuthStorage().retryPendingDiskPersistence();
 }
 
-export function registerAuthStoragePersistenceRecovery(): void {
-  if (persistenceRecoveryRegistered) {
-    return;
+export function registerAuthStoragePersistenceRecovery(): () => void {
+  if (unregisterPersistenceRecovery) {
+    return unregisterPersistenceRecovery;
   }
-  persistenceRecoveryRegistered = true;
+
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      retryAuthStorageDiskPersistence();
+    }
+  };
 
   if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        retryAuthStorageDiskPersistence();
-      }
-    });
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    unregisterPersistenceRecovery = () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      unregisterPersistenceRecovery = null;
+    };
+    return unregisterPersistenceRecovery;
   }
+
+  unregisterPersistenceRecovery = () => {
+    unregisterPersistenceRecovery = null;
+  };
+  return unregisterPersistenceRecovery;
 }

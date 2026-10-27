@@ -1,11 +1,12 @@
 /** @vitest-environment happy-dom */
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
   onAuthStateChange: vi.fn(),
+  signOut: vi.fn(),
 }));
 
 const storageState = vi.hoisted(() => ({
@@ -23,20 +24,22 @@ const weightSyncState = vi.hoisted(() => ({
   getEntries: vi.fn(),
 }));
 
+let authStateChangeListener: ((event: string, session: unknown) => void) | null = null;
+
 vi.mock('../supabase/client', () => ({
   isSupabaseConfigured: () => true,
   supabase: {
     auth: {
       getSession: authState.getSession,
       onAuthStateChange: authState.onAuthStateChange,
-      signOut: vi.fn(),
+      signOut: authState.signOut,
     },
   },
 }));
 
 vi.mock('../supabase/auth-session-storage', () => ({
   getSupabaseAuthStorage: () => storageState,
-  registerAuthStoragePersistenceRecovery: vi.fn(),
+  registerAuthStoragePersistenceRecovery: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../supabase/app-lifecycle', () => ({
@@ -93,8 +96,16 @@ const sampleSession = {
   user: { id: 'user-1', email: 'a@example.com' },
 };
 
+const signedInSession = {
+  access_token: 'token-b',
+  refresh_token: 'refresh-b',
+  expires_in: 3600,
+  token_type: 'bearer',
+  user: { id: 'user-2', email: 'b@example.com' },
+};
+
 function AuthAndWeightProbe() {
-  const { isAuthenticated, isLoading } = useSupabaseAuth();
+  const { isAuthenticated, isLoading, session } = useSupabaseAuth();
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       void getEntries();
@@ -104,21 +115,50 @@ function AuthAndWeightProbe() {
     <div>
       <span data-testid="auth-loading">{isLoading ? 'yes' : 'no'}</span>
       <span data-testid="authenticated">{isAuthenticated ? 'yes' : 'no'}</span>
+      <span data-testid="token">{session?.access_token ?? 'none'}</span>
     </div>
   );
 }
 
+function setupAuthListener() {
+  authStateChangeListener = null;
+  authState.onAuthStateChange.mockImplementation((listener) => {
+    authStateChangeListener = listener;
+    return { data: { subscription: { unsubscribe: vi.fn() } } };
+  });
+}
+
 describe('SupabaseAuthProvider bootstrap', () => {
   afterEach(() => {
+    cleanup();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
-  it('does not fetch weight entries until restored-session validation finishes', async () => {
-    const session = sampleSession;
-    authState.getSession.mockResolvedValue({ data: { session } });
-    authState.onAuthStateChange.mockReturnValue({
-      data: { subscription: { unsubscribe: vi.fn() } },
+  it('shows signed-in immediately when validation hangs on an unflagged restored session', async () => {
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
+    validateState.validateRestoredSessionInBackground.mockImplementation(
+      () => new Promise<void>(() => {}),
+    );
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+      expect(screen.getByTestId('token').textContent).toBe('token-a');
     });
+    expect(weightSyncState.getEntries).toHaveBeenCalled();
+  });
+
+  it('does not fetch weight entries until flagged validation finishes', async () => {
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
     storageState.restoredSessionNeedsServerValidation.mockResolvedValue(true);
 
     let resolveValidation: () => void = () => {};
@@ -149,5 +189,94 @@ describe('SupabaseAuthProvider bootstrap', () => {
       expect(screen.getByTestId('authenticated').textContent).toBe('yes');
     });
     expect(weightSyncState.getEntries).toHaveBeenCalledTimes(1);
+  });
+
+  it('times out flagged validation and signs out locally', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupAuthListener();
+    authState.getSession
+      .mockResolvedValueOnce({ data: { session: sampleSession } })
+      .mockResolvedValue({ data: { session: null } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(true);
+    validateState.validateRestoredSessionInBackground.mockImplementation(
+      () => new Promise<void>(() => {}),
+    );
+    authState.signOut.mockResolvedValue({ error: null });
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await vi.advanceTimersByTimeAsync(6000);
+
+    await waitFor(() => {
+      expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+      expect(screen.getByTestId('authenticated').textContent).toBe('no');
+    });
+  });
+
+  it('honours SIGNED_IN during bootstrap instead of overwriting with the restored session', async () => {
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(true);
+
+    let resolveValidation: () => void = () => {};
+    validateState.validateRestoredSessionInBackground.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(authStateChangeListener).toBeTruthy();
+    });
+
+    authStateChangeListener?.('SIGNED_IN', signedInSession);
+
+    resolveValidation();
+    await waitFor(() => {
+      expect(screen.getByTestId('token').textContent).toBe('token-b');
+    });
+  });
+
+  it('honours SIGNED_OUT during bootstrap', async () => {
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(true);
+
+    let resolveValidation: () => void = () => {};
+    validateState.validateRestoredSessionInBackground.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(authStateChangeListener).toBeTruthy();
+    });
+
+    authStateChangeListener?.('SIGNED_OUT', null);
+
+    resolveValidation();
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('no');
+      expect(screen.getByTestId('token').textContent).toBe('none');
+    });
   });
 });

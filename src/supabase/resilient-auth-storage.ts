@@ -20,7 +20,8 @@ const PROBE_KEY = '@weigh-way/auth-storage-probe';
 const SIGNED_OUT_MARKER_PREFIX = '@weigh-way/auth-signed-out/';
 const SIGNED_OUT_MARKER_VALUE = '1';
 const CLEARED_MARKER_VALUE = '';
-const PENDING_DISK_RETRY_INTERVAL_MS = 4000;
+const PENDING_DISK_RETRY_INITIAL_MS = 4000;
+const PENDING_DISK_RETRY_MAX_MS = 60000;
 const TOMBSTONE = Symbol('auth-storage-tombstone');
 export const SIGNED_OUT_SESSION_PAYLOAD = JSON.stringify({ signedOut: true });
 
@@ -72,7 +73,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   let probeSettled = false;
   let probeWarningLogged = false;
   let signOutPersistWarning = false;
-  let pendingRetryInterval: ReturnType<typeof setInterval> | null = null;
+  let pendingRetryTimeout: ReturnType<typeof setTimeout> | null = null;
+  let pendingRetryBackoffMs = PENDING_DISK_RETRY_INITIAL_MS;
+  let pendingDiskSyncInFlight = false;
 
   const readOverlay = (key: string): string | null | undefined => {
     if (!overlay.has(key)) {
@@ -173,9 +176,28 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     }
     await flushPendingDiskRemoves();
 
-    if (pendingDiskRemoves.size === 0 && pendingRetryInterval) {
-      clearInterval(pendingRetryInterval);
-      pendingRetryInterval = null;
+    if (pendingDiskRemoves.size === 0) {
+      pendingRetryBackoffMs = PENDING_DISK_RETRY_INITIAL_MS;
+      if (pendingRetryTimeout) {
+        clearTimeout(pendingRetryTimeout);
+        pendingRetryTimeout = null;
+      }
+    }
+  };
+
+  const runPendingDiskSyncWithBackoff = async () => {
+    if (pendingDiskSyncInFlight || pendingDiskRemoves.size === 0) {
+      return;
+    }
+    pendingDiskSyncInFlight = true;
+    try {
+      await syncPendingDiskPersistence();
+      if (pendingDiskRemoves.size > 0) {
+        pendingRetryBackoffMs = Math.min(pendingRetryBackoffMs * 2, PENDING_DISK_RETRY_MAX_MS);
+        schedulePendingDiskRetries();
+      }
+    } finally {
+      pendingDiskSyncInFlight = false;
     }
   };
 
@@ -183,12 +205,13 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     if (pendingDiskRemoves.size === 0) {
       return;
     }
-    if (pendingRetryInterval) {
+    if (pendingRetryTimeout || pendingDiskSyncInFlight) {
       return;
     }
-    pendingRetryInterval = setInterval(() => {
-      void syncPendingDiskPersistence();
-    }, PENDING_DISK_RETRY_INTERVAL_MS);
+    pendingRetryTimeout = setTimeout(() => {
+      pendingRetryTimeout = null;
+      void runPendingDiskSyncWithBackoff();
+    }, pendingRetryBackoffMs);
   };
 
   const ensureProbe = async () => {
@@ -351,9 +374,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         if (isPrimaryAuthSessionStorageKey(key)) {
           await clearSignedOutMarkerOnDisk(key);
         }
-        if (pendingDiskRemoves.size === 0 && pendingRetryInterval) {
-          clearInterval(pendingRetryInterval);
-          pendingRetryInterval = null;
+        if (pendingDiskRemoves.size === 0 && pendingRetryTimeout) {
+          clearTimeout(pendingRetryTimeout);
+          pendingRetryTimeout = null;
         }
         return;
       }
