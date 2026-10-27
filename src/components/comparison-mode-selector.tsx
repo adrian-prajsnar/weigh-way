@@ -26,7 +26,7 @@ export function ComparisonModeSelector({
   showAgeYear = false,
 }: ComparisonModeSelectorProps) {
   const styles = useAppStyles();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   const options = useMemo(() => {
     const values: ComparisonMode[] = ['day', 'week', 'month', 'year'];
@@ -38,7 +38,7 @@ export function ComparisonModeSelector({
       value,
       label: t(COMPARISON_MODE_KEYS[value]),
     }));
-  }, [showAgeYear, t, locale]);
+  }, [showAgeYear, t]);
 
   return (
     <ScrollView

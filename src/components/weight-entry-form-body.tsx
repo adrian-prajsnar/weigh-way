@@ -129,7 +129,7 @@ export function WeightEntryFormBody({
     return () => clearTimeout(timer);
   }, [autoFocusWeight, initialDate]);
 
-  const isDisabled = isSaving || isDataLoading || isProfileLoading;
+  const isDisabled = isSaving || isConfirmingReplace || isDataLoading || isProfileLoading;
 
   const adjustWeight = (direction: -1 | 1) => {
     if (Platform.OS === 'web') {

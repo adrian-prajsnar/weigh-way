@@ -17,6 +17,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
+// eslint-disable-next-line import/first -- load after vi.mock
 import {
   AUTH_LAST_EXCHANGED_CODE_TTL_MS,
   clearRememberedAuthCode,

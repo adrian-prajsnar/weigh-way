@@ -21,12 +21,11 @@ import { DismissibleInfoBanner } from '../components/dismissible-info-banner';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { useDashboardAlertDismissals } from '../hooks/use-dashboard-alert-dismissals';
-import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
+import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTranslation } from '../i18n/language-context';
-import { formatDateLabel } from '../format';
+import { formatDateLabel, formatDateRange } from '../format';
 import { RootTabParamList } from '../navigation/types';
-import { formatDateRange } from '../format';
 import {
   getDashboardPeriodRange,
   getLast7WeighIns,
@@ -52,7 +51,7 @@ export function DashboardScreen({ navigation }: Props) {
   const { showError, showSuccess } = useToast();
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
-  const scrollContentStyle = useScrollContentStyle();
+  const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
   const [period, setPeriod] = useState<DashboardPeriod>('thisWeek');
   const [editingDate, setEditingDate] = useState<string | null>(null);
 
@@ -131,8 +130,8 @@ export function DashboardScreen({ navigation }: Props) {
           scrollY={scrollY}
         />
         <Animated.ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={scrollContentStyle}
+          style={scrollViewStyle}
+          contentContainerStyle={contentContainerStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={

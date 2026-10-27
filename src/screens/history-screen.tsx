@@ -13,7 +13,7 @@ import { WeightEntryModal } from '../components/weight-entry-modal';
 import { useConfirm } from '../context/confirm-context';
 import { useToast } from '../context/toast-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
-import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
+import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useWideLayout } from '../hooks/use-wide-layout';
 import { useTranslation } from '../i18n/language-context';
@@ -43,7 +43,7 @@ export function HistoryScreen() {
   const { showError, showSuccess } = useToast();
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
-  const scrollContentStyle = useScrollContentStyle();
+  const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
   const isWideLayout = useWideLayout();
   const today = getTodayDate();
   const defaultRange = useMemo(() => getDefaultHistoryDateRange(today), [today]);
@@ -176,8 +176,8 @@ export function HistoryScreen() {
         <ScreenHeader title={t('history.title')} subtitle={subtitle} scrollY={scrollY} />
 
         <Animated.ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={scrollContentStyle}
+          style={scrollViewStyle}
+          contentContainerStyle={contentContainerStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={

@@ -56,7 +56,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ],
     android: {
       ...config.android,
-      versionCode: 7,
+      versionCode: 8,
       intentFilters: [
         {
           action: 'VIEW',

@@ -16,7 +16,7 @@ import { SegmentedControl, SegmentedOption } from '../components/segmented-contr
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { isTrendMode, useComparison } from '../hooks/use-comparison';
-import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
+import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useWideLayout } from '../hooks/use-wide-layout';
 import { useTranslation } from '../i18n/language-context';
@@ -71,11 +71,11 @@ function RangePicker({
 
 export function ComparisonScreen() {
   const styles = useAppStyles();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const { entries, isLoading, isRefreshing, error, refreshEntries } = useSharedWeightEntries();
   const { birthDate } = useSharedUserProfile();
   const { scrollY, onScroll } = useScrollHeader();
-  const scrollContentStyle = useScrollContentStyle();
+  const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
   const isWideLayout = useWideLayout();
 
   const comparison = useComparison({
@@ -90,7 +90,7 @@ export function ComparisonScreen() {
       { value: 'period', label: t('comparison.customKind.period') },
       { value: 'dates', label: t('comparison.customKind.dates') },
     ],
-    [locale, t],
+    [t],
   );
 
   return (
@@ -102,8 +102,8 @@ export function ComparisonScreen() {
           scrollY={scrollY}
         />
         <Animated.ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={scrollContentStyle}
+          style={scrollViewStyle}
+          contentContainerStyle={contentContainerStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={

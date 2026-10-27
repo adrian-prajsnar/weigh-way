@@ -28,7 +28,7 @@ type HeroWeightCardProps = {
 
 export function HeroWeightCard({ entries, isLoading, isBusy = false }: HeroWeightCardProps) {
   const styles = useAppStyles();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, birthDate, sex } = useSharedUserProfile();
   const { showBmi } = useSharedBmiDisplay();
@@ -41,7 +41,7 @@ export function HeroWeightCard({ entries, isLoading, isBusy = false }: HeroWeigh
       { value: '90d', label: t('hero.range90d') },
       { value: '1y', label: t('hero.range1y') },
     ],
-    [t, locale],
+    [t],
   );
 
   const { latest, change } = useMemo(() => getLatestChange(entries), [entries]);

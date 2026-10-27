@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   clearPkceVerifierBackup,
-  clearPkceVerifierBackups,
   snapshotLegacyVerifierForFlow,
   type PkceBackupKind,
 } from './pkce-verifier-backup';

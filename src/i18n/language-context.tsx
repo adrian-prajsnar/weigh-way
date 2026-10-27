@@ -82,7 +82,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (scope: TranslationKey, options?: TranslateOptions) => translate(scope, options),
-    [locale],
+    [],
   );
 
   const value = useMemo<LanguageContextValue>(

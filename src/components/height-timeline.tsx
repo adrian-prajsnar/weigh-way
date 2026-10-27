@@ -7,7 +7,6 @@ import {
   formatDateLabel,
   formatHeight,
   fromDateKey,
-  getHeightRangeMessage,
   getTodayDate,
   heightToInputParts,
   parseHeightInput,
@@ -147,7 +146,9 @@ export function HeightTimelineEditor({
     const parts = heightToInputParts(parsed, units);
     setHeightPrimaryInput(parts.primary);
     setHeightSecondaryInput(parts.secondary);
-  }, [units]);
+    // Intentionally only when units change: reformat open form values for the new unit system.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- height inputs read at units-change time only
+  }, [units, formMode]);
 
   const isFormOpen = formMode !== null;
 

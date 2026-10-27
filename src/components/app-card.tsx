@@ -1,6 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { StyleProp, Text, View, ViewStyle } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import {
+  APP_CARD_ENTER_DURATION_MS,
+  getAppCardEnterFallbackMs,
+} from './app-card-enter-animation';
 import { LoadingCardOverlay } from './loading-card-overlay';
 import { useAppStyles } from '../theme/styles';
 import { radius } from '../theme/tokens';
@@ -29,11 +33,31 @@ export function AppCard({
   children,
 }: AppCardProps) {
   const styles = useAppStyles();
+  const reducedMotion = useReducedMotion();
   const hasHeader = Boolean(title || subtitle || right);
-  const entering = animateEntry ? FadeInDown.duration(320).delay(delay) : undefined;
+  const skipEnterAnimation = !animateEntry || reducedMotion;
+  const [enterFallback, setEnterFallback] = useState(skipEnterAnimation);
+
+  useEffect(() => {
+    if (skipEnterAnimation) {
+      setEnterFallback(true);
+      return;
+    }
+
+    setEnterFallback(false);
+    const fallbackMs = getAppCardEnterFallbackMs(delay);
+    const timer = setTimeout(() => setEnterFallback(true), fallbackMs);
+    return () => clearTimeout(timer);
+  }, [delay, skipEnterAnimation]);
+
+  const entering =
+    animateEntry && !reducedMotion && !enterFallback
+      ? FadeInDown.duration(APP_CARD_ENTER_DURATION_MS).delay(delay)
+      : undefined;
 
   return (
     <Animated.View
+      key={enterFallback ? `card-visible-${delay}` : `card-enter-${delay}`}
       entering={entering}
       style={styles.loadingCard}
     >
