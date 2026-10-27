@@ -10,7 +10,6 @@ export type AuthSessionStorage = {
 export type ResilientAuthStorage = AuthSessionStorage & {
   consumeSignOutPersistWarning: () => boolean;
   resetSignOutPersistWarning: () => void;
-  clearLastKnownAuthSessions: () => void;
   retryPendingDiskPersistence: () => Promise<void>;
   hasPendingDiskPersistence: () => boolean;
   restoredSessionNeedsServerValidation: () => Promise<boolean>;
@@ -70,7 +69,6 @@ export async function probePersistentAuthStorage(): Promise<boolean> {
 /** Supabase auth storage: tombstones failed removals; disk-first reads with overlay for failed writes. */
 export function createResilientAuthStorage(): ResilientAuthStorage {
   const overlay = new Map<string, OverlayEntry>();
-  const lastKnownAuthSession = new Map<string, string>();
   const pendingDiskRemoves = new Set<string>();
   let probeSettled = false;
   let probeWarningLogged = false;
@@ -90,17 +88,6 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
 
   const markTombstone = (key: string) => {
     overlay.set(key, TOMBSTONE);
-  };
-
-  const rememberAuthSessionValue = (key: string, value: string | null) => {
-    if (!isPrimaryAuthSessionStorageKey(key) || !value || isSignedOutSessionPayload(value)) {
-      return;
-    }
-    lastKnownAuthSession.set(key, value);
-  };
-
-  const forgetAuthSessionValue = (key: string) => {
-    lastKnownAuthSession.delete(key);
   };
 
   const tryRemoveFromDisk = async (key: string): Promise<boolean> => {
@@ -134,14 +121,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   const clearSignedOutMarkerOnDisk = async (sessionKey: string) => {
-    if (markerReadFailedSessionKeys.has(sessionKey)) {
-      return;
-    }
     const markerKey = getSignedOutMarkerKey(sessionKey);
     const removed = await tryRemoveFromDisk(markerKey);
     if (!removed) {
       await tryWriteToDisk(markerKey, CLEARED_MARKER_VALUE);
     }
+    markerReadFailedSessionKeys.delete(sessionKey);
   };
 
   const flushPendingDiskRemoves = async () => {
@@ -158,13 +143,13 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
 
   const persistSignedOutState = async (sessionKey: string) => {
     pendingDiskRemoves.add(sessionKey);
-    forgetAuthSessionValue(sessionKey);
     await tryWriteToDisk(getSignedOutMarkerKey(sessionKey), SIGNED_OUT_MARKER_VALUE);
     await tryWriteToDisk(sessionKey, SIGNED_OUT_SESSION_PAYLOAD);
   };
 
   const clearSignedOutState = async (sessionKey: string) => {
     pendingDiskRemoves.delete(sessionKey);
+    markerReadFailedSessionKeys.delete(sessionKey);
     await clearSignedOutMarkerOnDisk(sessionKey);
   };
 
@@ -260,6 +245,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     }
     try {
       const marker = await tryReadFromDiskOrThrow(getSignedOutMarkerKey(sessionKey));
+      markerReadFailedSessionKeys.delete(sessionKey);
       if (isSignedOutMarkerValue(marker)) {
         return true;
       }
@@ -277,6 +263,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     let markerReadFailed = false;
     try {
       marker = await tryReadFromDiskOrThrow(getSignedOutMarkerKey(key));
+      markerReadFailedSessionKeys.delete(key);
     } catch {
       markerReadFailed = true;
       markerReadFailedSessionKeys.add(key);
@@ -290,31 +277,18 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       return null;
     }
 
-    let disk: string | null = null;
-    let sessionReadFailed = false;
     try {
-      disk = await tryReadFromDiskOrThrow(key);
-    } catch {
-      sessionReadFailed = true;
-    }
-
-    if (!sessionReadFailed) {
+      const disk = await tryReadFromDiskOrThrow(key);
       if (isSignedOutSessionPayload(disk)) {
         return null;
       }
-      if (disk) {
-        rememberAuthSessionValue(key, disk);
-      }
       return disk;
+    } catch {
+      return null;
     }
-
-    return lastKnownAuthSession.get(key) ?? null;
   };
 
   return {
-    clearLastKnownAuthSessions() {
-      lastKnownAuthSession.clear();
-    },
     hasPendingDiskPersistence() {
       return pendingDiskRemoves.size > 0;
     },
@@ -346,9 +320,6 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       await ensureProbe();
       const cached = readOverlay(key);
       if (cached !== undefined) {
-        if (cached !== null) {
-          rememberAuthSessionValue(key, cached);
-        }
         return cached;
       }
       if (isPrimaryAuthSessionStorageKey(key)) {
@@ -363,7 +334,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       overlay.set(key, value);
 
       if (isPrimaryAuthSessionStorageKey(key) && !isSignedOutSessionPayload(value)) {
-        rememberAuthSessionValue(key, value);
+        markerReadFailedSessionKeys.delete(key);
         await clearSignedOutState(key);
       }
 
@@ -390,10 +361,6 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       pendingDiskRemoves.add(key);
       schedulePendingDiskRetries();
 
-      if (isPrimaryAuthSessionStorageKey(key)) {
-        forgetAuthSessionValue(key);
-      }
-
       const removed = await tryRemoveFromDisk(key);
       if (removed) {
         pendingDiskRemoves.delete(key);
@@ -409,9 +376,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       }
 
       if (isPrimaryAuthSessionStorageKey(key)) {
-        // If storage fails to persist local sign-out (even when the server sign-out succeeded),
-        // a reload can briefly show Home and fetch until /user rejects the stale JWT.
-        // Startup validation clears sessions revoked on the server once the app is back online.
+        // When the server revoke succeeded but storage cannot persist local sign-out, a reload
+        // can still show Home until /user rejects the JWT. An offline sign-out that reached the
+        // server survives a reload once storage recovers.
         await persistSignedOutState(key);
         signOutPersistWarning = true;
         schedulePendingDiskRetries();

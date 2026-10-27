@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { BOOTSTRAP_SESSION_DEADLINE_MS } from '../supabase/bootstrap-deadline';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { BOOTSTRAP_SESSION_DEADLINE_MS } from './supabase-auth-context';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -12,7 +12,6 @@ const authState = vi.hoisted(() => ({
 
 const storageState = vi.hoisted(() => ({
   restoredSessionNeedsServerValidation: vi.fn(),
-  clearLastKnownAuthSessions: vi.fn(),
   resetSignOutPersistWarning: vi.fn(),
   consumeSignOutPersistWarning: vi.fn(),
   forcePersistSignedOutStateForLastKnownSessionKey: vi.fn().mockResolvedValue(undefined),
@@ -30,6 +29,10 @@ const weightSyncState = vi.hoisted(() => ({
 
 let authStateChangeListener: ((event: string, session: unknown) => void) | null = null;
 
+const adminState = vi.hoisted(() => ({
+  signOut: vi.fn(),
+}));
+
 vi.mock('../supabase/client', () => ({
   isSupabaseConfigured: () => true,
   supabase: {
@@ -37,6 +40,9 @@ vi.mock('../supabase/client', () => ({
       getSession: authState.getSession,
       onAuthStateChange: authState.onAuthStateChange,
       signOut: authState.signOut,
+      admin: {
+        signOut: adminState.signOut,
+      },
     },
   },
 }));
@@ -133,6 +139,11 @@ function setupAuthListener() {
 }
 
 describe('SupabaseAuthProvider bootstrap', () => {
+  beforeEach(() => {
+    adminState.signOut.mockResolvedValue({ error: null });
+    authState.signOut.mockResolvedValue({ error: null });
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -312,6 +323,7 @@ describe('SupabaseAuthProvider bootstrap', () => {
     expect(screen.getByTestId('authenticated').textContent).toBe('no');
     expect(screen.getByTestId('token').textContent).toBe('none');
     expect(weightSyncState.getEntries).not.toHaveBeenCalled();
+    expect(adminState.signOut).toHaveBeenCalledWith('token-a', 'global');
 
     await vi.advanceTimersByTimeAsync(3000);
     expect(weightSyncState.getEntries).not.toHaveBeenCalled();

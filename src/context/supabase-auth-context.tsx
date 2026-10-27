@@ -12,7 +12,6 @@ import {
   formatSignOutPersistWarning,
   formatSignUpError,
   formatUpdatePasswordError,
-  isNetworkError,
 } from '../auth-errors';
 import { isOAuthCallbackUrl } from '../auth-oauth-callback';
 import {
@@ -33,12 +32,13 @@ import {
   registerAuthStoragePersistenceRecovery,
 } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
-import { BOOTSTRAP_SESSION_DEADLINE_MS } from '../supabase/bootstrap-deadline';
-import { beginLocalAuthSignOutBestEffort } from '../supabase/local-auth-sign-out';
+import { signOutSession, signOutSessionBestEffort } from '../supabase/sign-out-session';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
 import { isDemoMode } from '../demo/is-demo-mode';
 import { demoReadOnlyError } from '../demo/read-only';
+
+export const BOOTSTRAP_SESSION_DEADLINE_MS = 6000;
 
 type SignUpResult = {
   needsEmailConfirmation: boolean;
@@ -157,7 +157,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         if (!(await shouldRunFailClosedSignOut())) {
           return;
         }
-        beginLocalAuthSignOutBestEffort();
+        signOutSessionBestEffort(accessTokenAtStart, { forcePersistSignedOut: true });
       })();
     };
 
@@ -216,7 +216,6 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false);
         setIsRestoredSessionValidationPending(false);
-        getSupabaseAuthStorage().clearLastKnownAuthSessions();
         void clearAuthPendingFlows();
         resetOAuthRedirectState();
       }
@@ -352,9 +351,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       // Supabase may auto-login when email confirmation is disabled — sign out so the user logs in manually.
       if (data.session) {
-        getSupabaseAuthStorage().resetSignOutPersistWarning();
-        await supabase.auth.signOut();
-        getSupabaseAuthStorage().consumeSignOutPersistWarning();
+        await signOutSession({ accessToken: data.session.access_token });
       }
 
       return { needsEmailConfirmation };
@@ -368,18 +365,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw demoReadOnlyError();
     }
 
-    getSupabaseAuthStorage().resetSignOutPersistWarning();
+    const accessToken = session?.access_token ?? null;
     let persistWarning = false;
     let serverSignOutUnreachable = false;
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        if (isNetworkError(error)) {
-          serverSignOutUnreachable = true;
-        } else {
-          throw new Error(formatSignOutError(error));
-        }
-      }
+      const result = await signOutSession({ accessToken });
+      serverSignOutUnreachable = result.serverSignOutUnreachable;
+    } catch (error) {
+      throw new Error(formatSignOutError(error));
     } finally {
       resetOAuthRedirectState();
       await clearAuthPendingFlows();
@@ -392,7 +385,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (serverSignOutUnreachable) {
       throw new Error(formatSignOutError(new Error('Network request failed')));
     }
-  }, []);
+  }, [session]);
 
   const deleteAccount = useCallback(async () => {
     if (isDemoMode()) {
@@ -404,10 +397,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatDeleteAccountError(error));
     }
 
-    getSupabaseAuthStorage().resetSignOutPersistWarning();
+    const accessToken = session?.access_token ?? null;
     let persistWarning = false;
     try {
-      await supabase.auth.signOut({ scope: 'local' });
+      await signOutSession({ accessToken });
     } finally {
       resetOAuthRedirectState();
       await clearAuthPendingFlows();
@@ -417,7 +410,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     if (persistWarning) {
       throw new Error(formatSignOutPersistWarning());
     }
-  }, []);
+  }, [session]);
 
   const resendConfirmationEmail = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resend({

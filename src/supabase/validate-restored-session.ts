@@ -1,4 +1,4 @@
-import { signOutLocallyOnce } from './local-auth-sign-out';
+import { signOutSession } from './sign-out-session';
 import { supabase } from './client';
 
 const SESSION_REJECTION_CODES = new Set([
@@ -112,5 +112,5 @@ export async function validateRestoredSessionInBackground(): Promise<void> {
     return;
   }
 
-  await signOutLocallyOnce();
+  await signOutSession({ accessToken: accessTokenAtStart });
 }

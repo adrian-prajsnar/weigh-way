@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BOOTSTRAP_SESSION_DEADLINE_MS } from './bootstrap-deadline';
+const BOOTSTRAP_SESSION_DEADLINE_MS = 6000;
 
 const SESSION_KEY = 'sb-example-auth-token';
 

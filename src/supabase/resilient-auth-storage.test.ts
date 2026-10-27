@@ -234,28 +234,41 @@ describe('createResilientAuthStorage', () => {
     expect(disk.get(markerKey)).toBe('1');
   });
 
-  it('drops last-known session memory when clearLastKnownAuthSessions runs', async () => {
+  it('clears marker-read failure after a new session is saved', async () => {
     const sessionKey = 'sb-localhost-auth-token';
-    let sessionReads = 0;
+    const markerKey = '@weigh-way/auth-signed-out/sb-localhost-auth-token';
+    const disk = new Map<string, string>([[markerKey, '1']]);
+    let markerReads = 0;
 
     asyncStorage.getItem.mockImplementation(async (key: string) => {
       if (key === '@weigh-way/auth-storage-probe') {
         return '1';
       }
-      if (key === sessionKey) {
-        sessionReads += 1;
-        if (sessionReads === 1) {
-          return 'session-a';
+      if (key === markerKey) {
+        markerReads += 1;
+        if (markerReads === 1) {
+          throw securityError();
         }
-        throw securityError();
+        return disk.get(key) ?? null;
       }
-      return null;
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      disk.set(key, value);
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      disk.delete(key);
     });
 
     const storage = createResilientAuthStorage();
-    await expect(storage.getItem(sessionKey)).resolves.toBe('session-a');
-    storage.clearLastKnownAuthSessions();
-    await expect(storage.getItem(sessionKey)).resolves.toBeNull();
+    await storage.getItem(sessionKey);
+    await expect(storage.restoredSessionNeedsServerValidation()).resolves.toBe(true);
+
+    await storage.setItem(sessionKey, 'user-b-session');
+    disk.set(markerKey, '');
+
+    await expect(storage.restoredSessionNeedsServerValidation()).resolves.toBe(false);
+    await expect(storage.getItem(sessionKey)).resolves.toBe('user-b-session');
   });
 
   it('allows a new sign-in when marker removal keeps failing but overwrite clears it', async () => {

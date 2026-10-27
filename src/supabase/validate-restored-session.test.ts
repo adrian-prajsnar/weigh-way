@@ -4,6 +4,7 @@ const authState = vi.hoisted(() => ({
   getUser: vi.fn(),
   getSession: vi.fn(),
   signOut: vi.fn(),
+  adminSignOut: vi.fn(),
   refreshSession: vi.fn(),
 }));
 
@@ -19,6 +20,9 @@ vi.mock('./client', () => ({
       getSession: authState.getSession,
       signOut: authState.signOut,
       refreshSession: authState.refreshSession,
+      admin: {
+        signOut: authState.adminSignOut,
+      },
     },
   },
 }));
@@ -48,10 +52,12 @@ describe('validateRestoredSessionInBackground', () => {
     authState.getUser.mockReset();
     authState.getSession.mockReset();
     authState.signOut.mockReset();
+    authState.adminSignOut.mockReset();
     authState.refreshSession.mockReset();
     storageState.resetSignOutPersistWarning.mockReset();
     storageState.consumeSignOutPersistWarning.mockReset();
     authState.signOut.mockResolvedValue({ error: null });
+    authState.adminSignOut.mockResolvedValue({ error: null });
     authState.refreshSession.mockResolvedValue({ data: { session: sessionA }, error: null });
   });
 
@@ -65,6 +71,7 @@ describe('validateRestoredSessionInBackground', () => {
     await validateRestoredSessionInBackground();
 
     expect(storageState.resetSignOutPersistWarning).toHaveBeenCalled();
+    expect(authState.adminSignOut).toHaveBeenCalledWith('token-a', 'global');
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
@@ -175,6 +182,7 @@ describe('validateRestoredSessionInBackground', () => {
 
     await validateRestoredSessionInBackground();
 
+    expect(authState.adminSignOut).toHaveBeenCalledTimes(1);
     expect(authState.signOut).toHaveBeenCalledTimes(1);
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
@@ -199,6 +207,7 @@ describe('validateRestoredSessionInBackground', () => {
       validateRestoredSessionInBackground(),
     ]);
 
+    expect(authState.adminSignOut).toHaveBeenCalledTimes(1);
     expect(authState.signOut).toHaveBeenCalledTimes(1);
   });
 

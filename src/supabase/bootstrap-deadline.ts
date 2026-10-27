@@ -1,1 +1,0 @@
-export const BOOTSTRAP_SESSION_DEADLINE_MS = 6000;
