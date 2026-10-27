@@ -82,7 +82,9 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (scope: TranslationKey, options?: TranslateOptions) => translate(scope, options),
-    [],
+    // Locale in deps recreates `t` so useMemo(..., [t]) refreshes when language changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- locale is the intentional identity signal
+    [locale],
   );
 
   const value = useMemo<LanguageContextValue>(

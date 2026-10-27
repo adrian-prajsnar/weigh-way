@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useUnits } from '../context/unit-context';
@@ -14,6 +14,7 @@ import {
 } from '../format';
 import { useTranslation } from '../i18n/language-context';
 import { HeightEntry } from '../types';
+import { UnitSystem } from '../units';
 import { useAppStyles } from '../theme/styles';
 import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
@@ -86,6 +87,7 @@ export function HeightTimelineEditor({
   const [effectiveDate, setEffectiveDate] = useState(today);
   const [heightPrimaryInput, setHeightPrimaryInput] = useState('');
   const [heightSecondaryInput, setHeightSecondaryInput] = useState('');
+  const prevUnitsRef = useRef<UnitSystem>(units);
 
   const canDelete = onDelete !== undefined;
 
@@ -135,10 +137,17 @@ export function HeightTimelineEditor({
 
   useEffect(() => {
     if (formMode === null) {
+      prevUnitsRef.current = units;
       return;
     }
 
-    const parsed = parseHeightInput(units, heightPrimaryInput, heightSecondaryInput);
+    const prevUnits = prevUnitsRef.current;
+    if (prevUnits === units) {
+      return;
+    }
+    prevUnitsRef.current = units;
+
+    const parsed = parseHeightInput(prevUnits, heightPrimaryInput, heightSecondaryInput);
     if (parsed === null) {
       return;
     }
@@ -147,8 +156,8 @@ export function HeightTimelineEditor({
     setHeightPrimaryInput(parts.primary);
     setHeightSecondaryInput(parts.secondary);
     // Intentionally only when units change: reformat open form values for the new unit system.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- height inputs read at units-change time only
-  }, [units, formMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- height inputs read at units-change time only
+  }, [units]);
 
   const isFormOpen = formMode !== null;
 

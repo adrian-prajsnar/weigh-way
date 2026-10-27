@@ -1,11 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const root = path.join(__dirname, '..');
 const version = process.argv[2];
+const rootFromEnv = process.env.WEIGH_WAY_PROJECT_ROOT;
+const rootFromArg = process.argv[3];
+const root = path.resolve(rootFromEnv ?? rootFromArg ?? path.join(__dirname, '..'));
 
 if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
-  console.error('Usage: node scripts/bump-expo-version.cjs <version>');
+  console.error('Usage: node scripts/bump-expo-version.cjs <version> [projectRoot]');
   process.exit(1);
 }
 

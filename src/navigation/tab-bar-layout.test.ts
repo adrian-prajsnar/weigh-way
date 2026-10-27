@@ -16,8 +16,13 @@ describe('tab-bar-layout', () => {
     expect(getTabBarViewportInset(34)).toBe(122);
   });
 
-  it('clears the floating tab bar in scroll content', () => {
+  it('pads scroll content when the tab bar inset is reserved in padding', () => {
     expect(getScrollBottomPadding(0)).toBe(132);
     expect(getScrollBottomPadding(34)).toBe(166);
+  });
+
+  it('uses only content breathing room when the tab bar uses marginBottom', () => {
+    expect(getScrollBottomPadding(0, false)).toBe(44);
+    expect(getScrollBottomPadding(34, false)).toBe(44);
   });
 });

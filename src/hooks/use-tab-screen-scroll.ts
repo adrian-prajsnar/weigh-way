@@ -15,7 +15,10 @@ export function useTabScreenScroll() {
   );
 
   const contentContainerStyle = useMemo<StyleProp<ViewStyle>>(
-    () => [styles.content, { paddingBottom: getScrollBottomPadding(insets.bottom) }],
+    () => [
+      styles.content,
+      { paddingBottom: getScrollBottomPadding(insets.bottom, false) },
+    ],
     [styles.content, insets.bottom],
   );
 

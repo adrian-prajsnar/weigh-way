@@ -36,19 +36,19 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [phraseInput, setPhraseInput] = useState('');
-  const [backdropDismissEnabled, setBackdropDismissEnabled] = useState(false);
+  const [secondaryActionsEnabled, setSecondaryActionsEnabled] = useState(false);
   const resolverRef = useRef<((value: boolean) => void) | null>(null);
   const idRef = useRef(0);
 
   useEffect(() => {
     setPhraseInput('');
     if (!pending) {
-      setBackdropDismissEnabled(false);
+      setSecondaryActionsEnabled(false);
       return;
     }
 
-    setBackdropDismissEnabled(false);
-    const timer = setTimeout(() => setBackdropDismissEnabled(true), 320);
+    setSecondaryActionsEnabled(false);
+    const timer = setTimeout(() => setSecondaryActionsEnabled(true), 320);
     return () => clearTimeout(timer);
   }, [pending?.id, pending]);
 
@@ -88,7 +88,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               <Pressable
                 style={StyleSheet.absoluteFill}
                 onPress={() => {
-                  if (backdropDismissEnabled) {
+                  if (secondaryActionsEnabled) {
                     close(false);
                   }
                 }}
@@ -144,7 +144,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                           !phraseMatches && styles.buttonDisabled,
                           pressed && phraseMatches && styles.buttonPressed,
                         ]}
-                        onPress={() => close(true)}
+                        onPress={() => {
+                          if (!secondaryActionsEnabled) {
+                            return;
+                          }
+                          close(true);
+                        }}
                       >
                         <Text
                           style={

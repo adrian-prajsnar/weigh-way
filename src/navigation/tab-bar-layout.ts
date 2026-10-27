@@ -12,6 +12,18 @@ export function getTabBarViewportInset(bottomInset: number): number {
   return getTabBarBottomOffset(bottomInset) + TAB_BAR_HEIGHT + spacing.sm;
 }
 
-export function getScrollBottomPadding(bottomInset: number): number {
-  return getTabBarViewportInset(bottomInset) + spacing.xxl + spacing.lg;
+/** Bottom padding inside tab scroll content (xxl+lg breathing room). */
+export function getScrollContentBottomPadding(): number {
+  return spacing.xxl + spacing.lg;
+}
+
+/**
+ * @param reserveTabBarInset When false, the scroll view already uses `marginBottom` for the tab bar.
+ */
+export function getScrollBottomPadding(
+  bottomInset: number,
+  reserveTabBarInset = true,
+): number {
+  const base = getScrollContentBottomPadding();
+  return reserveTabBarInset ? getTabBarViewportInset(bottomInset) + base : base;
 }
