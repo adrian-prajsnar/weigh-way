@@ -78,6 +78,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   let pendingRetryTimeout: ReturnType<typeof setTimeout> | null = null;
   let pendingRetryBackoffMs = PENDING_DISK_RETRY_INITIAL_MS;
   let pendingDiskSyncInFlight = false;
+  const markerReadFailedSessionKeys = new Set<string>();
 
   const readOverlay = (key: string): string | null | undefined => {
     if (!overlay.has(key)) {
@@ -133,6 +134,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   const clearSignedOutMarkerOnDisk = async (sessionKey: string) => {
+    if (markerReadFailedSessionKeys.has(sessionKey)) {
+      return;
+    }
     const markerKey = getSignedOutMarkerKey(sessionKey);
     const removed = await tryRemoveFromDisk(markerKey);
     if (!removed) {
@@ -251,8 +255,16 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     if (!sessionKey) {
       return false;
     }
-    const marker = await tryReadFromDisk(getSignedOutMarkerKey(sessionKey));
-    if (isSignedOutMarkerValue(marker)) {
+    if (markerReadFailedSessionKeys.has(sessionKey)) {
+      return true;
+    }
+    try {
+      const marker = await tryReadFromDiskOrThrow(getSignedOutMarkerKey(sessionKey));
+      if (isSignedOutMarkerValue(marker)) {
+        return true;
+      }
+    } catch {
+      markerReadFailedSessionKeys.add(sessionKey);
       return true;
     }
     const disk = await tryReadFromDisk(sessionKey);
@@ -267,8 +279,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       marker = await tryReadFromDiskOrThrow(getSignedOutMarkerKey(key));
     } catch {
       markerReadFailed = true;
+      markerReadFailedSessionKeys.add(key);
     }
-    if (!markerReadFailed && isSignedOutMarkerValue(marker)) {
+    if (markerReadFailed) {
+      return null;
+    }
+    if (isSignedOutMarkerValue(marker)) {
       pendingDiskRemoves.add(key);
       await syncPendingDiskPersistence();
       return null;
@@ -393,9 +409,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       }
 
       if (isPrimaryAuthSessionStorageKey(key)) {
-        // If storage and network both fail during sign-out and the process is killed before
-        // storage recovers, the client cannot persist local sign-out; startup validation
-        // clears sessions revoked on the server once the app is back online.
+        // If storage fails to persist local sign-out (even when the server sign-out succeeded),
+        // a reload can briefly show Home and fetch until /user rejects the stale JWT.
+        // Startup validation clears sessions revoked on the server once the app is back online.
         await persistSignedOutState(key);
         signOutPersistWarning = true;
         schedulePendingDiskRetries();

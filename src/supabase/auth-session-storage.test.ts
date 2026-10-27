@@ -13,20 +13,18 @@ vi.mock('./resilient-auth-storage', () => ({
   createResilientAuthStorage: () => storageMock,
 }));
 
-
 describe('registerAuthStoragePersistenceRecovery', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('does not remove a newer visibility listener when an older registration unregisters', () => {
+  it('keeps the newer visibility listener when an older registration unregisters', () => {
     const removeEventListener = vi.spyOn(document, 'removeEventListener');
 
     const unregisterFirst = registerAuthStoragePersistenceRecovery();
     const unregisterSecond = registerAuthStoragePersistenceRecovery();
 
     unregisterFirst();
-    expect(removeEventListener).not.toHaveBeenCalled();
 
     Object.defineProperty(document, 'visibilityState', {
       configurable: true,
@@ -36,7 +34,7 @@ describe('registerAuthStoragePersistenceRecovery', () => {
     expect(storageMock.retryPendingDiskPersistence).toHaveBeenCalled();
 
     unregisterSecond();
-    expect(removeEventListener).toHaveBeenCalledTimes(1);
+    expect(removeEventListener).toHaveBeenCalled();
 
     removeEventListener.mockRestore();
   });

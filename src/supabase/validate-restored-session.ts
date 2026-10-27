@@ -1,4 +1,4 @@
-import { getSupabaseAuthStorage } from './auth-session-storage';
+import { signOutLocallyOnce } from './local-auth-sign-out';
 import { supabase } from './client';
 
 const SESSION_REJECTION_CODES = new Set([
@@ -112,7 +112,5 @@ export async function validateRestoredSessionInBackground(): Promise<void> {
     return;
   }
 
-  getSupabaseAuthStorage().resetSignOutPersistWarning();
-  getSupabaseAuthStorage().consumeSignOutPersistWarning();
-  await supabase.auth.signOut({ scope: 'local' });
+  await signOutLocallyOnce();
 }

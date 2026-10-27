@@ -33,13 +33,8 @@ import {
   registerAuthStoragePersistenceRecovery,
 } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
-import { runBootstrapAuthSession } from '../supabase/bootstrap-auth-session';
-import { runFailClosedLocalSignOut } from '../supabase/bootstrap-session-validation';
-import { registerFatalRefreshTokenHandler } from '../supabase/supabase-auth-fetch';
-import {
-  createRestoredSessionDataFetchGate,
-  RESTORED_SESSION_DATA_FETCH_CAP_MS,
-} from '../supabase/restored-session-data-fetch-gate';
+import { BOOTSTRAP_SESSION_DEADLINE_MS } from '../supabase/bootstrap-deadline';
+import { beginLocalAuthSignOutBestEffort } from '../supabase/local-auth-sign-out';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
 import { isDemoMode } from '../demo/is-demo-mode';
@@ -54,7 +49,6 @@ type SupabaseAuthContextValue = {
   isAuthenticated: boolean;
   isPasswordRecovery: boolean;
   isLoading: boolean;
-  isProtectedDataFetchReady: boolean;
   isCompletingOAuth: boolean;
   isConfigured: boolean;
   authLinkError: string | null;
@@ -79,43 +73,8 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [authLinkError, setAuthLinkError] = useState<string | null>(null);
   const [isRestoredSessionValidationPending, setIsRestoredSessionValidationPending] =
     useState(false);
-  const [isProtectedDataFetchGated, setIsProtectedDataFetchGated] = useState(false);
-  const restoredSessionDataFetchGateRef = useRef(createRestoredSessionDataFetchGate());
-  const dataFetchCapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const completingSignUpRef = useRef(false);
   const authEventGenerationRef = useRef(0);
-
-  const clearProtectedDataFetchCapTimer = useCallback(() => {
-    if (dataFetchCapTimerRef.current) {
-      clearTimeout(dataFetchCapTimerRef.current);
-      dataFetchCapTimerRef.current = null;
-    }
-  }, []);
-
-  const beginProtectedDataFetchGate = useCallback(() => {
-    restoredSessionDataFetchGateRef.current.begin();
-    setIsProtectedDataFetchGated(true);
-    clearProtectedDataFetchCapTimer();
-    dataFetchCapTimerRef.current = setTimeout(() => {
-      dataFetchCapTimerRef.current = null;
-      restoredSessionDataFetchGateRef.current.end();
-      setIsProtectedDataFetchGated(false);
-    }, RESTORED_SESSION_DATA_FETCH_CAP_MS);
-  }, [clearProtectedDataFetchCapTimer]);
-
-  const endProtectedDataFetchGate = useCallback(() => {
-    restoredSessionDataFetchGateRef.current.end();
-    clearProtectedDataFetchCapTimer();
-    setIsProtectedDataFetchGated(false);
-  }, [clearProtectedDataFetchCapTimer]);
-
-  const signOutLocallyAfterFatalRefresh = useCallback(async () => {
-    getSupabaseAuthStorage().resetSignOutPersistWarning();
-    getSupabaseAuthStorage().consumeSignOutPersistWarning();
-    await supabase.auth.signOut({ scope: 'local' });
-  }, []);
-
-  const isProtectedDataFetchReady = !isProtectedDataFetchGated;
 
   const isAuthenticated =
     Boolean(session) &&
@@ -158,18 +117,99 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     registerSupabaseAppLifecycle();
     const unregisterStorageRecovery = registerAuthStoragePersistenceRecovery();
 
-    registerFatalRefreshTokenHandler(() => {
-      void signOutLocallyAfterFatalRefresh();
-    });
+    const bootstrapGeneration = authEventGenerationRef.current;
+    let accessTokenAtStart: string | null = null;
+    let flagged = false;
+    let storageFlagged = false;
+    let sessionApplied = false;
+    let bootstrapFinished = false;
+    let flaggedDeadlineHandled = false;
+    let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearBootstrapDeadline = () => {
+      if (deadlineTimer) {
+        clearTimeout(deadlineTimer);
+        deadlineTimer = null;
+      }
+    };
+
+    const finishBootstrapLoading = () => {
+      setIsRestoredSessionValidationPending(false);
+      setIsLoading(false);
+    };
+
+    const shouldRunFailClosedSignOut = async (): Promise<boolean> => {
+      if (authEventGenerationRef.current !== bootstrapGeneration) {
+        return false;
+      }
+      if (!accessTokenAtStart) {
+        return true;
+      }
+      const { data } = await supabase.auth.getSession().catch(() => ({
+        data: { session: null as Session | null },
+      }));
+      const currentToken = data.session?.access_token ?? null;
+      return !currentToken || currentToken === accessTokenAtStart;
+    };
+
+    const runFailClosedSignOutBestEffort = () => {
+      void (async () => {
+        if (!(await shouldRunFailClosedSignOut())) {
+          return;
+        }
+        beginLocalAuthSignOutBestEffort();
+      })();
+    };
+
+    const hydrateSessionFromAuthStorage = async () => {
+      const key = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
+      if (!key) {
+        return;
+      }
+      const raw = await getSupabaseAuthStorage().getItem(key);
+      if (!raw) {
+        return;
+      }
+      try {
+        const restored = JSON.parse(raw) as Session;
+        if (
+          restored.access_token &&
+          authEventGenerationRef.current === bootstrapGeneration
+        ) {
+          setSession(restored);
+          sessionApplied = true;
+        }
+      } catch {
+        // Ignore corrupt session payloads.
+      }
+    };
+
+    const failClosedAfterFlaggedDeadline = () => {
+      setSession(null);
+      finishBootstrapLoading();
+      runFailClosedSignOutBestEffort();
+    };
+
+    deadlineTimer = setTimeout(() => {
+      if (bootstrapFinished) {
+        return;
+      }
+      if (flagged || storageFlagged) {
+        flaggedDeadlineHandled = true;
+        failClosedAfterFlaggedDeadline();
+        return;
+      }
+      finishBootstrapLoading();
+      if (!sessionApplied) {
+        void hydrateSessionFromAuthStorage();
+      }
+    }, BOOTSTRAP_SESSION_DEADLINE_MS);
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
       if (event !== 'INITIAL_SESSION') {
         authEventGenerationRef.current += 1;
       }
       setSession(activeSession);
-      if (event === 'TOKEN_REFRESHED' && activeSession) {
-        endProtectedDataFetchGate();
-      }
       if (event === 'PASSWORD_RECOVERY' && activeSession) {
         setIsPasswordRecovery(true);
       }
@@ -180,45 +220,64 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         void clearAuthPendingFlows();
         resetOAuthRedirectState();
       }
-      if (event === 'SIGNED_IN' && activeSession) {
+      if (
+        (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') &&
+        activeSession
+      ) {
         setIsRestoredSessionValidationPending(false);
-        endProtectedDataFetchGate();
+        setIsLoading(false);
+        clearBootstrapDeadline();
         void clearAuthPendingFlows();
       }
     });
 
-    void runBootstrapAuthSession({
-      getAuthEventGeneration: () => authEventGenerationRef.current,
-      getSession: () => supabase.auth.getSession(),
-      restoredSessionNeedsServerValidation: () =>
-        getSupabaseAuthStorage().restoredSessionNeedsServerValidation(),
-      validateRestoredSessionInBackground: () => validateRestoredSessionInBackground(),
-      applyBootstrapSessionIfGeneration: (bootstrapAuthGeneration, nextSession) => {
-        if (authEventGenerationRef.current === bootstrapAuthGeneration) {
-          setSession(nextSession);
-        }
-      },
-      setRestoredSessionValidationPending: setIsRestoredSessionValidationPending,
-      setLoading: setIsLoading,
-      onBootstrapComplete: () => {
-        void refreshSessionOnForeground();
-      },
-      onRestoredSessionBackgroundValidationBegin: beginProtectedDataFetchGate,
-      onRestoredSessionBackgroundValidationEnd: endProtectedDataFetchGate,
-      runFailClosedLocalSignOut: async (context) => {
-        await runFailClosedLocalSignOut(context, {
-          signOutViaSupabase: async () => {
-            await supabase.auth.signOut({ scope: 'local' });
-          },
-          clearReactSession: () => {
+    void (async () => {
+      try {
+        storageFlagged = await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
+        const sessionResult = await supabase.auth.getSession().catch(() => ({
+          data: { session: null as Session | null },
+        }));
+        const activeSession = sessionResult.data.session;
+        if (!activeSession) {
+          if (authEventGenerationRef.current === bootstrapGeneration) {
             setSession(null);
-          },
-          forcePersistSignedOutOnDisk: async () => {
-            await getSupabaseAuthStorage().forcePersistSignedOutStateForLastKnownSessionKey();
-          },
-        });
-      },
-    });
+          }
+          sessionApplied = true;
+          return;
+        }
+
+        accessTokenAtStart = activeSession.access_token;
+        flagged = await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
+        if (!flagged) {
+          if (authEventGenerationRef.current === bootstrapGeneration) {
+            setSession(activeSession);
+          }
+          sessionApplied = true;
+          void validateRestoredSessionInBackground();
+          return;
+        }
+
+        setIsRestoredSessionValidationPending(true);
+        await validateRestoredSessionInBackground();
+        if (!flaggedDeadlineHandled && authEventGenerationRef.current === bootstrapGeneration) {
+          const afterSession = await supabase.auth.getSession().catch(() => ({
+            data: { session: null as Session | null },
+          }));
+          setSession(afterSession.data.session);
+        }
+        sessionApplied = true;
+      } catch {
+        if (authEventGenerationRef.current === bootstrapGeneration) {
+          setSession(null);
+        }
+        sessionApplied = true;
+      } finally {
+        bootstrapFinished = true;
+        clearBootstrapDeadline();
+        finishBootstrapLoading();
+        void refreshSessionOnForeground();
+      }
+    })();
 
     void Linking.getInitialURL().then((url) => {
       if (url) {
@@ -231,12 +290,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      registerFatalRefreshTokenHandler(null);
+      clearBootstrapDeadline();
       unregisterStorageRecovery();
       subscription.subscription.unsubscribe();
       linkSubscription.remove();
     };
-  }, [beginProtectedDataFetchGate, endProtectedDataFetchGate, handleAuthUrl, signOutLocallyAfterFatalRefresh]);
+  }, [handleAuthUrl]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -404,7 +463,6 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated,
         isPasswordRecovery,
         isLoading: isLoading || isRestoredSessionValidationPending,
-        isProtectedDataFetchReady,
         isCompletingOAuth,
         isConfigured: isDemoMode() || isSupabaseConfigured(),
         authLinkError,

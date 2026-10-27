@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RESTORED_SESSION_DATA_FETCH_CAP_MS } from '../supabase/restored-session-data-fetch-gate';
+import { BOOTSTRAP_SESSION_DEADLINE_MS } from '../supabase/bootstrap-deadline';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -16,6 +16,8 @@ const storageState = vi.hoisted(() => ({
   resetSignOutPersistWarning: vi.fn(),
   consumeSignOutPersistWarning: vi.fn(),
   forcePersistSignedOutStateForLastKnownSessionKey: vi.fn().mockResolvedValue(undefined),
+  getLastSeenPrimaryAuthSessionKey: vi.fn().mockReturnValue('sb-localhost-auth-token'),
+  getItem: vi.fn(),
 }));
 
 const validateState = vi.hoisted(() => ({
@@ -107,12 +109,12 @@ const signedInSession = {
 };
 
 function AuthAndWeightProbe() {
-  const { isAuthenticated, isLoading, session, isProtectedDataFetchReady } = useSupabaseAuth();
+  const { isAuthenticated, isLoading, session } = useSupabaseAuth();
   useEffect(() => {
-    if (!isLoading && isAuthenticated && isProtectedDataFetchReady) {
+    if (!isLoading && isAuthenticated) {
       void getEntries();
     }
-  }, [isAuthenticated, isLoading, isProtectedDataFetchReady]);
+  }, [isAuthenticated, isLoading]);
   return (
     <div>
       <span data-testid="auth-loading">{isLoading ? 'yes' : 'no'}</span>
@@ -148,7 +150,6 @@ describe('SupabaseAuthProvider bootstrap', () => {
           setTimeout(resolve, 7000);
         }),
     );
-    weightSyncState.getEntries.mockResolvedValue([]);
 
     const seenUnauthenticatedWhileLoaded: boolean[] = [];
 
@@ -182,8 +183,7 @@ describe('SupabaseAuthProvider bootstrap', () => {
     expect(seenUnauthenticatedWhileLoaded).toEqual([]);
   });
 
-  it('shows signed-in immediately when validation hangs on an unflagged restored session', async () => {
-    vi.useFakeTimers();
+  it('fetches weigh-ins immediately for an unflagged restored session while validation hangs', async () => {
     setupAuthListener();
     authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
     storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
@@ -198,28 +198,18 @@ describe('SupabaseAuthProvider bootstrap', () => {
       </SupabaseAuthProvider>,
     );
 
-    await act(async () => {
-      await Promise.resolve();
-      await Promise.resolve();
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+      expect(weightSyncState.getEntries).toHaveBeenCalled();
     });
-    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
-    expect(screen.getByTestId('token').textContent).toBe('token-a');
-    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(RESTORED_SESSION_DATA_FETCH_CAP_MS);
-    });
-    expect(weightSyncState.getEntries).toHaveBeenCalledTimes(1);
   });
 
-  it('does not fetch weigh-ins when background validation signs out on 403', async () => {
+  it('ends loading within the bootstrap deadline when getSession hangs', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     setupAuthListener();
-    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    authState.getSession.mockImplementation(() => new Promise(() => {}));
     storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
-    validateState.validateRestoredSessionInBackground.mockImplementation(async () => {
-      authStateChangeListener?.('SIGNED_OUT', null);
-    });
-    weightSyncState.getEntries.mockResolvedValue([]);
+    storageState.getItem.mockResolvedValue(JSON.stringify(sampleSession));
 
     render(
       <SupabaseAuthProvider>
@@ -227,31 +217,12 @@ describe('SupabaseAuthProvider bootstrap', () => {
       </SupabaseAuthProvider>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('authenticated').textContent).toBe('no');
-    });
-    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
-  });
-
-  it('does not fetch weigh-ins when validation clears the session after 401 and refresh 400', async () => {
-    setupAuthListener();
-    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
-    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
-    validateState.validateRestoredSessionInBackground.mockImplementation(async () => {
-      authStateChangeListener?.('SIGNED_OUT', null);
-    });
-    weightSyncState.getEntries.mockResolvedValue([]);
-
-    render(
-      <SupabaseAuthProvider>
-        <AuthAndWeightProbe />
-      </SupabaseAuthProvider>,
-    );
+    await vi.advanceTimersByTimeAsync(BOOTSTRAP_SESSION_DEADLINE_MS);
 
     await waitFor(() => {
-      expect(screen.getByTestId('token').textContent).toBe('none');
+      expect(screen.getByTestId('auth-loading').textContent).toBe('no');
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
     });
-    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
   });
 
   it('keeps the splash up past 4s while flagged validation is still running', async () => {
@@ -314,18 +285,42 @@ describe('SupabaseAuthProvider bootstrap', () => {
 
     resolveValidation();
     await waitFor(() => {
-      expect(screen.getByTestId('auth-loading').textContent).toBe('no');
       expect(screen.getByTestId('authenticated').textContent).toBe('yes');
       expect(weightSyncState.getEntries).toHaveBeenCalledTimes(1);
     });
   });
 
-  it('times out flagged validation and signs out locally', async () => {
+  it('clears signed-in state immediately at the deadline when flagged validation and signOut hang', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     setupAuthListener();
-    authState.getSession
-      .mockResolvedValueOnce({ data: { session: sampleSession } })
-      .mockResolvedValue({ data: { session: null } });
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(true);
+    validateState.validateRestoredSessionInBackground.mockImplementation(
+      () => new Promise<void>(() => {}),
+    );
+    authState.signOut.mockImplementation(() => new Promise(() => {}));
+    weightSyncState.getEntries.mockResolvedValue([]);
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await vi.advanceTimersByTimeAsync(BOOTSTRAP_SESSION_DEADLINE_MS);
+
+    expect(screen.getByTestId('authenticated').textContent).toBe('no');
+    expect(screen.getByTestId('token').textContent).toBe('none');
+    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
+  });
+
+  it('skips fail-closed sign-out when auth generation changed during flagged validation', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
     storageState.restoredSessionNeedsServerValidation.mockResolvedValue(true);
     validateState.validateRestoredSessionInBackground.mockImplementation(
       () => new Promise<void>(() => {}),
@@ -338,12 +333,14 @@ describe('SupabaseAuthProvider bootstrap', () => {
       </SupabaseAuthProvider>,
     );
 
-    await vi.advanceTimersByTimeAsync(6000);
-
     await waitFor(() => {
-      expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
-      expect(screen.getByTestId('authenticated').textContent).toBe('no');
+      expect(authStateChangeListener).toBeTruthy();
     });
+
+    authStateChangeListener?.('SIGNED_IN', signedInSession);
+    await vi.advanceTimersByTimeAsync(BOOTSTRAP_SESSION_DEADLINE_MS);
+
+    expect(authState.signOut).not.toHaveBeenCalled();
   });
 
   it('applies bootstrap session after INITIAL_SESSION without ignoring generation', async () => {

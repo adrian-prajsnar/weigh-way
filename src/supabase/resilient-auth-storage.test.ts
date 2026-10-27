@@ -203,6 +203,37 @@ describe('createResilientAuthStorage', () => {
     await expect(storage.getItem('sb-session')).resolves.toBe('still-on-disk');
   });
 
+  it('flags the session when reading the signed-out marker throws and does not clear the marker', async () => {
+    const sessionKey = 'sb-localhost-auth-token';
+    const markerKey = '@weigh-way/auth-signed-out/sb-localhost-auth-token';
+    const disk = new Map<string, string>([
+      [sessionKey, 'user-a'],
+      [markerKey, '1'],
+    ]);
+
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      if (key === markerKey) {
+        throw securityError();
+      }
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      if (key === markerKey) {
+        throw securityError();
+      }
+      disk.delete(key);
+    });
+
+    const storage = createResilientAuthStorage();
+    await storage.getItem(sessionKey);
+    await expect(storage.restoredSessionNeedsServerValidation()).resolves.toBe(true);
+    await expect(storage.getItem(sessionKey)).resolves.toBeNull();
+    expect(disk.get(markerKey)).toBe('1');
+  });
+
   it('drops last-known session memory when clearLastKnownAuthSessions runs', async () => {
     const sessionKey = 'sb-localhost-auth-token';
     let sessionReads = 0;

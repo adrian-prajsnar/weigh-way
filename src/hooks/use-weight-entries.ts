@@ -12,11 +12,7 @@ import { deleteEntry, getEntries, saveEntry } from '../supabase/weight-sync';
 import { WeightEntry } from '../types';
 
 export function useWeightEntries() {
-  const {
-    isAuthenticated,
-    isLoading: isAuthLoading,
-    isProtectedDataFetchReady,
-  } = useSupabaseAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useSupabaseAuth();
   const [entries, setEntries] = useState<WeightEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -43,7 +39,7 @@ export function useWeightEntries() {
       return;
     }
 
-    if (isAuthLoading || !isProtectedDataFetchReady) {
+    if (isAuthLoading) {
       return;
     }
 
@@ -77,7 +73,7 @@ export function useWeightEntries() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [isAuthenticated, isAuthLoading, isProtectedDataFetchReady]);
+  }, [isAuthenticated, isAuthLoading]);
 
   useEffect(() => {
     void refreshEntries().catch(() => undefined);

@@ -175,7 +175,31 @@ describe('validateRestoredSessionInBackground', () => {
 
     await validateRestoredSessionInBackground();
 
+    expect(authState.signOut).toHaveBeenCalledTimes(1);
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('runs at most one local sign-out when validation is invoked concurrently', async () => {
+    authState.getSession.mockResolvedValue({ data: { session: sessionA } });
+    authState.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: 'token is expired',
+        status: 401,
+        code: 'bad_jwt',
+      },
+    });
+    authState.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'not found', status: 400, code: 'refresh_token_not_found' },
+    });
+
+    await Promise.all([
+      validateRestoredSessionInBackground(),
+      validateRestoredSessionInBackground(),
+    ]);
+
+    expect(authState.signOut).toHaveBeenCalledTimes(1);
   });
 
   it('signs out when expired bad_jwt refresh is clearly rejected', async () => {

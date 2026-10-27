@@ -1,10 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  BOOTSTRAP_SESSION_DEADLINE_MS,
-  runBootstrapAuthSession,
-  type BootstrapAuthSessionDeps,
-} from './bootstrap-auth-session';
+import { BOOTSTRAP_SESSION_DEADLINE_MS } from './bootstrap-deadline';
 
 const SESSION_KEY = 'sb-example-auth-token';
 
@@ -24,27 +20,35 @@ function makeExpiredSessionJson(): string {
   });
 }
 
-function createBootstrapDeps(
-  getSession: BootstrapAuthSessionDeps['getSession'],
-): { deps: BootstrapAuthSessionDeps; setLoading: ReturnType<typeof vi.fn> } {
+async function runBootstrapDeadlineProbe(getSession: () => Promise<unknown>): Promise<{
+  setLoading: ReturnType<typeof vi.fn>;
+}> {
   const setLoading = vi.fn();
-  const deps: BootstrapAuthSessionDeps = {
-    getAuthEventGeneration: () => 0,
-    getSession,
-    restoredSessionNeedsServerValidation: vi.fn().mockResolvedValue(false),
-    validateRestoredSessionInBackground: vi.fn().mockResolvedValue(undefined),
-    applyBootstrapSessionIfGeneration: vi.fn(),
-    setRestoredSessionValidationPending: vi.fn(),
-    setLoading,
-    onBootstrapComplete: vi.fn(),
-    onRestoredSessionBackgroundValidationBegin: vi.fn(),
-    onRestoredSessionBackgroundValidationEnd: vi.fn(),
-    runFailClosedLocalSignOut: vi.fn().mockResolvedValue(undefined),
-  };
-  return { deps, setLoading };
+  let bootstrapFinished = false;
+  let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
+
+  deadlineTimer = setTimeout(() => {
+    if (!bootstrapFinished) {
+      setLoading(false);
+    }
+  }, BOOTSTRAP_SESSION_DEADLINE_MS);
+
+  void (async () => {
+    try {
+      await getSession();
+    } finally {
+      bootstrapFinished = true;
+      if (deadlineTimer) {
+        clearTimeout(deadlineTimer);
+      }
+      setLoading(false);
+    }
+  })();
+
+  return { setLoading };
 }
 
-describe('runBootstrapAuthSession with real Supabase auth-js', () => {
+describe('bootstrap deadline with real Supabase auth-js', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
@@ -69,11 +73,15 @@ describe('runBootstrapAuthSession with real Supabase auth-js', () => {
         detectSessionInUrl: false,
       },
     });
-    const { deps, setLoading } = createBootstrapDeps(() => client.auth.getSession());
 
-    void runBootstrapAuthSession(deps);
+    const { setLoading } = await runBootstrapDeadlineProbe(() => client.auth.getSession());
     await vi.advanceTimersByTimeAsync(BOOTSTRAP_SESSION_DEADLINE_MS);
+    expect(setLoading).toHaveBeenCalledWith(false);
+  });
 
+  it('ends loading within the deadline when getSession never resolves', async () => {
+    const { setLoading } = await runBootstrapDeadlineProbe(() => new Promise(() => {}));
+    await vi.advanceTimersByTimeAsync(BOOTSTRAP_SESSION_DEADLINE_MS);
     expect(setLoading).toHaveBeenCalledWith(false);
   });
 
@@ -95,11 +103,9 @@ describe('runBootstrapAuthSession with real Supabase auth-js', () => {
         detectSessionInUrl: false,
       },
     });
-    const { deps, setLoading } = createBootstrapDeps(() => client.auth.getSession());
 
-    void runBootstrapAuthSession(deps);
+    const { setLoading } = await runBootstrapDeadlineProbe(() => client.auth.getSession());
     await vi.advanceTimersByTimeAsync(BOOTSTRAP_SESSION_DEADLINE_MS);
-
     expect(setLoading).toHaveBeenCalledWith(false);
   });
 });

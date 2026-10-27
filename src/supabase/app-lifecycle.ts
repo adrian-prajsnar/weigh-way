@@ -1,6 +1,5 @@
 import { AppState, AppStateStatus } from 'react-native';
-import { isFatalRefreshTokenError } from './auth-fatal-refresh-error';
-import { getSupabaseAuthStorage, retryAuthStorageDiskPersistence } from './auth-session-storage';
+import { retryAuthStorageDiskPersistence } from './auth-session-storage';
 import { supabase } from './client';
 
 let registered = false;
@@ -44,13 +43,7 @@ export async function refreshSessionOnForeground(): Promise<void> {
       return;
     }
 
-    const { error } = await supabase.auth.refreshSession();
-    if (error && isFatalRefreshTokenError(error)) {
-      getSupabaseAuthStorage().resetSignOutPersistWarning();
-      getSupabaseAuthStorage().consumeSignOutPersistWarning();
-      await supabase.auth.signOut({ scope: 'local' });
-      return;
-    }
+    await supabase.auth.refreshSession();
   })()
     .catch(() => {
       // Ignore transient refresh failures; the next request or sign-out flow will recover.
