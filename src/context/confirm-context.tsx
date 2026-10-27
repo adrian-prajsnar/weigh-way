@@ -8,6 +8,7 @@ import {
   useState,
 } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { getConfirmDialogPressableA11y } from './confirm-dialog-a11y';
 import { useTranslation } from '../i18n/language-context';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
@@ -125,6 +126,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                     ) : null}
                     <View style={styles.confirmDialogActions}>
                       <Pressable
+                        {...getConfirmDialogPressableA11y(cancelLabel)}
                         style={({ pressed }) => [
                           styles.confirmDialogButton,
                           styles.secondaryButton,
@@ -132,10 +134,18 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                         ]}
                         onPress={() => close(false)}
                       >
-                        <Text style={styles.secondaryButtonText}>{cancelLabel}</Text>
+                        <Text
+                          style={styles.secondaryButtonText}
+                          importantForAccessibility="no-hide-descendants"
+                          accessibilityElementsHidden
+                        >
+                          {cancelLabel}
+                        </Text>
                       </Pressable>
                       <Pressable
+                        {...getConfirmDialogPressableA11y(confirmLabel)}
                         disabled={!phraseMatches}
+                        accessibilityState={{ disabled: !phraseMatches }}
                         style={({ pressed }) => [
                           styles.confirmDialogButton,
                           pending.destructive
@@ -157,6 +167,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                               ? styles.confirmDialogDestructiveButtonText
                               : styles.primaryButtonText
                           }
+                          importantForAccessibility="no-hide-descendants"
+                          accessibilityElementsHidden
                         >
                           {confirmLabel}
                         </Text>

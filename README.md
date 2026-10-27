@@ -287,4 +287,5 @@ EAS Free includes 15 Android builds per month. Two production releases a week fi
 - Friends or others need their own accounts — data is never shared
 - Profile can export weigh-ins on the device (JSON and a CSV of weigh-ins). That action does not upload the file.
 - Production builds can report crashes when `EXPO_PUBLIC_SENTRY_DSN` is set in EAS. The report is the app version and an error code. Weigh-ins, height, BMI, and other health data are not included. Local dev and the website demo do not send reports.
+- **Sentry source maps (native builds):** `app.config.ts` sets `disableAutoUpload` when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are not all set, so local and CI Android/iOS builds do not fail on upload. Configure those variables in EAS (or locally) to upload maps on release builds. Set `SENTRY_DISABLE_AUTO_UPLOAD=true` to force skip even when credentials exist.
 - Never commit `.env` to git

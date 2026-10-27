@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach, afterEach } from 'vitest';
+import { getI18nLocale, setI18nLocale } from './i18n';
 import {
+  formatDecimal,
   formatWeightValue,
   fromDateKey,
   getHistoryDateRangeFieldHighlight,
@@ -17,9 +19,34 @@ import {
   nearestEntryWithinDays,
 } from './weight-insights';
 
+describe('locale-aware weight formatting', () => {
+  let previousLocale = getI18nLocale();
+
+  beforeEach(() => {
+    previousLocale = getI18nLocale();
+    setI18nLocale('en');
+  });
+
+  afterEach(() => {
+    setI18nLocale(previousLocale);
+  });
+
+  it('formats metric weights with a comma decimal separator in Polish', () => {
+    setI18nLocale('pl');
+    expect(formatWeightValue(82, 'metric')).toBe('82,00');
+    expect(formatDecimal(1.5, 1, 1)).toBe('1,5');
+  });
+
+  it('keeps a dot decimal separator in English', () => {
+    setI18nLocale('en');
+    expect(formatWeightValue(82, 'metric')).toBe('82.00');
+  });
+});
+
 describe('parseWeightInput', () => {
   it('accepts valid metric weights', () => {
     expect(parseWeightInput('75.50', 'metric')).toBe(75.5);
+    expect(parseWeightInput('75,50', 'metric')).toBe(75.5);
   });
 
   it('rejects out-of-range metric weights', () => {

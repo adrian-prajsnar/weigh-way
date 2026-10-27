@@ -1,4 +1,5 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
+import { shouldDisableSentryAutoUpload } from './src/sentry-build-upload';
 
 const SPLASH_BACKGROUND = '#F6F7F9';
 
@@ -52,7 +53,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-web-browser',
-      '@sentry/react-native',
+      [
+        '@sentry/react-native',
+        {
+          organization: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          disableAutoUpload: shouldDisableSentryAutoUpload(),
+        },
+      ],
     ],
     ios: {
       ...config.ios,
