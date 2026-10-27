@@ -21,6 +21,11 @@ function isClearSessionRejection(error: unknown): boolean {
     return true;
   }
 
+  const code = authError.code;
+  if (code && SESSION_REJECTION_CODES.has(code)) {
+    return true;
+  }
+
   if (authError.name === 'AuthRetryableFetchError') {
     return false;
   }
@@ -34,11 +39,6 @@ function isClearSessionRejection(error: unknown): boolean {
   }
 
   if (status === 401 || status === 403) {
-    return true;
-  }
-
-  const code = authError.code;
-  if (code && SESSION_REJECTION_CODES.has(code)) {
     return true;
   }
 

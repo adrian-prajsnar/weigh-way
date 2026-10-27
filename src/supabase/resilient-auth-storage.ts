@@ -13,6 +13,7 @@ export type ResilientAuthStorage = AuthSessionStorage & {
   clearLastKnownAuthSessions: () => void;
   retryPendingDiskPersistence: () => Promise<void>;
   hasPendingDiskPersistence: () => boolean;
+  restoredSessionNeedsServerValidation: () => Promise<boolean>;
 };
 
 const PROBE_KEY = '@weigh-way/auth-storage-probe';
@@ -127,7 +128,11 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   const clearSignedOutMarkerOnDisk = async (sessionKey: string) => {
-    await tryWriteToDisk(getSignedOutMarkerKey(sessionKey), CLEARED_MARKER_VALUE);
+    const markerKey = getSignedOutMarkerKey(sessionKey);
+    const removed = await tryRemoveFromDisk(markerKey);
+    if (!removed) {
+      await tryWriteToDisk(markerKey, CLEARED_MARKER_VALUE);
+    }
   };
 
   const flushPendingDiskRemoves = async () => {
@@ -200,7 +205,37 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     await syncPendingDiskPersistence();
   };
 
+  let lastSeenPrimaryAuthSessionKey: string | null = null;
+
+  const trackPrimaryAuthKey = (key: string) => {
+    if (isPrimaryAuthSessionStorageKey(key)) {
+      lastSeenPrimaryAuthSessionKey = key;
+    }
+  };
+
+  const restoredSessionNeedsServerValidation = async (): Promise<boolean> => {
+    if (pendingDiskRemoves.size > 0) {
+      return true;
+    }
+    for (const [key, entry] of overlay.entries()) {
+      if (isPrimaryAuthSessionStorageKey(key) && entry === TOMBSTONE) {
+        return true;
+      }
+    }
+    const sessionKey = lastSeenPrimaryAuthSessionKey;
+    if (!sessionKey) {
+      return false;
+    }
+    const marker = await tryReadFromDisk(getSignedOutMarkerKey(sessionKey));
+    if (isSignedOutMarkerValue(marker)) {
+      return true;
+    }
+    const disk = await tryReadFromDisk(sessionKey);
+    return isSignedOutSessionPayload(disk);
+  };
+
   const readAuthSessionFromDisk = async (key: string): Promise<string | null> => {
+    trackPrimaryAuthKey(key);
     let marker: string | null = null;
     let markerReadFailed = false;
     try {
@@ -242,6 +277,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     hasPendingDiskPersistence() {
       return pendingDiskRemoves.size > 0;
     },
+    restoredSessionNeedsServerValidation,
     async retryPendingDiskPersistence() {
       await syncPendingDiskPersistence();
     },
@@ -256,6 +292,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       return true;
     },
     async getItem(key) {
+      trackPrimaryAuthKey(key);
       await ensureProbe();
       const cached = readOverlay(key);
       if (cached !== undefined) {
@@ -270,6 +307,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       return tryReadFromDisk(key);
     },
     async setItem(key, value) {
+      trackPrimaryAuthKey(key);
       await ensureProbe();
       const wasTombstone = overlay.get(key) === TOMBSTONE;
       overlay.set(key, value);
@@ -296,6 +334,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       overlay.set(key, value);
     },
     async removeItem(key) {
+      trackPrimaryAuthKey(key);
       await ensureProbe();
       markTombstone(key);
       pendingDiskRemoves.add(key);

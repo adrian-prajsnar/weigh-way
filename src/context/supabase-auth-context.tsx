@@ -71,9 +71,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [isCompletingOAuth, setIsCompletingOAuth] = useState(false);
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [authLinkError, setAuthLinkError] = useState<string | null>(null);
+  const [isRestoredSessionValidationPending, setIsRestoredSessionValidationPending] =
+    useState(false);
   const completingSignUpRef = useRef(false);
+  const bootstrapCompleteRef = useRef(false);
 
-  const isAuthenticated = Boolean(session) && !completingSignUpRef.current && !isPasswordRecovery;
+  const isAuthenticated =
+    Boolean(session) &&
+    !isRestoredSessionValidationPending &&
+    !completingSignUpRef.current &&
+    !isPasswordRecovery;
 
   const clearAuthLinkError = useCallback(() => {
     setAuthLinkError(null);
@@ -119,22 +126,37 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
     }, SESSION_BOOTSTRAP_TIMEOUT_MS);
 
-    void supabase.auth
-      .getSession()
-      .then(({ data: { session: activeSession } }) => {
+    void (async () => {
+      try {
+        const {
+          data: { session: activeSession },
+        } = await supabase.auth.getSession();
         if (activeSession) {
-          setSession(activeSession);
-          void validateRestoredSessionInBackground();
+          const needsValidationGate =
+            await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
+          if (needsValidationGate) {
+            setIsRestoredSessionValidationPending(true);
+          }
+          await validateRestoredSessionInBackground();
+          const {
+            data: { session: validatedSession },
+          } = await supabase.auth.getSession();
+          setSession(validatedSession);
         }
-      })
-      .finally(() => {
+      } finally {
         isBootstrapSettled = true;
+        bootstrapCompleteRef.current = true;
         clearTimeout(bootstrapTimeout);
+        setIsRestoredSessionValidationPending(false);
         setIsLoading(false);
         void refreshSessionOnForeground();
-      });
+      }
+    })();
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
+      if (!bootstrapCompleteRef.current) {
+        return;
+      }
       setSession(activeSession);
       if (event === 'PASSWORD_RECOVERY' && activeSession) {
         setIsPasswordRecovery(true);
@@ -332,7 +354,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         session,
         isAuthenticated,
         isPasswordRecovery,
-        isLoading,
+        isLoading: isLoading || isRestoredSessionValidationPending,
         isCompletingOAuth,
         isConfigured: isDemoMode() || isSupabaseConfigured(),
         authLinkError,

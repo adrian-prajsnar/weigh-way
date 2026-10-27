@@ -158,6 +158,26 @@ describe('validateRestoredSessionInBackground', () => {
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
+  it('clears the session when refresh after expired jwt returns 400 refresh_token_not_found', async () => {
+    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: 'token is expired',
+        status: 401,
+        code: 'bad_jwt',
+      },
+    });
+    authState.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'not found', status: 400, code: 'refresh_token_not_found' },
+    });
+
+    await validateRestoredSessionInBackground();
+
+    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
   it('signs out when expired bad_jwt refresh is clearly rejected', async () => {
     mockSessionAtStartAndEnd(sessionA, sessionA);
     authState.getUser.mockResolvedValue({
