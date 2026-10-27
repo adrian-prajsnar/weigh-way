@@ -4,6 +4,7 @@ const authState = vi.hoisted(() => ({
   getUser: vi.fn(),
   getSession: vi.fn(),
   signOut: vi.fn(),
+  refreshSession: vi.fn(),
 }));
 
 const storageState = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ vi.mock('./client', () => ({
       getUser: authState.getUser,
       getSession: authState.getSession,
       signOut: authState.signOut,
+      refreshSession: authState.refreshSession,
     },
   },
 }));
@@ -46,9 +48,11 @@ describe('validateRestoredSessionInBackground', () => {
     authState.getUser.mockReset();
     authState.getSession.mockReset();
     authState.signOut.mockReset();
+    authState.refreshSession.mockReset();
     storageState.resetSignOutPersistWarning.mockReset();
     storageState.consumeSignOutPersistWarning.mockReset();
     authState.signOut.mockResolvedValue({ error: null });
+    authState.refreshSession.mockResolvedValue({ data: { session: sessionA }, error: null });
   });
 
   it('clears a session rejected with 401', async () => {
@@ -85,7 +89,71 @@ describe('validateRestoredSessionInBackground', () => {
 
     await validateRestoredSessionInBackground();
 
+    expect(authState.refreshSession).not.toHaveBeenCalled();
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('refreshes once on expired bad_jwt and keeps the session when refresh succeeds', async () => {
+    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: 'token is expired',
+        status: 401,
+        code: 'bad_jwt',
+      },
+    });
+    authState.refreshSession.mockResolvedValue({
+      data: { session: { access_token: 'token-a-refreshed' } },
+      error: null,
+    });
+
+    await validateRestoredSessionInBackground();
+
+    expect(authState.refreshSession).toHaveBeenCalledTimes(1);
+    expect(authState.signOut).not.toHaveBeenCalled();
+  });
+
+  it('signs out when expired bad_jwt refresh is clearly rejected', async () => {
+    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: 'token is expired',
+        status: 401,
+        code: 'bad_jwt',
+      },
+    });
+    authState.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'invalid', status: 401, code: 'session_not_found' },
+    });
+
+    await validateRestoredSessionInBackground();
+
+    expect(authState.refreshSession).toHaveBeenCalledTimes(1);
+    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('keeps the session when expired bad_jwt refresh hits a transient error', async () => {
+    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: 'token is expired',
+        status: 401,
+        code: 'bad_jwt',
+      },
+    });
+    authState.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'rate limited', status: 429 },
+    });
+
+    await validateRestoredSessionInBackground();
+
+    expect(authState.refreshSession).toHaveBeenCalledTimes(1);
+    expect(authState.signOut).not.toHaveBeenCalled();
   });
 
   it.each([500, 503, 429])('keeps the session when getUser returns %s', async (status) => {

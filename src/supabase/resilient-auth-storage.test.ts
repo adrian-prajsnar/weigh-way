@@ -16,6 +16,7 @@ import {
   createResilientAuthStorage,
   isPrimaryAuthSessionStorageKey,
   probePersistentAuthStorage,
+  resetResilientAuthStorageGlobalsForTests,
 } from './resilient-auth-storage';
 /* eslint-enable import/first */
 
@@ -65,6 +66,7 @@ describe('probePersistentAuthStorage', () => {
 
 describe('createResilientAuthStorage', () => {
   beforeEach(() => {
+    resetResilientAuthStorageGlobalsForTests();
     asyncStorage.getItem.mockReset();
     asyncStorage.setItem.mockReset();
     asyncStorage.removeItem.mockReset();
@@ -201,6 +203,84 @@ describe('createResilientAuthStorage', () => {
     const storage = createResilientAuthStorage();
     await expect(storage.getItem('sb-session')).resolves.toBeNull();
     await expect(storage.getItem('sb-session')).resolves.toBe('still-on-disk');
+  });
+
+  it('keeps sign-out durable when all storage calls throw, then recovers on a new instance', async () => {
+    const sessionKey = 'sb-localhost-auth-token';
+    const disk = new Map<string, string>([[sessionKey, 'user-a-session']]);
+    let storageBroken = false;
+
+    const throwIfBroken = () => {
+      if (storageBroken) {
+        throw securityError();
+      }
+    };
+
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      throwIfBroken();
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      throwIfBroken();
+      disk.set(key, value);
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      throwIfBroken();
+      disk.delete(key);
+    });
+
+    const storageA = createResilientAuthStorage();
+    await expect(storageA.getItem(sessionKey)).resolves.toBe('user-a-session');
+
+    storageBroken = true;
+    await storageA.removeItem(sessionKey);
+    await expect(storageA.getItem(sessionKey)).resolves.toBeNull();
+
+    storageBroken = false;
+    const storageB = createResilientAuthStorage();
+    await expect(storageB.getItem(sessionKey)).resolves.toBeNull();
+  });
+
+  it('allows a new sign-in when marker removal keeps failing but overwrite clears it', async () => {
+    const sessionKey = 'sb-localhost-auth-token';
+    const markerKey = '@weigh-way/auth-signed-out/sb-localhost-auth-token';
+    const disk = new Map<string, string>([[sessionKey, 'user-a']]);
+
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      disk.set(key, value);
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      if (key === sessionKey || key === markerKey) {
+        throw securityError();
+      }
+      disk.delete(key);
+    });
+
+    const storageA = createResilientAuthStorage();
+    await storageA.removeItem(sessionKey);
+    expect(disk.get(markerKey)).toBe('1');
+
+    await storageA.setItem(sessionKey, 'user-b');
+    expect(disk.get(sessionKey)).toBe('user-b');
+    expect(disk.get(markerKey)).toBe('');
+
+    const storageB = createResilientAuthStorage();
+    await expect(storageB.getItem(sessionKey)).resolves.toBe('user-b');
   });
 
   it('clears the disk-blocked flag after a successful disk write', async () => {
