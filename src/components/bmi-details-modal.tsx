@@ -126,7 +126,7 @@ function WeighInDetails({
   updatedAt,
 }: Omit<WeighInBmiDetails, 'type'>) {
   const styles = useAppStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, birthDate, sex } = useSharedUserProfile();
   const heightCm = getHeightAtDate(heightEntries, date);
@@ -145,10 +145,10 @@ function WeighInDetails({
         label={t('bmi.height')}
         value={heightCm === null ? unavailable : formatHeight(heightCm, units)}
       />
-      <DetailRow label={t('bmi.weight')} value={formatWeightLabel(weightKg, units)} />
+      <DetailRow label={t('bmi.weight')} value={formatWeightLabel(weightKg, units, locale)} />
       <DetailRow
         label={t('bmi.value')}
-        value={bmi ? formatBmiValue(bmi.value) : unavailable}
+        value={bmi ? formatBmiValue(bmi.value, locale) : unavailable}
       />
       <BmiClassificationRows bmi={bmi} />
       {createdAt === null && updatedAt === null ? (
@@ -175,7 +175,7 @@ function periodTitleKey(metric: PeriodBmiMetric): TranslationKey {
 
 function PeriodDetails({ metric, range, entries }: Omit<PeriodBmiDetails, 'type'>) {
   const styles = useAppStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { heightEntries, birthDate, sex } = useSharedUserProfile();
   const stats = getBmiStatsForRange(entries, heightEntries, range);
   const missing = stats.totalCount - stats.count;
@@ -199,7 +199,7 @@ function PeriodDetails({ metric, range, entries }: Omit<PeriodBmiDetails, 'type'
       <Text style={styles.bmiDetailsNote}>{formatDateRange(range)}</Text>
       <DetailRow
         label={t(periodTitleKey(metric))}
-        value={aggregate === null ? unavailable : formatBmiValue(aggregate)}
+        value={aggregate === null ? unavailable : formatBmiValue(aggregate, locale)}
       />
       <BmiClassificationRows bmi={aggregateBmi} />
       {metric === 'average' ? (

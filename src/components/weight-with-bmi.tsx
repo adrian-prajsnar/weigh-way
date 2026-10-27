@@ -6,6 +6,7 @@ import { useUnits } from '../context/unit-context';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { formatWeightLabel } from '../format';
 import { getHeightAtDate } from '../height';
+import { useTranslation } from '../i18n/language-context';
 import { HeightEntry, WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
 import { BmiBadge } from './bmi-badge';
@@ -29,6 +30,7 @@ export function WeightWithBmi({
 }: WeightWithBmiProps) {
   const styles = useAppStyles();
   const { units } = useUnits();
+  const { locale } = useTranslation();
   const { showBmi: showBmiPreference } = useSharedBmiDisplay();
   const showBmi = alwaysShowBmi || showBmiPreference;
   const { openWeighIn } = useBmiDetails();
@@ -42,7 +44,7 @@ export function WeightWithBmi({
           birthDate,
           sex,
         });
-  const weightLabel = formatWeightLabel(entry.weightKg, units);
+  const weightLabel = formatWeightLabel(entry.weightKg, units, locale);
 
   const badge = showBmi ? (
     <BmiBadge

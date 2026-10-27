@@ -66,7 +66,7 @@ export function WeightHighlightsCard({
 }: WeightHighlightsCardProps) {
   const styles = useAppStyles();
   const colors = useColors();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, sex } = useSharedUserProfile();
   const { showBmi } = useSharedBmiDisplay();
@@ -84,7 +84,7 @@ export function WeightHighlightsCard({
   }
 
   const formatWeighIn = (weightKg: number) =>
-    `${formatWeightValue(weightKg, units)} ${weightUnit}`;
+    `${formatWeightValue(weightKg, units, locale)} ${weightUnit}`;
   const formatMeta = (date: string, ageLabel: string) =>
     t('dashboard.onDateAtAge', { date: formatDateLabel(date), age: ageLabel });
   const bmiBadgeForEntry = (entry: WeightEntry) => {
@@ -141,7 +141,7 @@ export function WeightHighlightsCard({
         {sinceBirthday ? (
           <InsightRow
             label={t('dashboard.sinceBirthday')}
-            value={formatWeightDifference(sinceBirthday.changeKg, units)}
+            value={formatWeightDifference(sinceBirthday.changeKg, units, locale)}
             valueTextStyle={getWeightChangeTextStyle(sinceBirthday.changeKg, colors)}
             meta={formatMeta(sinceBirthday.birthday.entry.date, sinceBirthday.birthday.ageLabel)}
           />

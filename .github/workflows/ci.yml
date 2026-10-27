@@ -53,3 +53,6 @@ jobs:
 
       - name: Test
         run: npm test
+
+      - name: Expo config
+        run: npx expo config --json

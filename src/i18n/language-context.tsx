@@ -21,7 +21,7 @@ import {
   TranslationKey,
   TranslateOptions,
 } from './index';
-import { AppLocale } from './resolve-locale';
+import { AppLocale, resolveAppLocale } from './resolve-locale';
 
 type LanguageContextValue = {
   locale: AppLocale;
@@ -45,29 +45,51 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<LanguagePreference>(
     demoLocale ?? 'system',
   );
+  const [preferenceReady, setPreferenceReady] = useState(Boolean(demoLocale));
 
   useEffect(() => {
     if (demoLocale) {
       setPreferenceState(demoLocale);
+      setPreferenceReady(true);
       return;
     }
-    void getLanguagePreference().then(setPreferenceState);
+
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      setPreferenceState('system');
+      setPreferenceReady(true);
+    }, 2000);
+
+    void getLanguagePreference()
+      .then((stored) => {
+        setPreferenceState(stored);
+      })
+      .catch(() => {
+        setPreferenceState('system');
+      })
+      .finally(() => {
+        settled = true;
+        clearTimeout(timeout);
+        setPreferenceReady(true);
+      });
+
+    return () => {
+      settled = true;
+      clearTimeout(timeout);
+    };
   }, [demoLocale]);
 
-  const locale = useMemo(() => {
-    if (demoLocale) {
-      return demoLocale;
-    }
-    if (preference === 'system') {
-      const languageCode = locales[0]?.languageCode?.toLowerCase();
-      return languageCode === 'pl' ? 'pl' : 'en';
-    }
-    return preference;
-  }, [demoLocale, preference, locales]);
+  const locale = useMemo(
+    () => resolveAppLocale(preference, locales, demoLocale),
+    [demoLocale, preference, locales],
+  );
 
-  useEffect(() => {
+  if (preferenceReady) {
     setI18nLocale(locale);
-  }, [locale]);
+  }
 
   const setPreference = useCallback(
     async (next: LanguagePreference) => {
@@ -100,6 +122,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }),
     [locale, preference, setPreference, t],
   );
+
+  if (!preferenceReady) {
+    return null;
+  }
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

@@ -8,6 +8,12 @@ import {
   useState,
 } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { getConfirmDialogPressableA11y } from './confirm-dialog-a11y';
+import { getConfirmDialogChromeWebProps } from './confirm-dialog-chrome-web';
+import {
+  focusFirstConfirmDialogControl,
+  handleConfirmDialogTabKey,
+} from './confirm-dialog-focus-web';
 import { useTranslation } from '../i18n/language-context';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
@@ -39,6 +45,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [secondaryActionsEnabled, setSecondaryActionsEnabled] = useState(false);
   const resolverRef = useRef<((value: boolean) => void) | null>(null);
   const idRef = useRef(0);
+  const dialogFrameRef = useRef(null);
 
   useEffect(() => {
     setPhraseInput('');
@@ -50,6 +57,31 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     setSecondaryActionsEnabled(false);
     const timer = setTimeout(() => setSecondaryActionsEnabled(true), 320);
     return () => clearTimeout(timer);
+  }, [pending?.id, pending]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !pending) {
+      return;
+    }
+
+    const frame = dialogFrameRef.current as unknown as HTMLElement | null;
+    if (!frame) {
+      return;
+    }
+
+    const focusTimer = requestAnimationFrame(() => {
+      focusFirstConfirmDialogControl(frame);
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      handleConfirmDialogTabKey(frame, event, document.activeElement);
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      cancelAnimationFrame(focusTimer);
+      document.removeEventListener('keydown', onKeyDown);
+    };
   }, [pending?.id, pending]);
 
   const close = useCallback((result: boolean) => {
@@ -84,7 +116,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             statusBarTranslucent
             onRequestClose={() => close(false)}
           >
-            <View style={styles.modalBackdropCentered}>
+            <View
+              style={styles.modalBackdropCentered}
+              {...getConfirmDialogChromeWebProps()}
+            >
               <Pressable
                 style={StyleSheet.absoluteFill}
                 onPress={() => {
@@ -97,10 +132,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 importantForAccessibility="no-hide-descendants"
                 accessibilityElementsHidden
                 {...(Platform.OS === 'web'
-                  ? { dataSet: { wwModalDismiss: 'true', wwConfirmDismiss: 'true' }, tabIndex: -1 }
+                  ? { dataSet: { wwModalDismiss: 'true', wwConfirmDismiss: 'true' } }
                   : {})}
               />
               <View
+                ref={dialogFrameRef}
                 style={styles.confirmDialogFrame}
                 {...(Platform.OS === 'web' ? { dataSet: { wwConfirmDialog: 'true' } } : {})}
               >
@@ -125,6 +161,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                     ) : null}
                     <View style={styles.confirmDialogActions}>
                       <Pressable
+                        {...getConfirmDialogPressableA11y(cancelLabel)}
                         style={({ pressed }) => [
                           styles.confirmDialogButton,
                           styles.secondaryButton,
@@ -132,10 +169,18 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                         ]}
                         onPress={() => close(false)}
                       >
-                        <Text style={styles.secondaryButtonText}>{cancelLabel}</Text>
+                        <Text
+                          style={styles.secondaryButtonText}
+                          importantForAccessibility="no-hide-descendants"
+                          accessibilityElementsHidden
+                        >
+                          {cancelLabel}
+                        </Text>
                       </Pressable>
                       <Pressable
+                        {...getConfirmDialogPressableA11y(confirmLabel)}
                         disabled={!phraseMatches}
+                        accessibilityState={{ disabled: !phraseMatches }}
                         style={({ pressed }) => [
                           styles.confirmDialogButton,
                           pending.destructive
@@ -157,6 +202,8 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                               ? styles.confirmDialogDestructiveButtonText
                               : styles.primaryButtonText
                           }
+                          importantForAccessibility="no-hide-descendants"
+                          accessibilityElementsHidden
                         >
                           {confirmLabel}
                         </Text>

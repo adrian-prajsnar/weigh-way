@@ -9,8 +9,12 @@ function isThemePreference(value: string | null): value is ThemePreference {
 }
 
 export async function getThemePreference(): Promise<ThemePreference> {
-  const value = await AsyncStorage.getItem(STORAGE_KEY);
-  return isThemePreference(value) ? value : 'system';
+  try {
+    const value = await AsyncStorage.getItem(STORAGE_KEY);
+    return isThemePreference(value) ? value : 'system';
+  } catch {
+    return 'system';
+  }
 }
 
 export async function setStoredThemePreference(preference: ThemePreference): Promise<void> {

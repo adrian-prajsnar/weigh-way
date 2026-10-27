@@ -9,8 +9,12 @@ function isLanguagePreference(value: string | null): value is LanguagePreference
 }
 
 export async function getLanguagePreference(): Promise<LanguagePreference> {
-  const value = await AsyncStorage.getItem(STORAGE_KEY);
-  return isLanguagePreference(value) ? value : 'system';
+  try {
+    const value = await AsyncStorage.getItem(STORAGE_KEY);
+    return isLanguagePreference(value) ? value : 'system';
+  } catch {
+    return 'system';
+  }
 }
 
 export async function setStoredLanguagePreference(

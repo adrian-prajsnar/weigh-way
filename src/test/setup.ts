@@ -1,7 +1,12 @@
 import { vi } from 'vitest';
 
+vi.mock('@expo/vector-icons', () => ({
+  Ionicons: () => null,
+}));
+
 vi.mock('expo-localization', () => ({
   getLocales: () => [{ languageCode: 'en' }],
+  useLocales: () => [{ languageCode: 'en' }],
 }));
 
 vi.mock('expo-linking', () => {

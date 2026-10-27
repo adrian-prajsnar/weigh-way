@@ -12,10 +12,7 @@
         "simulator": false,
         "distribution": "internal"
       },
-      "environment": "preview",
-      "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
-      }
+      "environment": "preview"
     },
     "production": {
       "android": {
@@ -25,10 +22,7 @@
         "simulator": false,
         "distribution": "internal"
       },
-      "environment": "production",
-      "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
-      }
+      "environment": "production"
     }
   },
   "submit": {

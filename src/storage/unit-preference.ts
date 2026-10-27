@@ -9,8 +9,12 @@ function isUnitPreference(value: string | null): value is UnitPreference {
 }
 
 export async function getUnitPreference(): Promise<UnitPreference> {
-  const value = await AsyncStorage.getItem(STORAGE_KEY);
-  return isUnitPreference(value) ? value : 'system';
+  try {
+    const value = await AsyncStorage.getItem(STORAGE_KEY);
+    return isUnitPreference(value) ? value : 'system';
+  } catch {
+    return 'system';
+  }
 }
 
 export async function setStoredUnitPreference(preference: UnitPreference): Promise<void> {

@@ -24,7 +24,7 @@ export function BmiBadge({
 }: BmiBadgeProps) {
   const styles = useAppStyles();
   const { scheme } = useTheme();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   if (bmi === null) {
     if (!showUnavailable) {
@@ -58,7 +58,7 @@ export function BmiBadge({
   }
 
   const badgeTheme = getBmiTheme(bmi.category, scheme);
-  const formattedValue = formatBmiValue(bmi.value);
+  const formattedValue = formatBmiValue(bmi.value, locale);
   const label = labelOnly
     ? bmi.label
     : onPress && !compact
