@@ -1,7 +1,7 @@
 import { createResilientAuthStorage, ResilientAuthStorage } from './resilient-auth-storage';
 
 let authStorage: ResilientAuthStorage | null = null;
-let unregisterPersistenceRecovery: (() => void) | null = null;
+let activeRecoveryRegistrationId = 0;
 
 export function getSupabaseAuthStorage(): ResilientAuthStorage {
   authStorage ??= createResilientAuthStorage();
@@ -13,9 +13,8 @@ export function retryAuthStorageDiskPersistence(): void {
 }
 
 export function registerAuthStoragePersistenceRecovery(): () => void {
-  if (unregisterPersistenceRecovery) {
-    return unregisterPersistenceRecovery;
-  }
+  const registrationId = activeRecoveryRegistrationId + 1;
+  activeRecoveryRegistrationId = registrationId;
 
   const onVisibilityChange = () => {
     if (document.visibilityState === 'visible') {
@@ -25,15 +24,17 @@ export function registerAuthStoragePersistenceRecovery(): () => void {
 
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', onVisibilityChange);
-    unregisterPersistenceRecovery = () => {
+    return () => {
+      if (registrationId !== activeRecoveryRegistrationId) {
+        return;
+      }
       document.removeEventListener('visibilitychange', onVisibilityChange);
-      unregisterPersistenceRecovery = null;
     };
-    return unregisterPersistenceRecovery;
   }
 
-  unregisterPersistenceRecovery = () => {
-    unregisterPersistenceRecovery = null;
+  return () => {
+    if (registrationId !== activeRecoveryRegistrationId) {
+      return;
+    }
   };
-  return unregisterPersistenceRecovery;
 }

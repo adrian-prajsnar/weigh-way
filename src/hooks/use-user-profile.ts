@@ -15,7 +15,11 @@ import { getHeightEntries, saveHeight, deleteHeight } from '../supabase/height-s
 import { BiologicalSex, HeightEntry } from '../types';
 
 export function useUserProfile() {
-  const { isAuthenticated, isLoading: isAuthLoading } = useSupabaseAuth();
+  const {
+    isAuthenticated,
+    isLoading: isAuthLoading,
+    isProtectedDataFetchReady,
+  } = useSupabaseAuth();
   const [heightEntries, setHeightEntries] = useState<HeightEntry[]>([]);
   const [birthDate, setBirthDate] = useState<string | null>(null);
   const [sex, setSex] = useState<BiologicalSex | null>(null);
@@ -47,7 +51,7 @@ export function useUserProfile() {
       return;
     }
 
-    if (isAuthLoading) {
+    if (isAuthLoading || !isProtectedDataFetchReady) {
       return;
     }
 
@@ -84,10 +88,10 @@ export function useUserProfile() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [isAuthenticated, isAuthLoading]);
+  }, [isAuthenticated, isAuthLoading, isProtectedDataFetchReady]);
 
   useEffect(() => {
-    void refreshProfile();
+    void refreshProfile().catch(() => undefined);
   }, [refreshProfile]);
 
   useRefreshOnAppForeground(refreshProfile, isAuthenticated);

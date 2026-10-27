@@ -1,7 +1,8 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { RESTORED_SESSION_DATA_FETCH_CAP_MS } from '../supabase/restored-session-data-fetch-gate';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -14,6 +15,7 @@ const storageState = vi.hoisted(() => ({
   clearLastKnownAuthSessions: vi.fn(),
   resetSignOutPersistWarning: vi.fn(),
   consumeSignOutPersistWarning: vi.fn(),
+  forcePersistSignedOutStateForLastKnownSessionKey: vi.fn().mockResolvedValue(undefined),
 }));
 
 const validateState = vi.hoisted(() => ({
@@ -105,12 +107,12 @@ const signedInSession = {
 };
 
 function AuthAndWeightProbe() {
-  const { isAuthenticated, isLoading, session } = useSupabaseAuth();
+  const { isAuthenticated, isLoading, session, isProtectedDataFetchReady } = useSupabaseAuth();
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    if (!isLoading && isAuthenticated && isProtectedDataFetchReady) {
       void getEntries();
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, isProtectedDataFetchReady]);
   return (
     <div>
       <span data-testid="auth-loading">{isLoading ? 'yes' : 'no'}</span>
@@ -181,12 +183,43 @@ describe('SupabaseAuthProvider bootstrap', () => {
   });
 
   it('shows signed-in immediately when validation hangs on an unflagged restored session', async () => {
+    vi.useFakeTimers();
     setupAuthListener();
     authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
     storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
     validateState.validateRestoredSessionInBackground.mockImplementation(
       () => new Promise<void>(() => {}),
     );
+    weightSyncState.getEntries.mockResolvedValue([]);
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    expect(screen.getByTestId('token').textContent).toBe('token-a');
+    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(RESTORED_SESSION_DATA_FETCH_CAP_MS);
+    });
+    expect(weightSyncState.getEntries).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not fetch weigh-ins when background validation signs out on 403', async () => {
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
+    validateState.validateRestoredSessionInBackground.mockImplementation(async () => {
+      authStateChangeListener?.('SIGNED_OUT', null);
+    });
+    weightSyncState.getEntries.mockResolvedValue([]);
 
     render(
       <SupabaseAuthProvider>
@@ -195,10 +228,30 @@ describe('SupabaseAuthProvider bootstrap', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
-      expect(screen.getByTestId('token').textContent).toBe('token-a');
+      expect(screen.getByTestId('authenticated').textContent).toBe('no');
     });
-    expect(weightSyncState.getEntries).toHaveBeenCalled();
+    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
+  });
+
+  it('does not fetch weigh-ins when validation clears the session after 401 and refresh 400', async () => {
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
+    validateState.validateRestoredSessionInBackground.mockImplementation(async () => {
+      authStateChangeListener?.('SIGNED_OUT', null);
+    });
+    weightSyncState.getEntries.mockResolvedValue([]);
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('token').textContent).toBe('none');
+    });
+    expect(weightSyncState.getEntries).not.toHaveBeenCalled();
   });
 
   it('keeps the splash up past 4s while flagged validation is still running', async () => {
@@ -263,8 +316,8 @@ describe('SupabaseAuthProvider bootstrap', () => {
     await waitFor(() => {
       expect(screen.getByTestId('auth-loading').textContent).toBe('no');
       expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+      expect(weightSyncState.getEntries).toHaveBeenCalledTimes(1);
     });
-    expect(weightSyncState.getEntries).toHaveBeenCalledTimes(1);
   });
 
   it('times out flagged validation and signs out locally', async () => {
@@ -290,6 +343,37 @@ describe('SupabaseAuthProvider bootstrap', () => {
     await waitFor(() => {
       expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
       expect(screen.getByTestId('authenticated').textContent).toBe('no');
+    });
+  });
+
+  it('applies bootstrap session after INITIAL_SESSION without ignoring generation', async () => {
+    setupAuthListener();
+    let resolveGetSession: (value: { data: { session: typeof sampleSession } }) => void = () => {};
+    authState.getSession.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveGetSession = resolve;
+        }),
+    );
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
+    validateState.validateRestoredSessionInBackground.mockResolvedValue(undefined);
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(authStateChangeListener).toBeTruthy();
+    });
+
+    authStateChangeListener?.('INITIAL_SESSION', null);
+    resolveGetSession({ data: { session: sampleSession } });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('token').textContent).toBe('token-a');
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
     });
   });
 

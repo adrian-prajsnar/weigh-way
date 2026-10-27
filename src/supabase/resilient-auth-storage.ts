@@ -14,6 +14,8 @@ export type ResilientAuthStorage = AuthSessionStorage & {
   retryPendingDiskPersistence: () => Promise<void>;
   hasPendingDiskPersistence: () => boolean;
   restoredSessionNeedsServerValidation: () => Promise<boolean>;
+  getLastSeenPrimaryAuthSessionKey: () => string | null;
+  forcePersistSignedOutStateForLastKnownSessionKey: () => Promise<void>;
 };
 
 const PROBE_KEY = '@weigh-way/auth-storage-probe';
@@ -192,12 +194,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     pendingDiskSyncInFlight = true;
     try {
       await syncPendingDiskPersistence();
+    } finally {
+      pendingDiskSyncInFlight = false;
       if (pendingDiskRemoves.size > 0) {
         pendingRetryBackoffMs = Math.min(pendingRetryBackoffMs * 2, PENDING_DISK_RETRY_MAX_MS);
         schedulePendingDiskRetries();
       }
-    } finally {
-      pendingDiskSyncInFlight = false;
     }
   };
 
@@ -301,6 +303,15 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       return pendingDiskRemoves.size > 0;
     },
     restoredSessionNeedsServerValidation,
+    getLastSeenPrimaryAuthSessionKey() {
+      return lastSeenPrimaryAuthSessionKey;
+    },
+    async forcePersistSignedOutStateForLastKnownSessionKey() {
+      if (!lastSeenPrimaryAuthSessionKey) {
+        return;
+      }
+      await persistSignedOutState(lastSeenPrimaryAuthSessionKey);
+    },
     async retryPendingDiskPersistence() {
       await syncPendingDiskPersistence();
     },

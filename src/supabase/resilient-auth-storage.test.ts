@@ -293,4 +293,40 @@ describe('createResilientAuthStorage', () => {
     await storage.setItem('sb-session', 'persisted');
     expect(disk.get('sb-session')).toBe('persisted');
   });
+
+  it('retries pending disk persistence more than once with exponential backoff', async () => {
+    vi.useFakeTimers();
+    const sessionKey = 'sb-localhost-auth-token';
+    const disk = new Map<string, string>([[sessionKey, 'user-a']]);
+    let removeAttempts = 0;
+
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      disk.set(key, value);
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      if (key === sessionKey) {
+        removeAttempts += 1;
+        if (removeAttempts < 3) {
+          throw securityError();
+        }
+      }
+      disk.delete(key);
+    });
+
+    const storage = createResilientAuthStorage();
+    await storage.removeItem(sessionKey);
+    const attemptsAfterRemove = removeAttempts;
+
+    await vi.advanceTimersByTimeAsync(4000);
+    await vi.advanceTimersByTimeAsync(8000);
+
+    expect(removeAttempts).toBeGreaterThan(attemptsAfterRemove);
+    vi.useRealTimers();
+  });
 });
