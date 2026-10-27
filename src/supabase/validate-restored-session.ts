@@ -1,7 +1,14 @@
 import { getSupabaseAuthStorage } from './auth-session-storage';
 import { supabase } from './client';
 
-const SESSION_REJECTION_CODES = new Set(['session_not_found', 'user_not_found', 'bad_jwt']);
+const SESSION_REJECTION_CODES = new Set([
+  'session_not_found',
+  'user_not_found',
+  'bad_jwt',
+  'refresh_token_not_found',
+  'refresh_token_already_used',
+  'session_expired',
+]);
 
 function isClearSessionRejection(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) {
@@ -9,6 +16,10 @@ function isClearSessionRejection(error: unknown): boolean {
   }
 
   const authError = error as { name?: string; status?: number; code?: string };
+
+  if (authError.name === 'AuthSessionMissingError') {
+    return true;
+  }
 
   if (authError.name === 'AuthRetryableFetchError') {
     return false;

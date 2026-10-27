@@ -16,7 +16,6 @@ import {
   createResilientAuthStorage,
   isPrimaryAuthSessionStorageKey,
   probePersistentAuthStorage,
-  resetResilientAuthStorageGlobalsForTests,
 } from './resilient-auth-storage';
 /* eslint-enable import/first */
 
@@ -66,7 +65,6 @@ describe('probePersistentAuthStorage', () => {
 
 describe('createResilientAuthStorage', () => {
   beforeEach(() => {
-    resetResilientAuthStorageGlobalsForTests();
     asyncStorage.getItem.mockReset();
     asyncStorage.setItem.mockReset();
     asyncStorage.removeItem.mockReset();
@@ -205,46 +203,28 @@ describe('createResilientAuthStorage', () => {
     await expect(storage.getItem('sb-session')).resolves.toBe('still-on-disk');
   });
 
-  it('keeps sign-out durable when all storage calls throw, then recovers on a new instance', async () => {
+  it('drops last-known session memory when clearLastKnownAuthSessions runs', async () => {
     const sessionKey = 'sb-localhost-auth-token';
-    const disk = new Map<string, string>([[sessionKey, 'user-a-session']]);
-    let storageBroken = false;
-
-    const throwIfBroken = () => {
-      if (storageBroken) {
-        throw securityError();
-      }
-    };
+    let sessionReads = 0;
 
     asyncStorage.getItem.mockImplementation(async (key: string) => {
       if (key === '@weigh-way/auth-storage-probe') {
         return '1';
       }
-      throwIfBroken();
-      return disk.get(key) ?? null;
-    });
-    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
-      if (key === '@weigh-way/auth-storage-probe') {
-        return;
+      if (key === sessionKey) {
+        sessionReads += 1;
+        if (sessionReads === 1) {
+          return 'session-a';
+        }
+        throw securityError();
       }
-      throwIfBroken();
-      disk.set(key, value);
-    });
-    asyncStorage.removeItem.mockImplementation(async (key: string) => {
-      throwIfBroken();
-      disk.delete(key);
+      return null;
     });
 
-    const storageA = createResilientAuthStorage();
-    await expect(storageA.getItem(sessionKey)).resolves.toBe('user-a-session');
-
-    storageBroken = true;
-    await storageA.removeItem(sessionKey);
-    await expect(storageA.getItem(sessionKey)).resolves.toBeNull();
-
-    storageBroken = false;
-    const storageB = createResilientAuthStorage();
-    await expect(storageB.getItem(sessionKey)).resolves.toBeNull();
+    const storage = createResilientAuthStorage();
+    await expect(storage.getItem(sessionKey)).resolves.toBe('session-a');
+    storage.clearLastKnownAuthSessions();
+    await expect(storage.getItem(sessionKey)).resolves.toBeNull();
   });
 
   it('allows a new sign-in when marker removal keeps failing but overwrite clears it', async () => {

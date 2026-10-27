@@ -114,6 +114,50 @@ describe('validateRestoredSessionInBackground', () => {
     expect(authState.signOut).not.toHaveBeenCalled();
   });
 
+  it.each([
+    'refresh_token_not_found',
+    'refresh_token_already_used',
+    'session_expired',
+  ])('clears the session when refresh after expired jwt returns %s', async (code) => {
+    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: 'token is expired',
+        status: 401,
+        code: 'bad_jwt',
+      },
+    });
+    authState.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'rejected', status: 401, code },
+    });
+
+    await validateRestoredSessionInBackground();
+
+    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
+  it('clears the session when refresh returns AuthSessionMissingError', async () => {
+    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getUser.mockResolvedValue({
+      data: { user: null },
+      error: {
+        message: 'token is expired',
+        status: 401,
+        code: 'bad_jwt',
+      },
+    });
+    authState.refreshSession.mockResolvedValue({
+      data: { session: null },
+      error: { message: 'missing', name: 'AuthSessionMissingError' },
+    });
+
+    await validateRestoredSessionInBackground();
+
+    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
   it('signs out when expired bad_jwt refresh is clearly rejected', async () => {
     mockSessionAtStartAndEnd(sessionA, sessionA);
     authState.getUser.mockResolvedValue({

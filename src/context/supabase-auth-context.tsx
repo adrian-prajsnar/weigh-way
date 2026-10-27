@@ -12,6 +12,7 @@ import {
   formatSignOutPersistWarning,
   formatSignUpError,
   formatUpdatePasswordError,
+  isNetworkError,
 } from '../auth-errors';
 import { isOAuthCallbackUrl } from '../auth-oauth-callback';
 import {
@@ -27,7 +28,10 @@ import {
 import { getAuthLinkErrorContext } from '../storage/auth-pending-flow';
 import { clearPkceVerifierBackups } from '../storage/pkce-verifier-backup';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
-import { getSupabaseAuthStorage } from '../supabase/auth-session-storage';
+import {
+  getSupabaseAuthStorage,
+  registerAuthStoragePersistenceRecovery,
+} from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
@@ -104,6 +108,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     registerSupabaseAppLifecycle();
+    registerAuthStoragePersistenceRecovery();
 
     // Never block the splash on a slow or unreachable auth server: `getSession()`
     // retries a token refresh for up to 30s when the network is down.
@@ -136,6 +141,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
       if (event === 'SIGNED_OUT') {
         setIsPasswordRecovery(false);
+        getSupabaseAuthStorage().clearLastKnownAuthSessions();
         void clearAuthPendingFlows();
         resetOAuthRedirectState();
       }
@@ -234,10 +240,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     getSupabaseAuthStorage().resetSignOutPersistWarning();
     let persistWarning = false;
+    let serverSignOutUnreachable = false;
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        throw new Error(formatSignOutError(error));
+        if (isNetworkError(error)) {
+          serverSignOutUnreachable = true;
+        } else {
+          throw new Error(formatSignOutError(error));
+        }
       }
     } finally {
       resetOAuthRedirectState();
@@ -246,7 +257,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
     if (persistWarning) {
-      throw new Error(formatSignOutPersistWarning());
+      throw new Error(formatSignOutPersistWarning({ serverSignOutUnreachable }));
+    }
+    if (serverSignOutUnreachable) {
+      throw new Error(formatSignOutError(new Error('Network request failed')));
     }
   }, []);
 

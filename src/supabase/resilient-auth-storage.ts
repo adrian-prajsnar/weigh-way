@@ -10,23 +10,20 @@ export type AuthSessionStorage = {
 export type ResilientAuthStorage = AuthSessionStorage & {
   consumeSignOutPersistWarning: () => boolean;
   resetSignOutPersistWarning: () => void;
+  clearLastKnownAuthSessions: () => void;
+  retryPendingDiskPersistence: () => Promise<void>;
+  hasPendingDiskPersistence: () => boolean;
 };
 
 const PROBE_KEY = '@weigh-way/auth-storage-probe';
 const SIGNED_OUT_MARKER_PREFIX = '@weigh-way/auth-signed-out/';
 const SIGNED_OUT_MARKER_VALUE = '1';
 const CLEARED_MARKER_VALUE = '';
+const PENDING_DISK_RETRY_INTERVAL_MS = 4000;
 const TOMBSTONE = Symbol('auth-storage-tombstone');
 export const SIGNED_OUT_SESSION_PAYLOAD = JSON.stringify({ signedOut: true });
 
 type OverlayEntry = string | typeof TOMBSTONE;
-
-/** Survives new storage instances until disk catches up or the user signs in again. */
-const globallySignedOutSessionKeys = new Set<string>();
-
-export function resetResilientAuthStorageGlobalsForTests(): void {
-  globallySignedOutSessionKeys.clear();
-}
 
 export function isPrimaryAuthSessionStorageKey(key: string): boolean {
   return /^sb-.+-auth-token$/.test(key);
@@ -74,6 +71,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   let probeSettled = false;
   let probeWarningLogged = false;
   let signOutPersistWarning = false;
+  let pendingRetryInterval: ReturnType<typeof setInterval> | null = null;
 
   const readOverlay = (key: string): string | null | undefined => {
     if (!overlay.has(key)) {
@@ -140,14 +138,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       }
       pendingDiskRemoves.delete(key);
       overlay.delete(key);
-      globallySignedOutSessionKeys.delete(key);
       await clearSignedOutMarkerOnDisk(key);
     }
   };
 
   const persistSignedOutState = async (sessionKey: string) => {
     pendingDiskRemoves.add(sessionKey);
-    globallySignedOutSessionKeys.add(sessionKey);
     forgetAuthSessionValue(sessionKey);
     await tryWriteToDisk(getSignedOutMarkerKey(sessionKey), SIGNED_OUT_MARKER_VALUE);
     await tryWriteToDisk(sessionKey, SIGNED_OUT_SESSION_PAYLOAD);
@@ -155,8 +151,39 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
 
   const clearSignedOutState = async (sessionKey: string) => {
     pendingDiskRemoves.delete(sessionKey);
-    globallySignedOutSessionKeys.delete(sessionKey);
     await clearSignedOutMarkerOnDisk(sessionKey);
+  };
+
+  const syncPendingDiskPersistence = async () => {
+    if (pendingDiskRemoves.size === 0) {
+      return;
+    }
+
+    await probePersistentAuthStorage().catch(() => false);
+
+    for (const key of [...pendingDiskRemoves]) {
+      if (isPrimaryAuthSessionStorageKey(key)) {
+        await persistSignedOutState(key);
+      }
+    }
+    await flushPendingDiskRemoves();
+
+    if (pendingDiskRemoves.size === 0 && pendingRetryInterval) {
+      clearInterval(pendingRetryInterval);
+      pendingRetryInterval = null;
+    }
+  };
+
+  const schedulePendingDiskRetries = () => {
+    if (pendingDiskRemoves.size === 0) {
+      return;
+    }
+    if (pendingRetryInterval) {
+      return;
+    }
+    pendingRetryInterval = setInterval(() => {
+      void syncPendingDiskPersistence();
+    }, PENDING_DISK_RETRY_INTERVAL_MS);
   };
 
   const ensureProbe = async () => {
@@ -170,16 +197,10 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         );
       }
     }
-    await flushPendingDiskRemoves();
+    await syncPendingDiskPersistence();
   };
 
   const readAuthSessionFromDisk = async (key: string): Promise<string | null> => {
-    if (globallySignedOutSessionKeys.has(key)) {
-      pendingDiskRemoves.add(key);
-      await flushPendingDiskRemoves();
-      return null;
-    }
-
     let marker: string | null = null;
     let markerReadFailed = false;
     try {
@@ -189,7 +210,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     }
     if (!markerReadFailed && isSignedOutMarkerValue(marker)) {
       pendingDiskRemoves.add(key);
-      await flushPendingDiskRemoves();
+      await syncPendingDiskPersistence();
       return null;
     }
 
@@ -215,6 +236,15 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   return {
+    clearLastKnownAuthSessions() {
+      lastKnownAuthSession.clear();
+    },
+    hasPendingDiskPersistence() {
+      return pendingDiskRemoves.size > 0;
+    },
+    async retryPendingDiskPersistence() {
+      await syncPendingDiskPersistence();
+    },
     resetSignOutPersistWarning() {
       signOutPersistWarning = false;
     },
@@ -258,7 +288,6 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         overlay.delete(key);
         if (isPrimaryAuthSessionStorageKey(key) && !isSignedOutSessionPayload(value)) {
           pendingDiskRemoves.delete(key);
-          globallySignedOutSessionKeys.delete(key);
         }
         return;
       }
@@ -270,9 +299,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       await ensureProbe();
       markTombstone(key);
       pendingDiskRemoves.add(key);
+      schedulePendingDiskRetries();
 
       if (isPrimaryAuthSessionStorageKey(key)) {
-        globallySignedOutSessionKeys.add(key);
         forgetAuthSessionValue(key);
       }
 
@@ -281,15 +310,22 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         pendingDiskRemoves.delete(key);
         overlay.delete(key);
         if (isPrimaryAuthSessionStorageKey(key)) {
-          globallySignedOutSessionKeys.delete(key);
           await clearSignedOutMarkerOnDisk(key);
+        }
+        if (pendingDiskRemoves.size === 0 && pendingRetryInterval) {
+          clearInterval(pendingRetryInterval);
+          pendingRetryInterval = null;
         }
         return;
       }
 
       if (isPrimaryAuthSessionStorageKey(key)) {
+        // If storage and network both fail during sign-out and the process is killed before
+        // storage recovers, the client cannot persist local sign-out; startup validation
+        // clears sessions revoked on the server once the app is back online.
         await persistSignedOutState(key);
         signOutPersistWarning = true;
+        schedulePendingDiskRetries();
       }
     },
   };
