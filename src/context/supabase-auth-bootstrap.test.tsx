@@ -135,6 +135,51 @@ describe('SupabaseAuthProvider bootstrap', () => {
     vi.useRealTimers();
   });
 
+  it('stays signed-in through a 7s background validation delay with no login flash', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(false);
+    validateState.validateRestoredSessionInBackground.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, 7000);
+        }),
+    );
+    weightSyncState.getEntries.mockResolvedValue([]);
+
+    const seenUnauthenticatedWhileLoaded: boolean[] = [];
+
+    function FlashProbe() {
+      const { isAuthenticated, isLoading } = useSupabaseAuth();
+      if (!isLoading && !isAuthenticated) {
+        seenUnauthenticatedWhileLoaded.push(true);
+      }
+      return (
+        <div>
+          <span data-testid="auth-loading">{isLoading ? 'yes' : 'no'}</span>
+          <span data-testid="authenticated">{isAuthenticated ? 'yes' : 'no'}</span>
+        </div>
+      );
+    }
+
+    render(
+      <SupabaseAuthProvider>
+        <FlashProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+      expect(screen.getByTestId('auth-loading').textContent).toBe('no');
+    });
+
+    await vi.advanceTimersByTimeAsync(4000);
+
+    expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    expect(seenUnauthenticatedWhileLoaded).toEqual([]);
+  });
+
   it('shows signed-in immediately when validation hangs on an unflagged restored session', async () => {
     setupAuthListener();
     authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
@@ -154,6 +199,37 @@ describe('SupabaseAuthProvider bootstrap', () => {
       expect(screen.getByTestId('token').textContent).toBe('token-a');
     });
     expect(weightSyncState.getEntries).toHaveBeenCalled();
+  });
+
+  it('keeps the splash up past 4s while flagged validation is still running', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    setupAuthListener();
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+    storageState.restoredSessionNeedsServerValidation.mockResolvedValue(true);
+
+    let resolveValidation: () => void = () => {};
+    validateState.validateRestoredSessionInBackground.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveValidation = resolve;
+        }),
+    );
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await vi.advanceTimersByTimeAsync(4000);
+    expect(screen.getByTestId('auth-loading').textContent).toBe('yes');
+    expect(screen.getByTestId('authenticated').textContent).toBe('no');
+
+    resolveValidation();
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-loading').textContent).toBe('no');
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+    });
   });
 
   it('does not fetch weight entries until flagged validation finishes', async () => {

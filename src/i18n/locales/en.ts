@@ -326,9 +326,9 @@ export default {
     signedOut: 'Signed out.',
     signOutFailed: 'Could not sign out.',
     signOutPersistFailed:
-      'Sign-out could not be fully completed on this device. Try signing out again when storage is available.',
+      'Sign-out will finish on this device automatically once storage is available.',
     signOutPersistFailedOffline:
-      'Sign-out could not be fully completed on this device and we could not reach the server. Try again when you are back online.',
+      'Sign-out will finish on this device automatically once storage is available and you are back online.',
     deleteAccount: 'Delete account',
     deleteAccountConfirm:
       'This permanently deletes your account and all weigh-ins. This cannot be undone.',
