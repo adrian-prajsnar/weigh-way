@@ -40,6 +40,18 @@ describe('resolveWeightPrefillUpdate', () => {
     expect(result.nextInput).toBe('82,00');
   });
 
+  it('keeps a touched value when only the stored weight changes', () => {
+    const anchored = { ...base, existingEntryWeightKg: 80 };
+    const result = resolveWeightPrefillUpdate(
+      anchored,
+      { ...anchored, existingEntryWeightKg: 82 },
+      true,
+    );
+    expect(result.resetTouched).toBe(false);
+    expect(result.nextInput).toBeNull();
+    expect(result.nextAnchor.existingEntryWeightKg).toBe(82);
+  });
+
   it('does not clobber a touched value on locale change', () => {
     const anchored = { ...base, existingEntryWeightKg: 82 };
     const result = resolveWeightPrefillUpdate(

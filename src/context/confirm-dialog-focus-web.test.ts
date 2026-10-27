@@ -39,6 +39,19 @@ describe('confirm-dialog-focus-web', () => {
     expect(document.activeElement).toBe(cancel);
   });
 
+  it('wraps Shift+Tab from outside the dialog onto the last control', () => {
+    const root = mountDialog();
+    const behind = document.createElement('div');
+    behind.tabIndex = 0;
+    document.body.appendChild(behind);
+    behind.focus();
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true });
+    handleConfirmDialogTabKey(root, event, behind);
+    expect(document.activeElement?.textContent).toBe('Replace');
+    behind.remove();
+  });
+
   it('pulls focus back from chrome wrappers onto the first control', () => {
     const root = mountDialog();
     const chrome = root.querySelector('[data-testid="chrome"]') as HTMLElement;

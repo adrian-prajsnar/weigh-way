@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { warnPreferenceStorageFallback } from './preference-storage-fallback';
 
 const STORAGE_KEY = '@weigh-way/theme';
 
@@ -13,6 +14,7 @@ export async function getThemePreference(): Promise<ThemePreference> {
     const value = await AsyncStorage.getItem(STORAGE_KEY);
     return isThemePreference(value) ? value : 'system';
   } catch {
+    warnPreferenceStorageFallback('theme');
     return 'system';
   }
 }

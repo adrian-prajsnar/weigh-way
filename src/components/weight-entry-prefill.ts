@@ -25,6 +25,17 @@ export function resolveWeightPrefillUpdate(
     anchor.units !== next.units ||
     anchor.existingEntryWeightKg !== next.existingEntryWeightKg;
 
+  const weightOnlyChange =
+    touched &&
+    anchor.selectedDateKey === next.selectedDateKey &&
+    anchor.units === next.units &&
+    anchor.locale === next.locale &&
+    anchor.existingEntryWeightKg !== next.existingEntryWeightKg;
+
+  if (weightOnlyChange) {
+    return { nextAnchor: next, nextInput: null, resetTouched: false };
+  }
+
   if (contextChanged) {
     return {
       nextAnchor: next,

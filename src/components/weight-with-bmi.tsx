@@ -34,7 +34,7 @@ export function WeightWithBmi({
   const { showBmi: showBmiPreference } = useSharedBmiDisplay();
   const showBmi = alwaysShowBmi || showBmiPreference;
   const { openWeighIn } = useBmiDetails();
-  const { birthDate, sex } = useSharedUserProfile();
+  const { birthDate, sex, isLoading: isProfileLoading } = useSharedUserProfile();
   const heightCm = getHeightAtDate(heightEntries, entry.date);
   const bmi =
     heightCm === null
@@ -50,7 +50,7 @@ export function WeightWithBmi({
     <BmiBadge
       bmi={bmi}
       compact={compactBmi}
-      showUnavailable={heightCm === null}
+      showUnavailable={!isProfileLoading && heightCm === null}
       onPress={() =>
         openWeighIn({
           date: entry.date,

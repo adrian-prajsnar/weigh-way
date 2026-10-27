@@ -28,9 +28,10 @@ import {
   isAuthCodeAlreadyExchanged,
   rememberExchangedAuthCode,
 } from './storage/auth-last-exchanged-code';
+import { safeMaybeCompleteAuthSession } from './auth-web-session-complete';
 import { supabase } from './supabase/client';
 
-WebBrowser.maybeCompleteAuthSession();
+safeMaybeCompleteAuthSession();
 
 const PKCE_FLOW_ID_PARAM = 'sb_flow_id';
 

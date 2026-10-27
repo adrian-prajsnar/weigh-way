@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { warnPreferenceStorageFallback } from './preference-storage-fallback';
 
 const STORAGE_KEY = '@weigh-way/language';
 
@@ -13,6 +14,7 @@ export async function getLanguagePreference(): Promise<LanguagePreference> {
     const value = await AsyncStorage.getItem(STORAGE_KEY);
     return isLanguagePreference(value) ? value : 'system';
   } catch {
+    warnPreferenceStorageFallback('language');
     return 'system';
   }
 }
