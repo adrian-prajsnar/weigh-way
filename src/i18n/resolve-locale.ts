@@ -8,11 +8,23 @@ export function getDeviceLocale(): AppLocale {
   return languageCode === 'pl' ? 'pl' : 'en';
 }
 
-export function resolveLocale(preference: LanguagePreference): AppLocale {
+export function resolveAppLocale(
+  preference: LanguagePreference,
+  locales: { languageCode?: string | null }[],
+  demoLocale: AppLocale | null = null,
+): AppLocale {
+  if (demoLocale) {
+    return demoLocale;
+  }
   if (preference === 'en' || preference === 'pl') {
     return preference;
   }
-  return getDeviceLocale();
+  const languageCode = locales[0]?.languageCode?.toLowerCase();
+  return languageCode === 'pl' ? 'pl' : 'en';
+}
+
+export function resolveLocale(preference: LanguagePreference): AppLocale {
+  return resolveAppLocale(preference, getLocales(), null);
 }
 
 export function getDateLocale(locale: AppLocale): string {

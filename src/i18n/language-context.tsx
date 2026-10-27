@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useState,
 } from 'react';
@@ -22,7 +21,7 @@ import {
   TranslationKey,
   TranslateOptions,
 } from './index';
-import { AppLocale } from './resolve-locale';
+import { AppLocale, resolveAppLocale } from './resolve-locale';
 
 type LanguageContextValue = {
   locale: AppLocale;
@@ -54,26 +53,27 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       setPreferenceReady(true);
       return;
     }
-    void getLanguagePreference().then((stored) => {
-      setPreferenceState(stored);
-      setPreferenceReady(true);
-    });
+
+    void getLanguagePreference()
+      .then((stored) => {
+        setPreferenceState(stored);
+      })
+      .catch(() => {
+        setPreferenceState('system');
+      })
+      .finally(() => {
+        setPreferenceReady(true);
+      });
   }, [demoLocale]);
 
-  const locale = useMemo(() => {
-    if (demoLocale) {
-      return demoLocale;
-    }
-    if (preference === 'system') {
-      const languageCode = locales[0]?.languageCode?.toLowerCase();
-      return languageCode === 'pl' ? 'pl' : 'en';
-    }
-    return preference;
-  }, [demoLocale, preference, locales]);
+  const locale = useMemo(
+    () => resolveAppLocale(preference, locales, demoLocale),
+    [demoLocale, preference, locales],
+  );
 
-  useLayoutEffect(() => {
+  if (preferenceReady) {
     setI18nLocale(locale);
-  }, [locale]);
+  }
 
   const setPreference = useCallback(
     async (next: LanguagePreference) => {

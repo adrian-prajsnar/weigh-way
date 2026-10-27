@@ -83,6 +83,11 @@ export function WeightEntryFormBody({
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
   const weightInputRef = useRef<TextInputInstance>(null);
   const weightInputTouchedRef = useRef(false);
+  const prefillAnchorRef = useRef({
+    selectedDateKey: '',
+    units,
+    locale,
+  });
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
   const existingEntryForDate = useMemo(
@@ -117,22 +122,30 @@ export function WeightEntryFormBody({
   }, [initialDate]);
 
   useEffect(() => {
-    weightInputTouchedRef.current = false;
-    setWeightInput(
-      existingEntryWeightKg !== undefined
-        ? formatWeightValue(existingEntryWeightKg, units, locale)
-        : '',
-    );
-    // Locale changes for untouched prefills are handled in the effect below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset prefill only on date/units
-  }, [selectedDateKey, existingEntryWeightKg, units]);
+    const anchor = prefillAnchorRef.current;
+    const contextChanged =
+      anchor.selectedDateKey !== selectedDateKey || anchor.units !== units;
 
-  useEffect(() => {
-    if (weightInputTouchedRef.current || existingEntryWeightKg === undefined) {
+    if (contextChanged) {
+      weightInputTouchedRef.current = false;
+      prefillAnchorRef.current = { selectedDateKey, units, locale };
+      setWeightInput(
+        existingEntryWeightKg !== undefined
+          ? formatWeightValue(existingEntryWeightKg, units, locale)
+          : '',
+      );
       return;
     }
-    setWeightInput(formatWeightValue(existingEntryWeightKg, units, locale));
-  }, [locale, existingEntryWeightKg, units]);
+
+    if (
+      !weightInputTouchedRef.current &&
+      existingEntryWeightKg !== undefined &&
+      anchor.locale !== locale
+    ) {
+      prefillAnchorRef.current = { selectedDateKey, units, locale };
+      setWeightInput(formatWeightValue(existingEntryWeightKg, units, locale));
+    }
+  }, [selectedDateKey, existingEntryWeightKg, units, locale]);
 
   useEffect(() => {
     if (!autoFocusWeight) {
