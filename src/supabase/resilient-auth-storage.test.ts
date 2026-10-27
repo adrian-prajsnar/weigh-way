@@ -90,6 +90,37 @@ describe('createResilientAuthStorage', () => {
     await expect(storage.getItem('sb-key')).resolves.toBe('token');
   });
 
+  it('returns no session on a new instance after failed remove left stale data on disk', async () => {
+    const disk = new Map<string, string>([['sb-localhost-auth-token', 'user-a']]);
+
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      disk.set(key, value);
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      if (key === 'sb-localhost-auth-token') {
+        throw securityError();
+      }
+      disk.delete(key);
+    });
+
+    const storageA = createResilientAuthStorage();
+    await storageA.removeItem('sb-localhost-auth-token');
+    expect(storageA.consumeSignOutPersistWarning()).toBe(true);
+    expect(disk.get('sb-localhost-auth-token')).not.toBe('user-a');
+
+    const storageB = createResilientAuthStorage();
+    await expect(storageB.getItem('sb-localhost-auth-token')).resolves.toBeNull();
+  });
+
   it('returns null after a failed remove without reading disk again in the same instance', async () => {
     const disk = new Map<string, string>([['sb-localhost-auth-token', 'user-a']]);
 

@@ -9,15 +9,34 @@ export type AuthSessionStorage = {
 
 export type ResilientAuthStorage = AuthSessionStorage & {
   consumeSignOutPersistWarning: () => boolean;
+  resetSignOutPersistWarning: () => void;
 };
 
 const PROBE_KEY = '@weigh-way/auth-storage-probe';
+const SIGNED_OUT_MARKER_PREFIX = '@weigh-way/auth-signed-out/';
 const TOMBSTONE = Symbol('auth-storage-tombstone');
+export const SIGNED_OUT_SESSION_PAYLOAD = JSON.stringify({ signedOut: true });
 
 type OverlayEntry = string | typeof TOMBSTONE;
 
 export function isPrimaryAuthSessionStorageKey(key: string): boolean {
   return /^sb-.+-auth-token$/.test(key);
+}
+
+export function getSignedOutMarkerKey(sessionKey: string): string {
+  return `${SIGNED_OUT_MARKER_PREFIX}${sessionKey}`;
+}
+
+export function isSignedOutSessionPayload(raw: string | null): boolean {
+  if (!raw) {
+    return false;
+  }
+  try {
+    const parsed = JSON.parse(raw) as { signedOut?: boolean };
+    return parsed.signedOut === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function probePersistentAuthStorage(): Promise<boolean> {
@@ -37,22 +56,10 @@ export async function probePersistentAuthStorage(): Promise<boolean> {
 /** Supabase auth storage: tombstones failed removals; disk-first reads with overlay for failed writes. */
 export function createResilientAuthStorage(): ResilientAuthStorage {
   const overlay = new Map<string, OverlayEntry>();
+  const pendingDiskRemoves = new Set<string>();
   let probeSettled = false;
-  let diskBlocked = false;
+  let probeWarningLogged = false;
   let signOutPersistWarning = false;
-
-  const ensureProbe = async () => {
-    if (probeSettled) {
-      return;
-    }
-    probeSettled = true;
-    diskBlocked = !(await probePersistentAuthStorage());
-    if (diskBlocked && isDevWarningsEnabled()) {
-      console.warn(
-        '[weigh-way] Persistent auth storage probe failed; using in-memory overlay when needed.',
-      );
-    }
-  };
 
   const readOverlay = (key: string): string | null | undefined => {
     if (!overlay.has(key)) {
@@ -69,7 +76,6 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   const tryRemoveFromDisk = async (key: string): Promise<boolean> => {
     try {
       await AsyncStorage.removeItem(key);
-      diskBlocked = false;
       return true;
     } catch {
       return false;
@@ -78,9 +84,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
 
   const tryReadFromDisk = async (key: string): Promise<string | null> => {
     try {
-      const value = await AsyncStorage.getItem(key);
-      diskBlocked = false;
-      return value;
+      return await AsyncStorage.getItem(key);
     } catch {
       return null;
     }
@@ -89,14 +93,68 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   const tryWriteToDisk = async (key: string, value: string): Promise<boolean> => {
     try {
       await AsyncStorage.setItem(key, value);
-      diskBlocked = false;
       return true;
     } catch {
       return false;
     }
   };
 
+  const flushPendingDiskRemoves = async () => {
+    for (const key of [...pendingDiskRemoves]) {
+      const removed = await tryRemoveFromDisk(key);
+      if (!removed) {
+        continue;
+      }
+      pendingDiskRemoves.delete(key);
+      overlay.delete(key);
+      await tryRemoveFromDisk(getSignedOutMarkerKey(key));
+    }
+  };
+
+  const persistSignedOutState = async (sessionKey: string) => {
+    pendingDiskRemoves.add(sessionKey);
+    await tryWriteToDisk(getSignedOutMarkerKey(sessionKey), '1');
+    await tryWriteToDisk(sessionKey, SIGNED_OUT_SESSION_PAYLOAD);
+  };
+
+  const clearSignedOutState = async (sessionKey: string) => {
+    pendingDiskRemoves.delete(sessionKey);
+    await tryRemoveFromDisk(getSignedOutMarkerKey(sessionKey));
+  };
+
+  const ensureProbe = async () => {
+    if (!probeSettled) {
+      probeSettled = true;
+      const probeOk = await probePersistentAuthStorage();
+      if (!probeOk && isDevWarningsEnabled() && !probeWarningLogged) {
+        probeWarningLogged = true;
+        console.warn(
+          '[weigh-way] Persistent auth storage probe failed; retrying on each access.',
+        );
+      }
+    }
+    await flushPendingDiskRemoves();
+  };
+
+  const readAuthSessionFromDisk = async (key: string): Promise<string | null> => {
+    const marker = await tryReadFromDisk(getSignedOutMarkerKey(key));
+    if (marker) {
+      pendingDiskRemoves.add(key);
+      await flushPendingDiskRemoves();
+      return null;
+    }
+
+    const disk = await tryReadFromDisk(key);
+    if (isSignedOutSessionPayload(disk)) {
+      return null;
+    }
+    return disk;
+  };
+
   return {
+    resetSignOutPersistWarning() {
+      signOutPersistWarning = false;
+    },
     consumeSignOutPersistWarning() {
       if (!signOutPersistWarning) {
         return false;
@@ -110,6 +168,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       if (cached !== undefined) {
         return cached;
       }
+      if (isPrimaryAuthSessionStorageKey(key)) {
+        return readAuthSessionFromDisk(key);
+      }
       return tryReadFromDisk(key);
     },
     async setItem(key, value) {
@@ -117,17 +178,20 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       const wasTombstone = overlay.get(key) === TOMBSTONE;
       overlay.set(key, value);
 
-      if (wasTombstone) {
-        await tryRemoveFromDisk(key);
+      if (isPrimaryAuthSessionStorageKey(key) && !isSignedOutSessionPayload(value)) {
+        await clearSignedOutState(key);
       }
 
-      if (diskBlocked) {
-        return;
+      if (wasTombstone) {
+        await tryRemoveFromDisk(key);
       }
 
       const written = await tryWriteToDisk(key, value);
       if (written) {
         overlay.delete(key);
+        if (isPrimaryAuthSessionStorageKey(key) && !isSignedOutSessionPayload(value)) {
+          pendingDiskRemoves.delete(key);
+        }
         return;
       }
 
@@ -137,14 +201,18 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     async removeItem(key) {
       await ensureProbe();
       markTombstone(key);
+      pendingDiskRemoves.add(key);
 
       const removed = await tryRemoveFromDisk(key);
       if (removed) {
+        pendingDiskRemoves.delete(key);
         overlay.delete(key);
+        await tryRemoveFromDisk(getSignedOutMarkerKey(key));
         return;
       }
 
       if (isPrimaryAuthSessionStorageKey(key)) {
+        await persistSignedOutState(key);
         signOutPersistWarning = true;
       }
     },

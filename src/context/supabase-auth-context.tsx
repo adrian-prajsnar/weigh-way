@@ -29,6 +29,7 @@ import { clearPkceVerifierBackups } from '../storage/pkce-verifier-backup';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
 import { getSupabaseAuthStorage } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
+import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
 import { isDemoMode } from '../demo/is-demo-mode';
 import { demoReadOnlyError } from '../demo/read-only';
@@ -118,6 +119,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       .then(({ data: { session: activeSession } }) => {
         if (activeSession) {
           setSession(activeSession);
+          void validateRestoredSessionInBackground();
         }
       })
       .finally(() => {
@@ -214,7 +216,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       // Supabase may auto-login when email confirmation is disabled — sign out so the user logs in manually.
       if (data.session) {
+        getSupabaseAuthStorage().resetSignOutPersistWarning();
         await supabase.auth.signOut();
+        getSupabaseAuthStorage().consumeSignOutPersistWarning();
       }
 
       return { needsEmailConfirmation };
@@ -228,18 +232,22 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw demoReadOnlyError();
     }
 
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      throw new Error(formatSignOutError(error));
+    getSupabaseAuthStorage().resetSignOutPersistWarning();
+    let persistWarning = false;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw new Error(formatSignOutError(error));
+      }
+    } finally {
+      resetOAuthRedirectState();
+      await clearAuthPendingFlows();
+      await clearPkceVerifierBackups();
+      persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
-
-    if (getSupabaseAuthStorage().consumeSignOutPersistWarning()) {
+    if (persistWarning) {
       throw new Error(formatSignOutPersistWarning());
     }
-
-    resetOAuthRedirectState();
-    await clearAuthPendingFlows();
-    await clearPkceVerifierBackups();
   }, []);
 
   const deleteAccount = useCallback(async () => {
@@ -252,10 +260,19 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatDeleteAccountError(error));
     }
 
-    await supabase.auth.signOut({ scope: 'local' });
-    resetOAuthRedirectState();
-    await clearAuthPendingFlows();
-    await clearPkceVerifierBackups();
+    getSupabaseAuthStorage().resetSignOutPersistWarning();
+    let persistWarning = false;
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } finally {
+      resetOAuthRedirectState();
+      await clearAuthPendingFlows();
+      await clearPkceVerifierBackups();
+      persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
+    }
+    if (persistWarning) {
+      throw new Error(formatSignOutPersistWarning());
+    }
   }, []);
 
   const resendConfirmationEmail = useCallback(async (email: string) => {

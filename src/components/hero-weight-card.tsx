@@ -19,6 +19,7 @@ import { EmptyState } from './empty-state';
 import { SegmentedControl, SegmentedOption } from './segmented-control';
 import { SkeletonBlock } from './skeleton';
 import { WeightChart } from './weight-chart';
+import { shouldShowBmiUnavailableBadge } from './weight-with-bmi-availability';
 
 type HeroWeightCardProps = {
   entries: WeightEntry[];
@@ -30,7 +31,7 @@ export function HeroWeightCard({ entries, isLoading, isBusy = false }: HeroWeigh
   const styles = useAppStyles();
   const { t, locale } = useTranslation();
   const { units } = useUnits();
-  const { heightEntries, birthDate, sex } = useSharedUserProfile();
+  const { heightEntries, birthDate, sex, isLoading: isProfileLoading } = useSharedUserProfile();
   const { showBmi } = useSharedBmiDisplay();
   const { openWeighIn } = useBmiDetails();
   const [range, setRange] = useState<ChartRange>('30d');
@@ -91,7 +92,10 @@ export function HeroWeightCard({ entries, isLoading, isBusy = false }: HeroWeigh
                 <BmiBadge
                   bmi={bmi}
                   compact
-                  showUnavailable={getHeightAtDate(heightEntries, latest.date) === null}
+                  showUnavailable={shouldShowBmiUnavailableBadge(
+                    isProfileLoading,
+                    getHeightAtDate(heightEntries, latest.date),
+                  )}
                   onPress={() =>
                     openWeighIn({
                       date: latest.date,
