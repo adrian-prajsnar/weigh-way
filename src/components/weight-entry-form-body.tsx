@@ -82,6 +82,7 @@ export function WeightEntryFormBody({
   const [weightValidationMessage, setWeightValidationMessage] = useState<string | null>(null);
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
   const weightInputRef = useRef<TextInputInstance>(null);
+  const weightInputTouchedRef = useRef(false);
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
   const existingEntryForDate = useMemo(
@@ -116,12 +117,22 @@ export function WeightEntryFormBody({
   }, [initialDate]);
 
   useEffect(() => {
+    weightInputTouchedRef.current = false;
     setWeightInput(
       existingEntryWeightKg !== undefined
         ? formatWeightValue(existingEntryWeightKg, units, locale)
         : '',
     );
-  }, [selectedDateKey, existingEntryWeightKg, units, locale]);
+    // Locale changes for untouched prefills are handled in the effect below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset prefill only on date/units
+  }, [selectedDateKey, existingEntryWeightKg, units]);
+
+  useEffect(() => {
+    if (weightInputTouchedRef.current || existingEntryWeightKg === undefined) {
+      return;
+    }
+    setWeightInput(formatWeightValue(existingEntryWeightKg, units, locale));
+  }, [locale, existingEntryWeightKg, units]);
 
   useEffect(() => {
     if (!autoFocusWeight) {
@@ -146,6 +157,7 @@ export function WeightEntryFormBody({
 
     const deltaKg =
       units === 'imperial' ? lbToKg(WEIGHT_STEP_LB) * direction : WEIGHT_STEP_KG * direction;
+    weightInputTouchedRef.current = true;
     setWeightInput(
       formatWeightValue(Math.round((current + deltaKg) * 100) / 100, units, locale),
     );
@@ -259,6 +271,7 @@ export function WeightEntryFormBody({
                 style={styles.weightInput}
                 value={weightInput}
                 onChangeText={(value) => {
+                  weightInputTouchedRef.current = true;
                   setWeightInput(value);
                   if (weightValidationMessage) {
                     setWeightValidationMessage(null);

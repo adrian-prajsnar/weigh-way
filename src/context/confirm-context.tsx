@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getConfirmDialogPressableA11y } from './confirm-dialog-a11y';
+import { getConfirmDialogChromeWebProps } from './confirm-dialog-chrome-web';
 import { useTranslation } from '../i18n/language-context';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
@@ -85,7 +86,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             statusBarTranslucent
             onRequestClose={() => close(false)}
           >
-            <View style={styles.modalBackdropCentered}>
+            <View
+              style={styles.modalBackdropCentered}
+              {...getConfirmDialogChromeWebProps()}
+            >
               <Pressable
                 style={StyleSheet.absoluteFill}
                 onPress={() => {
@@ -103,9 +107,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
               />
               <View
                 style={styles.confirmDialogFrame}
+                {...getConfirmDialogChromeWebProps()}
                 {...(Platform.OS === 'web' ? { dataSet: { wwConfirmDialog: 'true' } } : {})}
               >
-                <View style={styles.confirmDialogCard}>
+                <View style={styles.confirmDialogCard} {...getConfirmDialogChromeWebProps()}>
                     <Text style={styles.confirmDialogTitle}>{pending.title}</Text>
                     <Text style={styles.confirmDialogMessage}>{pending.message}</Text>
                     {pending.confirmationPhrase ? (
@@ -124,7 +129,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                         />
                       </View>
                     ) : null}
-                    <View style={styles.confirmDialogActions}>
+                    <View
+                      style={styles.confirmDialogActions}
+                      {...getConfirmDialogChromeWebProps()}
+                    >
                       <Pressable
                         {...getConfirmDialogPressableA11y(cancelLabel)}
                         style={({ pressed }) => [

@@ -1,4 +1,4 @@
-import { PressableProps } from 'react-native';
+import type { PressableProps } from 'react-native';
 
 export function getConfirmDialogPressableA11y(label: string): Pick<
   PressableProps,
