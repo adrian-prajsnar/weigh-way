@@ -22,6 +22,7 @@ vi.mock('../storage/language-preference', () => ({
 /* eslint-disable import/first -- after vi.mock */
 import { LanguageProvider } from '../i18n/language-context';
 import { ThemeProvider } from '../theme/theme-context';
+import * as confirmDialogFocusWeb from './confirm-dialog-focus-web';
 import { listConfirmDialogFocusables } from './confirm-dialog-focus-web';
 import { ConfirmProvider, useConfirm } from './confirm-context';
 /* eslint-enable import/first */
@@ -35,6 +36,22 @@ function OpenReplaceConfirmOnMount() {
       message: 'Already logged for this date.',
       cancelLabel: 'Cancel',
       confirmLabel: 'Replace',
+    });
+  }, [confirm]);
+
+  return null;
+}
+
+function OpenPhraseConfirmOnMount() {
+  const { confirm } = useConfirm();
+
+  useEffect(() => {
+    void confirm({
+      title: 'Delete account?',
+      message: 'This cannot be undone.',
+      cancelLabel: 'Cancel',
+      confirmLabel: 'Delete',
+      confirmationPhrase: 'DELETE',
     });
   }, [confirm]);
 
@@ -72,5 +89,26 @@ describe('ConfirmProvider', () => {
     expect(dialog).toBeTruthy();
     const tabStops = listConfirmDialogFocusables(document);
     expect(tabStops.map((node) => node.getAttribute('aria-label'))).toEqual(['Cancel', 'Replace']);
+  });
+
+  it('registers capture-phase Tab handling when a phrase confirm is open', async () => {
+    const subscribeSpy = vi.spyOn(confirmDialogFocusWeb, 'subscribeConfirmDialogKeydown');
+
+    render(
+      <ThemeProvider>
+        <LanguageProvider>
+          <ConfirmProvider>
+            <OpenPhraseConfirmOnMount />
+          </ConfirmProvider>
+        </LanguageProvider>
+      </ThemeProvider>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('DELETE')).toBeTruthy();
+      expect(subscribeSpy).toHaveBeenCalled();
+    });
+
+    subscribeSpy.mockRestore();
   });
 });

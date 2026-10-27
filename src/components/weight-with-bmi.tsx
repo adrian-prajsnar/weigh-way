@@ -10,6 +10,7 @@ import { useTranslation } from '../i18n/language-context';
 import { HeightEntry, WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
 import { BmiBadge } from './bmi-badge';
+import { shouldShowBmiUnavailableBadge } from './weight-with-bmi-availability';
 
 type WeightWithBmiProps = {
   entry: WeightEntry;
@@ -34,7 +35,7 @@ export function WeightWithBmi({
   const { showBmi: showBmiPreference } = useSharedBmiDisplay();
   const showBmi = alwaysShowBmi || showBmiPreference;
   const { openWeighIn } = useBmiDetails();
-  const { birthDate, sex } = useSharedUserProfile();
+  const { birthDate, sex, isLoading: isProfileLoading } = useSharedUserProfile();
   const heightCm = getHeightAtDate(heightEntries, entry.date);
   const bmi =
     heightCm === null
@@ -50,7 +51,7 @@ export function WeightWithBmi({
     <BmiBadge
       bmi={bmi}
       compact={compactBmi}
-      showUnavailable={heightCm === null}
+      showUnavailable={shouldShowBmiUnavailableBadge(isProfileLoading, heightCm)}
       onPress={() =>
         openWeighIn({
           date: entry.date,

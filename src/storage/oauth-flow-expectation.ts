@@ -17,11 +17,20 @@ export async function persistOAuthFlowExpectation(
     flowId: flowId ?? null,
     expiresAt,
   };
-  await AsyncStorage.setItem(OAUTH_FLOW_EXPECTATION_KEY, JSON.stringify(payload));
+  try {
+    await AsyncStorage.setItem(OAUTH_FLOW_EXPECTATION_KEY, JSON.stringify(payload));
+  } catch {
+    // Blocked storage must not break OAuth sign-in.
+  }
 }
 
 export async function readOAuthFlowExpectation(): Promise<StoredOAuthFlowExpectation | null> {
-  const raw = await AsyncStorage.getItem(OAUTH_FLOW_EXPECTATION_KEY);
+  let raw: string | null;
+  try {
+    raw = await AsyncStorage.getItem(OAUTH_FLOW_EXPECTATION_KEY);
+  } catch {
+    return null;
+  }
   if (!raw) {
     return null;
   }
@@ -29,20 +38,24 @@ export async function readOAuthFlowExpectation(): Promise<StoredOAuthFlowExpecta
   try {
     const parsed = JSON.parse(raw) as StoredOAuthFlowExpectation;
     if (!Number.isFinite(parsed.expiresAt)) {
-      await AsyncStorage.removeItem(OAUTH_FLOW_EXPECTATION_KEY);
+      await clearOAuthFlowExpectationStorage();
       return null;
     }
     if (Date.now() > parsed.expiresAt) {
-      await AsyncStorage.removeItem(OAUTH_FLOW_EXPECTATION_KEY);
+      await clearOAuthFlowExpectationStorage();
       return null;
     }
     return parsed;
   } catch {
-    await AsyncStorage.removeItem(OAUTH_FLOW_EXPECTATION_KEY);
+    await clearOAuthFlowExpectationStorage();
     return null;
   }
 }
 
 export async function clearOAuthFlowExpectationStorage(): Promise<void> {
-  await AsyncStorage.removeItem(OAUTH_FLOW_EXPECTATION_KEY);
+  try {
+    await AsyncStorage.removeItem(OAUTH_FLOW_EXPECTATION_KEY);
+  } catch {
+    // Best-effort when storage is blocked.
+  }
 }

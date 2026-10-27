@@ -26,6 +26,13 @@ export function focusFirstConfirmDialogControl(root: ParentNode): void {
   first?.focus();
 }
 
+export function subscribeConfirmDialogKeydown(
+  listener: (event: KeyboardEvent) => void,
+): () => void {
+  document.addEventListener('keydown', listener, true);
+  return () => document.removeEventListener('keydown', listener, true);
+}
+
 export function handleConfirmDialogTabKey(
   root: ParentNode,
   event: KeyboardEvent,
@@ -40,10 +47,16 @@ export function handleConfirmDialogTabKey(
     return;
   }
 
-  const currentIndex = focusables.findIndex((node) => node === activeElement);
+  const active = activeElement instanceof HTMLElement ? activeElement : null;
+  const activeInDialog = active !== null && root.contains(active);
+  const currentIndex = activeInDialog ? focusables.findIndex((node) => node === active) : -1;
   if (currentIndex === -1) {
     event.preventDefault();
-    focusFirstConfirmDialogControl(root);
+    if (event.shiftKey) {
+      focusables[focusables.length - 1]?.focus();
+    } else {
+      focusFirstConfirmDialogControl(root);
+    }
     return;
   }
 

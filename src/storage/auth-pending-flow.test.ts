@@ -1,19 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const storage = vi.hoisted(() => new Map<string, string>());
+const { storage, asyncStorage } = vi.hoisted(() => {
+  const map = new Map<string, string>();
+  return {
+    storage: map,
+    asyncStorage: {
+      getItem: vi.fn((key: string) => Promise.resolve(map.get(key) ?? null)),
+      setItem: vi.fn((key: string, value: string) => {
+        map.set(key, value);
+        return Promise.resolve();
+      }),
+      removeItem: vi.fn((key: string) => {
+        map.delete(key);
+        return Promise.resolve();
+      }),
+    },
+  };
+});
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
-  default: {
-    getItem: (key: string) => Promise.resolve(storage.get(key) ?? null),
-    setItem: (key: string, value: string) => {
-      storage.set(key, value);
-      return Promise.resolve();
-    },
-    removeItem: (key: string) => {
-      storage.delete(key);
-      return Promise.resolve();
-    },
-  },
+  default: asyncStorage,
 }));
 
 vi.mock('./pkce-verifier-backup', () => ({
@@ -34,6 +40,15 @@ import {
 describe('auth pending flow storage', () => {
   beforeEach(() => {
     storage.clear();
+    asyncStorage.getItem.mockImplementation((key: string) => Promise.resolve(storage.get(key) ?? null));
+    asyncStorage.setItem.mockImplementation((key: string, value: string) => {
+      storage.set(key, value);
+      return Promise.resolve();
+    });
+    asyncStorage.removeItem.mockImplementation((key: string) => {
+      storage.delete(key);
+      return Promise.resolve();
+    });
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-01-01T12:00:00Z'));
   });
@@ -51,6 +66,15 @@ describe('auth pending flow storage', () => {
     await markEmailConfirmationPending('user@example.com');
     vi.setSystemTime(new Date(Date.now() + AUTH_PENDING_FLOW_TTL_MS + 1));
     expect(await isEmailConfirmationPending()).toBe(false);
+  });
+
+  it('resolves clearAuthPendingFlows when removeItem throws', async () => {
+    const securityError = new DOMException('The operation is insecure.', 'SecurityError');
+    asyncStorage.removeItem.mockRejectedValue(securityError);
+    await markEmailConfirmationPending('user@example.com');
+    await markPasswordResetPending('user@example.com');
+
+    await expect(clearAuthPendingFlows()).resolves.toBeUndefined();
   });
 
   it('clears all pending flows', async () => {

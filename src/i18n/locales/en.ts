@@ -325,6 +325,8 @@ export default {
     signOutConfirm: 'Sign out of your account?',
     signedOut: 'Signed out.',
     signOutFailed: 'Could not sign out.',
+    signOutPersistFailed:
+      'You were signed out here, but this device may still remember your session until storage is available again.',
     deleteAccount: 'Delete account',
     deleteAccountConfirm:
       'This permanently deletes your account and all weigh-ins. This cannot be undone.',

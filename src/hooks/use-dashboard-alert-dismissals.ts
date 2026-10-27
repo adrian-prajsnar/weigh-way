@@ -9,7 +9,9 @@ export function useDashboardAlertDismissals() {
   const [dismissed, setDismissed] = useState<DashboardAlertId[] | null>(null);
 
   useEffect(() => {
-    void getDismissedDashboardAlerts().then(setDismissed);
+    void getDismissedDashboardAlerts()
+      .then(setDismissed)
+      .catch(() => setDismissed([]));
   }, []);
 
   const isDismissed = useCallback(

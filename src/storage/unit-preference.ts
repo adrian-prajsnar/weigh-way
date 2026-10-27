@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { warnPreferenceStorageFallback } from './preference-storage-fallback';
 
 const STORAGE_KEY = '@weigh-way/units';
 
@@ -13,6 +14,7 @@ export async function getUnitPreference(): Promise<UnitPreference> {
     const value = await AsyncStorage.getItem(STORAGE_KEY);
     return isUnitPreference(value) ? value : 'system';
   } catch {
+    warnPreferenceStorageFallback('units');
     return 'system';
   }
 }

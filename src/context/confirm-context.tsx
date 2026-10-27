@@ -9,10 +9,10 @@ import {
 } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { getConfirmDialogPressableA11y } from './confirm-dialog-a11y';
-import { getConfirmDialogChromeWebProps } from './confirm-dialog-chrome-web';
 import {
   focusFirstConfirmDialogControl,
   handleConfirmDialogTabKey,
+  subscribeConfirmDialogKeydown,
 } from './confirm-dialog-focus-web';
 import { useTranslation } from '../i18n/language-context';
 import { useAppStyles } from '../theme/styles';
@@ -77,10 +77,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       handleConfirmDialogTabKey(frame, event, document.activeElement);
     };
 
-    document.addEventListener('keydown', onKeyDown);
+    const unsubscribeKeydown = subscribeConfirmDialogKeydown(onKeyDown);
     return () => {
       cancelAnimationFrame(focusTimer);
-      document.removeEventListener('keydown', onKeyDown);
+      unsubscribeKeydown();
     };
   }, [pending?.id, pending]);
 
@@ -118,7 +118,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           >
             <View
               style={styles.modalBackdropCentered}
-              {...getConfirmDialogChromeWebProps()}
+              {...(Platform.OS === 'web' ? { focusable: false } : {})}
             >
               <Pressable
                 style={StyleSheet.absoluteFill}
