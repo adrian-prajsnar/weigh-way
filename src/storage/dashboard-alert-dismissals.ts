@@ -20,7 +20,12 @@ function isDashboardAlertId(value: string): value is DashboardAlertId {
 }
 
 export async function getDismissedDashboardAlerts(): Promise<DashboardAlertId[]> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
+  let raw: string | null;
+  try {
+    raw = await AsyncStorage.getItem(STORAGE_KEY);
+  } catch {
+    return [];
+  }
   if (!raw) {
     return [];
   }
@@ -53,7 +58,11 @@ export async function dismissDashboardAlerts(ids: DashboardAlertId[]): Promise<v
     return;
   }
 
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // Best-effort when storage is blocked.
+  }
 }
 
 export async function dismissDashboardAlert(id: DashboardAlertId): Promise<void> {

@@ -10,11 +10,24 @@ import { safeMaybeCompleteAuthSession } from './auth-web-session-complete';
 /* eslint-enable import/first */
 
 describe('safeMaybeCompleteAuthSession', () => {
-  it('swallows errors from maybeCompleteAuthSession', () => {
+  it('delegates to maybeCompleteAuthSession on the happy path', () => {
+    safeMaybeCompleteAuthSession();
+    expect(WebBrowser.maybeCompleteAuthSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('swallows SecurityError from maybeCompleteAuthSession', () => {
     vi.mocked(WebBrowser.maybeCompleteAuthSession).mockImplementation(() => {
       throw new DOMException('The operation is insecure.', 'SecurityError');
     });
 
     expect(() => safeMaybeCompleteAuthSession()).not.toThrow();
+  });
+
+  it('rethrows non-security errors', () => {
+    vi.mocked(WebBrowser.maybeCompleteAuthSession).mockImplementation(() => {
+      throw new Error('ERR_WEB_BROWSER_REDIRECT');
+    });
+
+    expect(() => safeMaybeCompleteAuthSession()).toThrow('ERR_WEB_BROWSER_REDIRECT');
   });
 });

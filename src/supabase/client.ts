@@ -11,6 +11,10 @@ export function isSupabaseConfigured(): boolean {
 
 const authStorage = createResilientAuthStorage();
 
+export function getSupabaseAuthStorage(): typeof authStorage {
+  return authStorage;
+}
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: authStorage,

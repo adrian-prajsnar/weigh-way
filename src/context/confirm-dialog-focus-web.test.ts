@@ -1,8 +1,9 @@
 /** @vitest-environment happy-dom */
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   handleConfirmDialogTabKey,
   listConfirmDialogFocusables,
+  subscribeConfirmDialogKeydown,
 } from './confirm-dialog-focus-web';
 
 function mountDialog() {
@@ -17,6 +18,16 @@ function mountDialog() {
 }
 
 describe('confirm-dialog-focus-web', () => {
+  it('registers keydown in the capture phase', () => {
+    const addSpy = vi.spyOn(document, 'addEventListener');
+    const listener = vi.fn();
+    const unsubscribe = subscribeConfirmDialogKeydown(listener);
+
+    expect(addSpy).toHaveBeenCalledWith('keydown', listener, true);
+    unsubscribe();
+    addSpy.mockRestore();
+  });
+
   it('lists only enabled dialog action controls', () => {
     const root = mountDialog();
     const focusables = listConfirmDialogFocusables(root);

@@ -7,68 +7,81 @@ export type AuthSessionStorage = {
   removeItem: (key: string) => Promise<void>;
 };
 
-function createMemoryAuthStorage(): AuthSessionStorage {
-  const store: Record<string, string> = {};
-  return {
-    getItem: async (key) => store[key] ?? null,
-    setItem: async (key, value) => {
-      store[key] = value;
-    },
-    removeItem: async (key) => {
-      delete store[key];
-    },
-  };
+const PROBE_KEY = '@weigh-way/auth-storage-probe';
+
+export async function probePersistentAuthStorage(): Promise<boolean> {
+  try {
+    await AsyncStorage.setItem(PROBE_KEY, '1');
+    const value = await AsyncStorage.getItem(PROBE_KEY);
+    if (value !== '1') {
+      return false;
+    }
+    await AsyncStorage.removeItem(PROBE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** Supabase auth storage that falls back to in-memory when persistent storage throws. */
-export function createResilientAuthStorage(): AuthSessionStorage {
-  const memory = createMemoryAuthStorage();
-  let useMemory = false;
+async function removeFromDisk(key: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch {
+    // Best-effort: sign-out must still attempt disk even when storage is blocked.
+  }
+}
 
-  const switchToMemory = () => {
-    if (!useMemory && isDevWarningsEnabled()) {
+/** Supabase auth storage: disk-first with session overlay when writes fail; remove always hits disk. */
+export function createResilientAuthStorage(): AuthSessionStorage {
+  const sessionOverlay = new Map<string, string>();
+  let probeSettled = false;
+  let diskBlocked = false;
+
+  const ensureProbe = async () => {
+    if (probeSettled) {
+      return;
+    }
+    probeSettled = true;
+    diskBlocked = !(await probePersistentAuthStorage());
+    if (diskBlocked && isDevWarningsEnabled()) {
       console.warn(
-        '[weigh-way] Supabase auth session storage is unavailable; using in-memory session only.',
+        '[weigh-way] Persistent auth storage is blocked; sessions will not survive reload.',
       );
     }
-    useMemory = true;
   };
 
   return {
     async getItem(key) {
-      if (useMemory) {
-        return memory.getItem(key);
+      await ensureProbe();
+      if (sessionOverlay.has(key)) {
+        return sessionOverlay.get(key) ?? null;
       }
       try {
         return await AsyncStorage.getItem(key);
       } catch {
-        switchToMemory();
-        return memory.getItem(key);
+        // Transient read failure: do not cache; next call retries disk.
+        return null;
       }
     },
     async setItem(key, value) {
-      if (useMemory) {
-        await memory.setItem(key, value);
+      await ensureProbe();
+      if (diskBlocked) {
+        sessionOverlay.set(key, value);
+        await removeFromDisk(key);
         return;
       }
       try {
         await AsyncStorage.setItem(key, value);
+        sessionOverlay.delete(key);
       } catch {
-        switchToMemory();
-        await memory.setItem(key, value);
+        await removeFromDisk(key);
+        sessionOverlay.set(key, value);
       }
     },
     async removeItem(key) {
-      if (useMemory) {
-        await memory.removeItem(key);
-        return;
-      }
-      try {
-        await AsyncStorage.removeItem(key);
-      } catch {
-        switchToMemory();
-        await memory.removeItem(key);
-      }
+      await ensureProbe();
+      sessionOverlay.delete(key);
+      await removeFromDisk(key);
     },
   };
 }

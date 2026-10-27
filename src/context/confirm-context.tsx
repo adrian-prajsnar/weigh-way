@@ -12,6 +12,7 @@ import { getConfirmDialogPressableA11y } from './confirm-dialog-a11y';
 import {
   focusFirstConfirmDialogControl,
   handleConfirmDialogTabKey,
+  subscribeConfirmDialogKeydown,
 } from './confirm-dialog-focus-web';
 import { useTranslation } from '../i18n/language-context';
 import { useAppStyles } from '../theme/styles';
@@ -76,10 +77,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       handleConfirmDialogTabKey(frame, event, document.activeElement);
     };
 
-    document.addEventListener('keydown', onKeyDown, true);
+    const unsubscribeKeydown = subscribeConfirmDialogKeydown(onKeyDown);
     return () => {
       cancelAnimationFrame(focusTimer);
-      document.removeEventListener('keydown', onKeyDown, true);
+      unsubscribeKeydown();
     };
   }, [pending?.id, pending]);
 

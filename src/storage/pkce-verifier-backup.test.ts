@@ -6,8 +6,8 @@ vi.mock('../supabase/auth-storage-key', () => ({
   getSupabaseLegacyPkceVerifierKey: () => 'sb-test-auth-token-code-verifier',
 }));
 
-vi.mock('@react-native-async-storage/async-storage', () => ({
-  default: {
+vi.mock('../supabase/client', () => ({
+  getSupabaseAuthStorage: () => ({
     getItem: (key: string) => Promise.resolve(storage.get(key) ?? null),
     setItem: (key: string, value: string) => {
       storage.set(key, value);
@@ -17,7 +17,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
       storage.delete(key);
       return Promise.resolve();
     },
-  },
+  }),
 }));
 
 // eslint-disable-next-line import/first -- load after vi.mock

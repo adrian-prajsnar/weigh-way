@@ -11,42 +11,119 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 /* eslint-disable import/first -- after vi.mock */
-import { createResilientAuthStorage } from './resilient-auth-storage';
+import {
+  createResilientAuthStorage,
+  probePersistentAuthStorage,
+} from './resilient-auth-storage';
 /* eslint-enable import/first */
 
-describe('createResilientAuthStorage', () => {
+const securityError = () => new DOMException('The operation is insecure.', 'SecurityError');
+
+function mockProbeSuccess() {
+  asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+    if (key === '@weigh-way/auth-storage-probe') {
+      return;
+    }
+  });
+  asyncStorage.getItem.mockImplementation(async (key: string) => {
+    if (key === '@weigh-way/auth-storage-probe') {
+      return '1';
+    }
+    return null;
+  });
+  asyncStorage.removeItem.mockImplementation(async () => {});
+}
+
+describe('probePersistentAuthStorage', () => {
   beforeEach(() => {
     asyncStorage.getItem.mockReset();
     asyncStorage.setItem.mockReset();
     asyncStorage.removeItem.mockReset();
   });
 
+  it('returns false when the probe write throws', async () => {
+    asyncStorage.setItem.mockRejectedValueOnce(securityError());
+    await expect(probePersistentAuthStorage()).resolves.toBe(false);
+  });
+});
+
+describe('createResilientAuthStorage', () => {
+  beforeEach(() => {
+    asyncStorage.getItem.mockReset();
+    asyncStorage.setItem.mockReset();
+    asyncStorage.removeItem.mockReset();
+    mockProbeSuccess();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('uses AsyncStorage when reads succeed', async () => {
-    asyncStorage.getItem.mockResolvedValueOnce('token');
-    const storage = createResilientAuthStorage();
+  it('uses disk when reads succeed', async () => {
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      if (key === 'sb-key') {
+        return 'token';
+      }
+      return null;
+    });
 
+    const storage = createResilientAuthStorage();
     await expect(storage.getItem('sb-key')).resolves.toBe('token');
-    expect(asyncStorage.getItem).toHaveBeenCalledWith('sb-key');
   });
 
-  it('falls back to memory when AsyncStorage throws', async () => {
-    const securityError = new DOMException('The operation is insecure.', 'SecurityError');
-    asyncStorage.getItem.mockRejectedValueOnce(securityError);
-    asyncStorage.setItem.mockRejectedValue(securityError);
-    asyncStorage.removeItem.mockRejectedValue(securityError);
+  it('after a transient set error, remove clears disk for a new storage instance', async () => {
+    const disk = new Map<string, string>();
+
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      if (key === 'sb-session') {
+        throw securityError();
+      }
+      disk.set(key, value);
+    });
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      disk.delete(key);
+    });
+
+    const storageA = createResilientAuthStorage();
+    disk.set('sb-session', 'user-a');
+    await storageA.setItem('sb-session', 'user-a-overlay');
+    await storageA.removeItem('sb-session');
+
+    const storageB = createResilientAuthStorage();
+    await expect(storageB.getItem('sb-session')).resolves.toBeNull();
+    expect(disk.has('sb-session')).toBe(false);
+  });
+
+  it('does not permanently hide disk after a transient get error', async () => {
+    let getAttempts = 0;
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      if (key === 'sb-session') {
+        getAttempts += 1;
+        if (getAttempts === 1) {
+          throw securityError();
+        }
+        return 'still-on-disk';
+      }
+      return null;
+    });
 
     const storage = createResilientAuthStorage();
-    await storage.setItem('sb-key', 'session');
-    await expect(storage.getItem('sb-key')).resolves.toBe('session');
-    await storage.removeItem('sb-key');
-    await expect(storage.getItem('sb-key')).resolves.toBeNull();
-
-    expect(asyncStorage.setItem).toHaveBeenCalledTimes(1);
-    await storage.setItem('sb-key', 'again');
-    expect(asyncStorage.setItem).toHaveBeenCalledTimes(1);
+    await expect(storage.getItem('sb-session')).resolves.toBeNull();
+    await expect(storage.getItem('sb-session')).resolves.toBe('still-on-disk');
   });
 });

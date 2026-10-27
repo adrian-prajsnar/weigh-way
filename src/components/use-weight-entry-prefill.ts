@@ -36,6 +36,7 @@ export function useWeightEntryPrefill({
       prefillAnchorRef.current,
       nextAnchor,
       weightInputTouchedRef.current,
+      weightInput,
     );
     prefillAnchorRef.current = update.nextAnchor;
     if (update.resetTouched) {
@@ -44,7 +45,7 @@ export function useWeightEntryPrefill({
     if (update.nextInput !== null) {
       setWeightInput(update.nextInput);
     }
-  }, [selectedDateKey, existingEntryWeightKg, units, locale]);
+  }, [selectedDateKey, existingEntryWeightKg, units, locale, weightInput]);
 
   return {
     weightInput,

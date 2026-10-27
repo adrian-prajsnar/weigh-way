@@ -10,6 +10,7 @@ import { useTranslation } from '../i18n/language-context';
 import { HeightEntry, WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
 import { BmiBadge } from './bmi-badge';
+import { shouldShowBmiUnavailableBadge } from './weight-with-bmi-availability';
 
 type WeightWithBmiProps = {
   entry: WeightEntry;
@@ -50,7 +51,7 @@ export function WeightWithBmi({
     <BmiBadge
       bmi={bmi}
       compact={compactBmi}
-      showUnavailable={!isProfileLoading && heightCm === null}
+      showUnavailable={shouldShowBmiUnavailableBadge(isProfileLoading, heightCm)}
       onPress={() =>
         openWeighIn({
           date: entry.date,

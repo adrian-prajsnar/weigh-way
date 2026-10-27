@@ -39,23 +39,47 @@ function isRecordValid(record: PendingFlowRecord | null): boolean {
   return Date.now() - record.startedAt < AUTH_PENDING_FLOW_TTL_MS;
 }
 
+async function getItemBestEffort(key: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+async function setItemBestEffort(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value);
+  } catch {
+    // Blocked storage must not break sign-in or sign-out.
+  }
+}
+
+async function removeItemBestEffort(key: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch {
+    // Blocked storage must not break sign-in or sign-out.
+  }
+}
+
 async function writePending(key: string, email: string): Promise<void> {
   const payload: PendingFlowRecord = {
     startedAt: Date.now(),
     email: email.trim().toLowerCase(),
   };
-  await AsyncStorage.setItem(key, JSON.stringify(payload));
+  await setItemBestEffort(key, JSON.stringify(payload));
 }
 
 async function readPending(
   key: string,
   backupKind: PkceBackupKind,
 ): Promise<PendingFlowRecord | null> {
-  const raw = await AsyncStorage.getItem(key);
+  const raw = await getItemBestEffort(key);
   const record = parsePendingRecord(raw);
   if (!isRecordValid(record)) {
     if (raw) {
-      await AsyncStorage.removeItem(key);
+      await removeItemBestEffort(key);
       await clearPkceVerifierBackup(backupKind);
     }
     return null;
@@ -123,15 +147,16 @@ export async function getAuthLinkErrorContext(): Promise<AuthLinkErrorContext> {
 }
 
 export async function clearEmailConfirmationPending(): Promise<void> {
-  await AsyncStorage.removeItem(EMAIL_CONFIRMATION_PENDING_KEY);
+  await removeItemBestEffort(EMAIL_CONFIRMATION_PENDING_KEY);
   await clearPkceVerifierBackup('signup');
 }
 
 export async function clearPasswordResetPending(): Promise<void> {
-  await AsyncStorage.removeItem(PASSWORD_RESET_PENDING_KEY);
+  await removeItemBestEffort(PASSWORD_RESET_PENDING_KEY);
   await clearPkceVerifierBackup('recovery');
 }
 
 export async function clearAuthPendingFlows(): Promise<void> {
-  await Promise.all([clearEmailConfirmationPending(), clearPasswordResetPending()]);
+  await clearEmailConfirmationPending();
+  await clearPasswordResetPending();
 }

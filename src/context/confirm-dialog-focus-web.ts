@@ -26,6 +26,13 @@ export function focusFirstConfirmDialogControl(root: ParentNode): void {
   first?.focus();
 }
 
+export function subscribeConfirmDialogKeydown(
+  listener: (event: KeyboardEvent) => void,
+): () => void {
+  document.addEventListener('keydown', listener, true);
+  return () => document.removeEventListener('keydown', listener, true);
+}
+
 export function handleConfirmDialogTabKey(
   root: ParentNode,
   event: KeyboardEvent,
