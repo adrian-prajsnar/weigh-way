@@ -36,12 +36,21 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [phraseInput, setPhraseInput] = useState('');
+  const [secondaryActionsEnabled, setSecondaryActionsEnabled] = useState(false);
   const resolverRef = useRef<((value: boolean) => void) | null>(null);
   const idRef = useRef(0);
 
   useEffect(() => {
     setPhraseInput('');
-  }, [pending?.id]);
+    if (!pending) {
+      setSecondaryActionsEnabled(false);
+      return;
+    }
+
+    setSecondaryActionsEnabled(false);
+    const timer = setTimeout(() => setSecondaryActionsEnabled(true), 320);
+    return () => clearTimeout(timer);
+  }, [pending?.id, pending]);
 
   const close = useCallback((result: boolean) => {
     setPending(null);
@@ -78,10 +87,15 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
             <View style={styles.modalBackdropCentered}>
               <Pressable
                 style={StyleSheet.absoluteFill}
-                onPress={() => close(false)}
+                onPress={() => {
+                  if (secondaryActionsEnabled) {
+                    close(false);
+                  }
+                }}
                 focusable={false}
-                accessibilityRole="button"
-                accessibilityLabel={cancelLabel}
+                accessible={false}
+                importantForAccessibility="no-hide-descendants"
+                accessibilityElementsHidden
                 {...(Platform.OS === 'web'
                   ? { dataSet: { wwModalDismiss: 'true', wwConfirmDismiss: 'true' }, tabIndex: -1 }
                   : {})}
@@ -130,7 +144,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                           !phraseMatches && styles.buttonDisabled,
                           pressed && phraseMatches && styles.buttonPressed,
                         ]}
-                        onPress={() => close(true)}
+                        onPress={() => {
+                          if (!secondaryActionsEnabled) {
+                            return;
+                          }
+                          close(true);
+                        }}
                       >
                         <Text
                           style={

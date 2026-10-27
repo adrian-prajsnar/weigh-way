@@ -1,11 +1,15 @@
 const fs = require('fs');
 const path = require('path');
 
-const root = path.join(__dirname, '..');
 const version = process.argv[2];
+const rootFromArg = process.argv[3];
+const rootFromEnv = process.env.WEIGH_WAY_PROJECT_ROOT?.trim();
+const root = path.resolve(
+  rootFromArg || rootFromEnv || path.join(__dirname, '..'),
+);
 
 if (!version || !/^\d+\.\d+\.\d+/.test(version)) {
-  console.error('Usage: node scripts/bump-expo-version.cjs <version>');
+  console.error('Usage: node scripts/bump-expo-version.cjs <version> [projectRoot]');
   process.exit(1);
 }
 
@@ -42,10 +46,19 @@ const versionCodeMatch = appConfig.match(/versionCode:\s*(\d+)/);
 const nextBuildNumber = versionCodeMatch ? Number.parseInt(versionCodeMatch[1], 10) + 1 : 1;
 
 appConfig = appConfig.replace(/versionCode:\s*\d+/, `versionCode: ${nextBuildNumber}`);
-appConfig = appConfig.replace(
-  /buildNumber:\s*['"]?\d+['"]?/,
-  `buildNumber: '${nextBuildNumber}'`,
-);
+if (/buildNumber:\s*['"]?\d+['"]?/.test(appConfig)) {
+  appConfig = appConfig.replace(
+    /buildNumber:\s*['"]?\d+['"]?/,
+    `buildNumber: '${nextBuildNumber}'`,
+  );
+} else if (/ios:\s*\{/.test(appConfig)) {
+  appConfig = appConfig.replace(/ios:\s*\{/, `ios: {\n      buildNumber: '${nextBuildNumber}',`);
+} else {
+  appConfig = appConfig.replace(
+    /android:\s*\{/,
+    `ios: {\n      buildNumber: '${nextBuildNumber}',\n    },\n    android: {`,
+  );
+}
 
 fs.writeFileSync(appConfigPath, appConfig);
 

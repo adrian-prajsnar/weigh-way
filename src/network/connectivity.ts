@@ -1,11 +1,6 @@
 import { Platform } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
-import {
-  getWebReachabilityUrl,
-  resolveIsOffline,
-  shouldBlockSaveForOffline,
-  shouldConfigureWebReachability,
-} from './connectivity-status';
+import { getWebReachabilityUrl, shouldConfigureWebReachability } from './connectivity-status';
 
 export {
   getWebDemoBasePath,

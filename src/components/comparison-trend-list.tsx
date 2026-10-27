@@ -1,4 +1,3 @@
-import { View } from 'react-native';
 import { useTranslation } from '../i18n/language-context';
 import { TrendGranularity, TrendRow, WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';

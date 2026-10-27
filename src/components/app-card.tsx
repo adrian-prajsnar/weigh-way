@@ -1,7 +1,8 @@
 import { ReactNode } from 'react';
 import { StyleProp, Text, View, ViewStyle } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { LoadingCardOverlay } from './loading-card-overlay';
+import { useAppCardEnterAnimation } from './use-app-card-enter-animation';
 import { useAppStyles } from '../theme/styles';
 import { radius } from '../theme/tokens';
 
@@ -29,13 +30,15 @@ export function AppCard({
   children,
 }: AppCardProps) {
   const styles = useAppStyles();
+  const reducedMotion = useReducedMotion();
   const hasHeader = Boolean(title || subtitle || right);
-  const entering = animateEntry ? FadeInDown.duration(320).delay(delay) : undefined;
+  const skipEnterAnimation = !animateEntry || reducedMotion;
+  const { animatedStyle, pointerEvents } = useAppCardEnterAnimation(delay, skipEnterAnimation);
 
   return (
     <Animated.View
-      entering={entering}
-      style={styles.loadingCard}
+      pointerEvents={pointerEvents}
+      style={[styles.loadingCard, animatedStyle]}
     >
       {isBusy ? (
         <LoadingCardOverlay

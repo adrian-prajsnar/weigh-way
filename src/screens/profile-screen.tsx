@@ -25,7 +25,7 @@ import { useConfirm } from '../context/confirm-context';
 import { useToast } from '../context/toast-context';
 import { useSupabaseAuth } from '../context/supabase-auth-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
-import { useScrollContentStyle } from '../hooks/use-scroll-content-style';
+import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTranslation } from '../i18n/language-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -110,7 +110,7 @@ export function ProfileScreen({
   const { t, locale, preference: languagePreference, setPreference: setLanguagePreference } =
     useTranslation();
   const { preference, setPreference } = useTheme();
-  const { units, preference: unitPreference, setPreference: setUnitPreference } = useUnits();
+  const { preference: unitPreference, setPreference: setUnitPreference } = useUnits();
   const { session, signOut, deleteAccount } = useSupabaseAuth();
   const {
     entries,
@@ -135,7 +135,7 @@ export function ProfileScreen({
   const { showError, showInfo, showSuccess } = useToast();
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
-  const scrollContentStyle = useScrollContentStyle();
+  const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
   const user = session?.user;
   const dateLocale = getDateLocale(locale);
   const emDash = t('common.emDash');
@@ -369,8 +369,8 @@ export function ProfileScreen({
             scrollY={scrollY}
           />
           <Animated.ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={scrollContentStyle}
+            style={scrollViewStyle}
+            contentContainerStyle={contentContainerStyle}
             onScroll={onScroll}
             scrollEventThrottle={16}
             refreshControl={

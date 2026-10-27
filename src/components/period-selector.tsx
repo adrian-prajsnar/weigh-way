@@ -37,7 +37,7 @@ export function PeriodSelector({
   showAgeYear = false,
 }: PeriodSelectorProps) {
   const styles = useAppStyles();
-  const { t, locale } = useTranslation();
+  const { t } = useTranslation();
 
   const options = useMemo(() => {
     const values = showAgeYear
@@ -47,7 +47,7 @@ export function PeriodSelector({
       value,
       label: t(PERIOD_KEYS[value]),
     }));
-  }, [showAgeYear, t, locale]);
+  }, [showAgeYear, t]);
 
   return (
     <ScrollView

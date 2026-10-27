@@ -131,7 +131,7 @@ function normalCdf(z: number): number {
 }
 
 function interpolateLms(
-  table: ReadonlyArray<readonly [number, number, number, number]>,
+  table: readonly (readonly [number, number, number, number])[],
   ageMonths: number,
 ): { l: number; m: number; s: number } | null {
   if (table.length === 0) {

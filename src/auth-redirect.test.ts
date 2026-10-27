@@ -77,13 +77,14 @@ vi.mock('./storage/auth-last-exchanged-code', () => ({
   }),
 }));
 
-// eslint-disable-next-line import/first -- load after vi.mock
+/* eslint-disable import/first -- load after vi.mock */
 import { formatAuthLinkError } from './auth-errors';
 import {
   beginOAuthFlowExpectation,
   createSessionFromUrl,
   resetOAuthRedirectState,
 } from './auth-redirect';
+/* eslint-enable import/first */
 
 const PKCE_VERIFIER_MISMATCH = {
   code: 'bad_code_verifier',

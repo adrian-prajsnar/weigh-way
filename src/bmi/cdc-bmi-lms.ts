@@ -1,7 +1,7 @@
 // CDC 2000 BMI-for-age LMS parameters (bmiagerev.csv).
 // Sex 1 = male, 2 = female. Ages are months. Public domain.
 
-export const CDC_BMI_LMS_MALE: ReadonlyArray<readonly [number, number, number, number]> = [
+export const CDC_BMI_LMS_MALE: readonly (readonly [number, number, number, number])[] = [
   [24, -2.01118107, 16.57502768, 0.080592465],
   [24.5, -1.9823736, 16.54777487, 0.080127429],
   [25.5, -1.92410017, 16.49442763, 0.079233994],
@@ -223,7 +223,7 @@ export const CDC_BMI_LMS_MALE: ReadonlyArray<readonly [number, number, number, n
   [240.5, -1.84358058, 23.04137734, 0.134675001],
 ];
 
-export const CDC_BMI_LMS_FEMALE: ReadonlyArray<readonly [number, number, number, number]> = [
+export const CDC_BMI_LMS_FEMALE: readonly (readonly [number, number, number, number])[] = [
   [24, -0.98660853, 16.42339664, 0.085451785],
   [24.5, -1.02449683, 16.38804056, 0.085025838],
   [25.5, -1.10269835, 16.3189719, 0.084214052],
