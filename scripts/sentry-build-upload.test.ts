@@ -1,5 +1,8 @@
+import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { shouldDisableSentryAutoUpload } from './sentry-build-upload';
+
+const require = createRequire(import.meta.url);
+const { shouldDisableSentryAutoUpload } = require('./sentry-build-upload.cjs');
 
 describe('shouldDisableSentryAutoUpload', () => {
   it('disables upload when org, project, or auth token is missing', () => {

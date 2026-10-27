@@ -33,13 +33,13 @@ describe('locale-aware weight formatting', () => {
 
   it('formats metric weights with a comma decimal separator in Polish', () => {
     setI18nLocale('pl');
-    expect(formatWeightValue(82, 'metric')).toBe('82,00');
-    expect(formatDecimal(1.5, 1, 1)).toBe('1,5');
+    expect(formatWeightValue(82, 'metric', 'pl')).toBe('82,00');
+    expect(formatDecimal(1.5, 1, 1, 'pl')).toBe('1,5');
   });
 
   it('keeps a dot decimal separator in English', () => {
     setI18nLocale('en');
-    expect(formatWeightValue(82, 'metric')).toBe('82.00');
+    expect(formatWeightValue(82, 'metric', 'en')).toBe('82.00');
   });
 });
 
@@ -60,8 +60,8 @@ describe('parseWeightInput', () => {
 
   it('preserves stored kg when imperial display is unchanged', () => {
     const storedKg = 73.1;
-    const display = formatWeightValue(storedKg, 'imperial');
-    expect(resolveWeightKgForSave(display, 'imperial', storedKg)).toBe(storedKg);
+    const display = formatWeightValue(storedKg, 'imperial', 'en');
+    expect(resolveWeightKgForSave(display, 'imperial', 'en', storedKg)).toBe(storedKg);
     expect(parseWeightInput(display, 'imperial')).not.toBe(storedKg);
   });
 });

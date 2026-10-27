@@ -66,7 +66,7 @@ export function WeightEntryFormBody({
 }: WeightEntryFormBodyProps) {
   const styles = useAppStyles();
   const colors = useColors();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, birthDate, sex, isLoading: isProfileLoading } = useSharedUserProfile();
   const { showBmi } = useSharedBmiDisplay();
@@ -93,9 +93,9 @@ export function WeightEntryFormBody({
   const heightAtDate = getHeightAtDate(heightEntries, selectedDateKey);
   const parsedWeightKg = useMemo(
     () =>
-      resolveWeightKgForSave(weightInput, units, existingEntryWeightKg) ??
+      resolveWeightKgForSave(weightInput, units, locale, existingEntryWeightKg) ??
       parseWeightInput(weightInput, units),
-    [weightInput, units, existingEntryWeightKg],
+    [weightInput, units, locale, existingEntryWeightKg],
   );
 
   const previewBmi = useMemo(() => {
@@ -117,9 +117,11 @@ export function WeightEntryFormBody({
 
   useEffect(() => {
     setWeightInput(
-      existingEntryWeightKg !== undefined ? formatWeightValue(existingEntryWeightKg, units) : '',
+      existingEntryWeightKg !== undefined
+        ? formatWeightValue(existingEntryWeightKg, units, locale)
+        : '',
     );
-  }, [selectedDateKey, existingEntryWeightKg, units]);
+  }, [selectedDateKey, existingEntryWeightKg, units, locale]);
 
   useEffect(() => {
     if (!autoFocusWeight) {
@@ -144,7 +146,9 @@ export function WeightEntryFormBody({
 
     const deltaKg =
       units === 'imperial' ? lbToKg(WEIGHT_STEP_LB) * direction : WEIGHT_STEP_KG * direction;
-    setWeightInput(formatWeightValue(Math.round((current + deltaKg) * 100) / 100, units));
+    setWeightInput(
+      formatWeightValue(Math.round((current + deltaKg) * 100) / 100, units, locale),
+    );
   };
 
   const decreaseWeightStepper = useWebStepperPress(() => adjustWeight(-1));
@@ -160,10 +164,10 @@ export function WeightEntryFormBody({
       return;
     }
 
-    const weightKg = resolveWeightKgForSave(weightInput, units, existingEntryWeightKg);
+    const weightKg = resolveWeightKgForSave(weightInput, units, locale, existingEntryWeightKg);
     if (weightKg === null) {
       const message = normalizeWeightInputText(weightInput)
-        ? getWeightRangeMessage(units)
+        ? getWeightRangeMessage(units, locale)
         : t('entryForm.invalidWeight');
       setWeightValidationMessage(message);
       showError(message);

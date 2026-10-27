@@ -22,7 +22,7 @@ type ComparisonTrendRowsProps = {
 
 function PeriodExtraStats({ stats }: { stats: WeightStats }) {
   const styles = useAppStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { units } = useUnits();
   const emDash = t('common.emDash');
 
@@ -31,7 +31,7 @@ function PeriodExtraStats({ stats }: { stats: WeightStats }) {
   }
 
   const formatValue = (value: number | null): string =>
-    value === null ? emDash : formatWeightValue(value, units);
+    value === null ? emDash : formatWeightValue(value, units, locale);
 
   const items = [
     { label: t('stats.lowest'), value: formatValue(stats.min), align: 'left' as const },
@@ -68,7 +68,7 @@ function PeriodAverageWithBmi({
   range: DateRange;
 }) {
   const styles = useAppStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, birthDate, sex } = useSharedUserProfile();
   const { showBmi } = useSharedBmiDisplay();
@@ -102,7 +102,9 @@ function PeriodAverageWithBmi({
 
   return (
     <View style={styles.weightWithBmiStacked}>
-      <Text style={styles.historyWeight}>{formatWeightLabel(stats.average, units)}</Text>
+      <Text style={styles.historyWeight}>
+        {formatWeightLabel(stats.average, units, locale)}
+      </Text>
       {badge}
     </View>
   );

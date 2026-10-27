@@ -152,7 +152,7 @@ export function WeightChart({ series, height = 160 }: WeightChartProps) {
       <View style={styles.chartAxisRow}>
         <Text style={styles.chartAxisLabel}>{formatAxisDate(series.points[0].date)}</Text>
         <Text style={styles.chartAxisLabel}>
-          {formatChartWeightRange(series.min, series.max, units)}
+          {formatChartWeightRange(series.min, series.max, units, locale)}
         </Text>
         <Text style={styles.chartAxisLabel}>
           {formatAxisDate(series.points[series.points.length - 1].date)}

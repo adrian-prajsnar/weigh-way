@@ -1,7 +1,5 @@
 /** Whether native Sentry source-map upload should be skipped at build time. */
-export function shouldDisableSentryAutoUpload(
-  env: Record<string, string | undefined> = process.env,
-): boolean {
+function shouldDisableSentryAutoUpload(env = process.env) {
   if (env.SENTRY_DISABLE_AUTO_UPLOAD === 'true') {
     return true;
   }
@@ -12,3 +10,5 @@ export function shouldDisableSentryAutoUpload(
 
   return !(token && org && project);
 }
+
+module.exports = { shouldDisableSentryAutoUpload };

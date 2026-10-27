@@ -28,7 +28,7 @@ type HeroWeightCardProps = {
 
 export function HeroWeightCard({ entries, isLoading, isBusy = false }: HeroWeightCardProps) {
   const styles = useAppStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, birthDate, sex } = useSharedUserProfile();
   const { showBmi } = useSharedBmiDisplay();
@@ -79,7 +79,9 @@ export function HeroWeightCard({ entries, isLoading, isBusy = false }: HeroWeigh
       {latest ? (
         <>
           <View style={styles.heroValueRow}>
-            <Text style={styles.heroValue}>{formatWeightValue(latest.weightKg, units)}</Text>
+            <Text style={styles.heroValue}>
+              {formatWeightValue(latest.weightKg, units, locale)}
+            </Text>
             <Text style={styles.heroUnit}>{getWeightUnitLabel(units)}</Text>
           </View>
           <View style={styles.heroMetaRow}>

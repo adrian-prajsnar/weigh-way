@@ -1,5 +1,8 @@
+import { createRequire } from 'node:module';
 import { ExpoConfig, ConfigContext } from 'expo/config';
-import { shouldDisableSentryAutoUpload } from './src/sentry-build-upload';
+
+const require = createRequire(import.meta.url);
+const { shouldDisableSentryAutoUpload } = require('./scripts/sentry-build-upload.cjs');
 
 const SPLASH_BACKGROUND = '#F6F7F9';
 

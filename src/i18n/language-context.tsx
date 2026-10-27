@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from 'react';
@@ -45,13 +46,18 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<LanguagePreference>(
     demoLocale ?? 'system',
   );
+  const [preferenceReady, setPreferenceReady] = useState(Boolean(demoLocale));
 
   useEffect(() => {
     if (demoLocale) {
       setPreferenceState(demoLocale);
+      setPreferenceReady(true);
       return;
     }
-    void getLanguagePreference().then(setPreferenceState);
+    void getLanguagePreference().then((stored) => {
+      setPreferenceState(stored);
+      setPreferenceReady(true);
+    });
   }, [demoLocale]);
 
   const locale = useMemo(() => {
@@ -65,7 +71,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return preference;
   }, [demoLocale, preference, locales]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setI18nLocale(locale);
   }, [locale]);
 
@@ -100,6 +106,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }),
     [locale, preference, setPreference, t],
   );
+
+  if (!preferenceReady) {
+    return null;
+  }
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

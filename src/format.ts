@@ -1,6 +1,7 @@
 import { getI18nLocale, t } from './i18n';
+import { formatDecimal } from './i18n/locale-number-format';
+import { AppLocale, getDateLocale } from './i18n/resolve-locale';
 import { TranslationKey } from './i18n/translation-keys';
-import { getDateLocale } from './i18n/resolve-locale';
 import {
   cmToFeetInches,
   feetInchesToCm,
@@ -20,23 +21,17 @@ export function getWeightUnitLabel(units: UnitSystem): string {
   return units === 'imperial' ? t('common.lb') : t('common.kg');
 }
 
-export function formatDecimal(
-  value: number,
-  minimumFractionDigits: number,
-  maximumFractionDigits: number,
-): string {
-  const locale = getDateLocale(getI18nLocale());
-  return new Intl.NumberFormat(locale, {
-    minimumFractionDigits,
-    maximumFractionDigits,
-  }).format(value);
-}
+export { formatDecimal } from './i18n/locale-number-format';
 
-export function formatWeightValue(weightKg: number, units: UnitSystem): string {
+export function formatWeightValue(
+  weightKg: number,
+  units: UnitSystem,
+  locale: AppLocale,
+): string {
   if (units === 'imperial') {
-    return formatDecimal(kgToLb(weightKg), 1, 1);
+    return formatDecimal(kgToLb(weightKg), 1, 1, locale);
   }
-  return formatDecimal(weightKg, 2, 2);
+  return formatDecimal(weightKg, 2, 2, locale);
 }
 
 export function normalizeWeightInputText(input: string): string {
@@ -47,6 +42,7 @@ export function normalizeWeightInputText(input: string): string {
 export function resolveWeightKgForSave(
   input: string,
   units: UnitSystem,
+  locale: AppLocale,
   existingWeightKg?: number,
 ): number | null {
   const normalized = normalizeWeightInputText(input);
@@ -55,7 +51,7 @@ export function resolveWeightKgForSave(
   }
 
   if (existingWeightKg !== undefined) {
-    const formattedExisting = formatWeightValue(existingWeightKg, units);
+    const formattedExisting = formatWeightValue(existingWeightKg, units, locale);
     if (normalizeWeightInputText(formattedExisting) === normalized) {
       return existingWeightKg;
     }
@@ -97,29 +93,37 @@ export function parseWeightInput(input: string, units: UnitSystem): number | nul
   return weightKg;
 }
 
-export function getWeightRangeMessage(units: UnitSystem): string {
+export function getWeightRangeMessage(units: UnitSystem, locale: AppLocale): string {
   if (units === 'imperial') {
     return t('validation.weightRangeImperial', {
-      min: formatDecimal(MIN_WEIGHT_LB, 1, 1),
-      max: formatDecimal(MAX_WEIGHT_LB, 1, 1),
+      min: formatDecimal(MIN_WEIGHT_LB, 1, 1, locale),
+      max: formatDecimal(MAX_WEIGHT_LB, 1, 1, locale),
     });
   }
   return t('validation.weightRangeMetric', {
-    min: formatDecimal(MIN_WEIGHT_KG, 2, 2),
-    max: formatDecimal(MAX_WEIGHT_KG, 2, 2),
+    min: formatDecimal(MIN_WEIGHT_KG, 2, 2, locale),
+    max: formatDecimal(MAX_WEIGHT_KG, 2, 2, locale),
   });
 }
 
-export function formatWeightLabel(weightKg: number, units: UnitSystem): string {
-  return `${formatWeightValue(weightKg, units)} ${getWeightUnitLabel(units)}`;
+export function formatWeightLabel(
+  weightKg: number,
+  units: UnitSystem,
+  locale: AppLocale,
+): string {
+  return `${formatWeightValue(weightKg, units, locale)} ${getWeightUnitLabel(units)}`;
 }
 
-export function formatWeightDifference(deltaKg: number | null, units: UnitSystem): string {
+export function formatWeightDifference(
+  deltaKg: number | null,
+  units: UnitSystem,
+  locale: AppLocale,
+): string {
   if (deltaKg === null) {
     return t('common.emDash');
   }
   const sign = deltaKg > 0 ? '+' : '';
-  return `${sign}${formatWeightValue(deltaKg, units)} ${getWeightUnitLabel(units)}`;
+  return `${sign}${formatWeightValue(deltaKg, units, locale)} ${getWeightUnitLabel(units)}`;
 }
 
 export function toDateKey(date: Date): string {
@@ -724,15 +728,20 @@ export function parseHeightInput(
   return total;
 }
 
-export function formatChartWeightRange(minKg: number, maxKg: number, units: UnitSystem): string {
+export function formatChartWeightRange(
+  minKg: number,
+  maxKg: number,
+  units: UnitSystem,
+  locale: AppLocale,
+): string {
   if (units === 'imperial') {
     return t('chart.rangeLabelImperial', {
-      min: formatWeightValue(minKg, units),
-      max: formatWeightValue(maxKg, units),
+      min: formatWeightValue(minKg, units, locale),
+      max: formatWeightValue(maxKg, units, locale),
     });
   }
   return t('chart.rangeLabelMetric', {
-    min: formatWeightValue(minKg, units),
-    max: formatWeightValue(maxKg, units),
+    min: formatWeightValue(minKg, units, locale),
+    max: formatWeightValue(maxKg, units, locale),
   });
 }

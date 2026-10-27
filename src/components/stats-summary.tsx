@@ -25,7 +25,7 @@ export function StatsSummary({
   range,
 }: StatsSummaryProps) {
   const styles = useAppStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, birthDate, sex } = useSharedUserProfile();
   const { showBmi } = useSharedBmiDisplay();
@@ -39,7 +39,7 @@ export function StatsSummary({
   const emDash = t('common.emDash');
 
   const formatValue = (value: number | null): string =>
-    value === null ? emDash : formatWeightValue(value, units);
+    value === null ? emDash : formatWeightValue(value, units, locale);
 
   const bmiBadge = (
     value: number | null,

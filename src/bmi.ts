@@ -1,6 +1,8 @@
 import { getAgeOnDate } from './age';
 import { CDC_BMI_LMS_FEMALE, CDC_BMI_LMS_MALE } from './bmi/cdc-bmi-lms';
 import { t } from './i18n';
+import { formatDecimal } from './i18n/locale-number-format';
+import { AppLocale } from './i18n/resolve-locale';
 import { TranslationKey } from './i18n/translation-keys';
 import { ColorScheme, palettes } from './theme/tokens';
 import { BiologicalSex } from './types';
@@ -257,6 +259,6 @@ export function getBmiTheme(category: BmiCategory, scheme: ColorScheme): BmiThem
   return BMI_THEMES[scheme][category];
 }
 
-export function formatBmiValue(value: number): string {
-  return value.toFixed(1);
+export function formatBmiValue(value: number, locale: AppLocale): string {
+  return formatDecimal(value, 1, 1, locale);
 }
