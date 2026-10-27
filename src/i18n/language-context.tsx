@@ -54,6 +54,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    let settled = false;
+    const timeout = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      setPreferenceState('system');
+      setPreferenceReady(true);
+    }, 2000);
+
     void getLanguagePreference()
       .then((stored) => {
         setPreferenceState(stored);
@@ -62,8 +71,15 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         setPreferenceState('system');
       })
       .finally(() => {
+        settled = true;
+        clearTimeout(timeout);
         setPreferenceReady(true);
       });
+
+    return () => {
+      settled = true;
+      clearTimeout(timeout);
+    };
   }, [demoLocale]);
 
   const locale = useMemo(

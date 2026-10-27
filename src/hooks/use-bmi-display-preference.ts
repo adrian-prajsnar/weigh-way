@@ -9,10 +9,15 @@ export function useBmiDisplayPreference() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    void getShowBmiPreference().then((value) => {
-      setShowBmiState(value);
-      setIsLoading(false);
-    });
+    void getShowBmiPreference()
+      .then((value) => {
+        setShowBmiState(value);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setShowBmiState(true);
+        setIsLoading(false);
+      });
   }, []);
 
   const setShowBmi = useCallback(async (value: boolean) => {

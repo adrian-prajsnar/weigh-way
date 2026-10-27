@@ -21,7 +21,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>('system');
 
   useEffect(() => {
-    void getThemePreference().then(setPreferenceState);
+    void getThemePreference()
+      .then(setPreferenceState)
+      .catch(() => setPreferenceState('system'));
   }, []);
 
   const setPreference = useCallback(async (next: ThemePreference) => {

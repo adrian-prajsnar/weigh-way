@@ -6,9 +6,9 @@ import {
   Pressable,
   Text,
   TextInput,
-  TextInputInstance,
   View,
 } from 'react-native';
+import type { TextInputInstance } from 'react-native';
 import { calculateBmi } from '../bmi';
 import { BmiBadge } from './bmi-badge';
 import { DateField } from './date-field';
@@ -42,6 +42,7 @@ import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { spacing } from '../theme/tokens';
 import { useWebStepperPress } from '../theme/use-web-stepper-press';
+import { useWeightEntryPrefill } from './use-weight-entry-prefill';
 
 type WeightEntryFormBodyProps = {
   entries: WeightEntry[];
@@ -76,18 +77,11 @@ export function WeightEntryFormBody({
   const { isOffline } = useNetworkStatus();
   const { upsertEntry } = useSharedWeightEntries();
   const [selectedDate, setSelectedDate] = useState(initialDate ?? getTodayDate);
-  const [weightInput, setWeightInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [weightValidationMessage, setWeightValidationMessage] = useState<string | null>(null);
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
   const weightInputRef = useRef<TextInputInstance>(null);
-  const weightInputTouchedRef = useRef(false);
-  const prefillAnchorRef = useRef({
-    selectedDateKey: '',
-    units,
-    locale,
-  });
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
   const existingEntryForDate = useMemo(
@@ -95,7 +89,13 @@ export function WeightEntryFormBody({
     [entries, selectedDateKey],
   );
   const existingEntryWeightKg = existingEntryForDate?.weightKg;
-  const weightPlaceholder = units === 'imperial' ? '0.0' : '0.00';
+  const { weightInput, setWeightInput, weightInputTouchedRef } = useWeightEntryPrefill({
+    selectedDateKey,
+    units,
+    locale,
+    existingEntryWeightKg,
+  });
+  const weightPlaceholder = formatWeightValue(0, units, locale);
   const heightAtDate = getHeightAtDate(heightEntries, selectedDateKey);
   const parsedWeightKg = useMemo(
     () =>
@@ -120,32 +120,6 @@ export function WeightEntryFormBody({
       setSelectedDate(initialDate);
     }
   }, [initialDate]);
-
-  useEffect(() => {
-    const anchor = prefillAnchorRef.current;
-    const contextChanged =
-      anchor.selectedDateKey !== selectedDateKey || anchor.units !== units;
-
-    if (contextChanged) {
-      weightInputTouchedRef.current = false;
-      prefillAnchorRef.current = { selectedDateKey, units, locale };
-      setWeightInput(
-        existingEntryWeightKg !== undefined
-          ? formatWeightValue(existingEntryWeightKg, units, locale)
-          : '',
-      );
-      return;
-    }
-
-    if (
-      !weightInputTouchedRef.current &&
-      existingEntryWeightKg !== undefined &&
-      anchor.locale !== locale
-    ) {
-      prefillAnchorRef.current = { selectedDateKey, units, locale };
-      setWeightInput(formatWeightValue(existingEntryWeightKg, units, locale));
-    }
-  }, [selectedDateKey, existingEntryWeightKg, units, locale]);
 
   useEffect(() => {
     if (!autoFocusWeight) {
@@ -322,7 +296,7 @@ export function WeightEntryFormBody({
             <Text style={styles.fieldLabel}>{t('entryForm.estimatedBmi')}</Text>
             <BmiBadge
               bmi={previewBmi}
-              showUnavailable={heightAtDate === null}
+              showUnavailable={!isProfileLoading && heightAtDate === null}
               onPress={() => {
                 openWeighIn({
                   date: selectedDateKey,

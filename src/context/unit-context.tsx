@@ -28,7 +28,9 @@ export function UnitProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<UnitPreference>('system');
 
   useEffect(() => {
-    void getUnitPreference().then(setPreferenceState);
+    void getUnitPreference()
+      .then(setPreferenceState)
+      .catch(() => setPreferenceState('system'));
   }, []);
 
   const measurementSystem = locales[0]?.measurementSystem;

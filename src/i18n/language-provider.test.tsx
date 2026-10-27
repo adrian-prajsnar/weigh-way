@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- vitest RN web shim
@@ -33,8 +33,18 @@ function LocaleProbe() {
 }
 
 describe('LanguageProvider', () => {
+  beforeEach(() => {
+    vi.mocked(getLanguagePreference).mockReset();
+    vi.mocked(getLanguagePreference).mockResolvedValue('en');
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('falls back to system language when preference storage rejects', async () => {
-    vi.mocked(getLanguagePreference).mockRejectedValueOnce(new Error('storage blocked'));
+    const securityError = new DOMException('The operation is insecure.', 'SecurityError');
+    vi.mocked(getLanguagePreference).mockRejectedValueOnce(securityError);
 
     render(
       <LanguageProvider>
@@ -45,6 +55,22 @@ describe('LanguageProvider', () => {
     await waitFor(() => {
       expect(screen.getByTestId('ready')).toBeTruthy();
     });
+    expect(getI18nLocale()).toBe('en');
+  });
+
+  it('falls back to system when preference storage never settles', async () => {
+    vi.mocked(getLanguagePreference).mockImplementation(() => new Promise(() => {}));
+    vi.useFakeTimers();
+
+    render(
+      <LanguageProvider>
+        <span data-testid="ready">ok</span>
+      </LanguageProvider>,
+    );
+
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(screen.getByTestId('ready')).toBeTruthy();
     expect(getI18nLocale()).toBe('en');
   });
 

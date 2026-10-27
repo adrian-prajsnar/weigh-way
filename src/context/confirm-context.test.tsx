@@ -22,6 +22,7 @@ vi.mock('../storage/language-preference', () => ({
 /* eslint-disable import/first -- after vi.mock */
 import { LanguageProvider } from '../i18n/language-context';
 import { ThemeProvider } from '../theme/theme-context';
+import { listConfirmDialogFocusables } from './confirm-dialog-focus-web';
 import { ConfirmProvider, useConfirm } from './confirm-context';
 /* eslint-enable import/first */
 
@@ -66,5 +67,10 @@ describe('ConfirmProvider', () => {
       'Cancel',
       'Replace',
     ]);
+
+    const dialog = document.querySelector('[data-ww-confirm-dialog="true"]');
+    expect(dialog).toBeTruthy();
+    const tabStops = listConfirmDialogFocusables(document);
+    expect(tabStops.map((node) => node.getAttribute('aria-label'))).toEqual(['Cancel', 'Replace']);
   });
 });
