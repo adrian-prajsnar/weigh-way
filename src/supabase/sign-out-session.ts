@@ -15,6 +15,8 @@ import {
   SIGN_OUT_FLOW_CAP_MS,
   SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
+  SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS,
+  type SignOutDeadlineControl,
   withSignOutDeadline,
 } from './sign-out-deadlines';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
@@ -42,8 +44,15 @@ function flowBudgetMs(deadlineMs: number, stepMs: number): number {
   return Math.min(stepMs, Math.max(0, deadlineMs - Date.now()));
 }
 
+function peekBudgetMs(deadlineMs: number): number {
+  return Math.min(SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS, Math.max(0, deadlineMs - Date.now()));
+}
+
 /** Local-only race guard: clear unless a different user is confirmed on disk or via auth events. */
-async function shouldClearLocalSession(capturedUserId: string | null): Promise<boolean> {
+async function shouldClearLocalSession(
+  capturedUserId: string | null,
+  deadlineMs: number,
+): Promise<boolean> {
   if (!capturedUserId) {
     return true;
   }
@@ -53,9 +62,23 @@ async function shouldClearLocalSession(capturedUserId: string | null): Promise<b
     return false;
   }
 
-  const storedUserId = await getSupabaseAuthStorage().peekStoredPrimaryAuthSessionUserId();
-  if (storedUserId && storedUserId !== capturedUserId) {
-    return false;
+  const peekMs = peekBudgetMs(deadlineMs);
+  if (peekMs <= 0) {
+    return true;
+  }
+
+  try {
+    const storedUserId = await withSignOutDeadline(peekMs, () =>
+      getSupabaseAuthStorage().peekStoredPrimaryAuthSessionUserId(),
+    );
+    if (storedUserId && storedUserId !== capturedUserId) {
+      return false;
+    }
+  } catch (error) {
+    if (isSignOutDeadlineError(error)) {
+      return true;
+    }
+    throw error;
   }
 
   return true;
@@ -65,28 +88,37 @@ async function clearLocalAuthSession(
   capturedUserId: string | null,
   deadlineMs: number,
 ): Promise<void> {
-  if (!(await shouldClearLocalSession(capturedUserId))) {
-    return;
-  }
+  const control: SignOutDeadlineControl = { abandoned: false };
+  const budgetMs = flowBudgetMs(deadlineMs, SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS);
 
-  getSupabaseAuthStorage().beginLocalClearForUser(capturedUserId);
+  await withSignOutDeadline(budgetMs, async () => {
+    if (!(await shouldClearLocalSession(capturedUserId, deadlineMs))) {
+      return;
+    }
 
-  await withSignOutDeadline(flowBudgetMs(deadlineMs, SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS), async () => {
-    if (!(await shouldClearLocalSession(capturedUserId))) {
+    getSupabaseAuthStorage().beginLocalClearForUser(capturedUserId);
+
+    if (!(await shouldClearLocalSession(capturedUserId, deadlineMs))) {
       return;
     }
     const storageKey = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
     if (storageKey) {
       await getSupabaseAuthStorage().removeItem(storageKey);
     }
-    if (!(await shouldClearLocalSession(capturedUserId))) {
+    if (control.abandoned) {
+      return;
+    }
+    if (!(await shouldClearLocalSession(capturedUserId, deadlineMs))) {
+      return;
+    }
+    if (control.abandoned) {
       return;
     }
     const { error } = await supabase.auth.signOut({ scope: 'local' });
     if (error) {
       throw error;
     }
-  });
+  }, control);
 }
 
 function scheduleLocalSignOutPersistFailureNote(deadlineMs: number): void {
@@ -97,8 +129,19 @@ function scheduleLocalSignOutPersistFailureNote(deadlineMs: number): void {
 
 async function resolveAccessTokenSafely(deadlineMs: number): Promise<string | null> {
   const storageKey = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
-  if (storageKey) {
-    const raw = await getSupabaseAuthStorage().getItem(storageKey).catch(() => null);
+  if (!storageKey) {
+    return null;
+  }
+
+  const readMs = peekBudgetMs(deadlineMs);
+  if (readMs <= 0) {
+    return null;
+  }
+
+  try {
+    const raw = await withSignOutDeadline(readMs, () =>
+      getSupabaseAuthStorage().getItem(storageKey).catch(() => null),
+    );
     if (raw) {
       try {
         const parsed = JSON.parse(raw) as { access_token?: string };
@@ -109,6 +152,11 @@ async function resolveAccessTokenSafely(deadlineMs: number): Promise<string | nu
         // fall through
       }
     }
+  } catch (error) {
+    if (isSignOutDeadlineError(error)) {
+      return null;
+    }
+    throw error;
   }
   return null;
 }
@@ -252,6 +300,7 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
           if (!serverRevokeSucceeded) {
             serverSignOutUnreachable = true;
           }
+          void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
           scheduleLocalSignOutPersistFailureNote(deadlineMs);
         } else {
           throw error;

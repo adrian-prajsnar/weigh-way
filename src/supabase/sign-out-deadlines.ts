@@ -16,9 +16,14 @@ export function isSignOutDeadlineError(error: unknown): boolean {
   return error instanceof SignOutDeadlineError;
 }
 
+export type SignOutDeadlineControl = {
+  abandoned: boolean;
+};
+
 export async function withSignOutDeadline<T>(
   timeoutMs: number,
   operation: () => Promise<T>,
+  control?: SignOutDeadlineControl,
 ): Promise<T> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   try {
@@ -26,6 +31,9 @@ export async function withSignOutDeadline<T>(
       operation(),
       new Promise<T>((_, reject) => {
         timeoutId = setTimeout(() => {
+          if (control) {
+            control.abandoned = true;
+          }
           reject(new SignOutDeadlineError());
         }, timeoutMs);
       }),

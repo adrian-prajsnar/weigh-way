@@ -96,6 +96,11 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   const tryRemoveFromDisk = async (key: string): Promise<boolean> => {
+    if (isPrimaryAuthSessionStorageKey(key)) {
+      if (!(await abortPendingRemoveIfUserChanged(key))) {
+        return false;
+      }
+    }
     try {
       await AsyncStorage.removeItem(key);
       return true;
@@ -161,7 +166,6 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       return true;
     }
     pendingDiskRemoves.delete(key);
-    pendingRemoveCapturedUserId.delete(key);
     overlay.delete(key);
     return false;
   };
@@ -402,14 +406,13 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     },
     async setItem(key, value) {
       trackPrimaryAuthKey(key);
-      await ensureProbe();
-      const wasTombstone = overlay.get(key) === TOMBSTONE;
-      overlay.set(key, value);
-
       if (isPrimaryAuthSessionStorageKey(key) && !isSignedOutSessionPayload(value)) {
         markerReadFailedSessionKeys.delete(key);
         await clearSignedOutState(key);
       }
+      await ensureProbe();
+      const wasTombstone = overlay.get(key) === TOMBSTONE;
+      overlay.set(key, value);
 
       if (wasTombstone) {
         await tryRemoveFromDisk(key);

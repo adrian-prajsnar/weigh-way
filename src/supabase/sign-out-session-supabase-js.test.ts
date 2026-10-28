@@ -9,6 +9,7 @@ vi.mock('./sign-out-deadlines', async (importOriginal) => {
     ...actual,
     SIGN_OUT_FLOW_CAP_MS: 500,
     SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS: 100,
+    SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS: 50,
     SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS: 100,
     SIGN_OUT_REFRESH_TIMEOUT_MS: 100,
   };
@@ -84,7 +85,11 @@ function mockProbeSuccess() {
   });
 }
 
-function makeSessionJson(accessToken: string, expiresAtSeconds?: number): string {
+function makeSessionJson(
+  accessToken: string,
+  expiresAtSeconds?: number,
+  userId: string = USER_ID,
+): string {
   return JSON.stringify({
     access_token: accessToken,
     refresh_token: 'refresh-token',
@@ -92,7 +97,7 @@ function makeSessionJson(accessToken: string, expiresAtSeconds?: number): string
     expires_at: expiresAtSeconds ?? Math.floor(Date.now() / 1000) + 3600,
     token_type: 'bearer',
     user: {
-      id: USER_ID,
+      id: userId,
       aud: 'authenticated',
       role: 'authenticated',
       email: 'user@example.com',

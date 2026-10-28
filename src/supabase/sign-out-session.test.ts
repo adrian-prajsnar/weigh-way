@@ -49,6 +49,16 @@ vi.mock('./auth-session-storage', () => ({
   getSupabaseAuthStorage: () => storageState,
 }));
 
+vi.mock('./sign-out-deadlines', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./sign-out-deadlines')>();
+  return {
+    ...actual,
+    SIGN_OUT_FLOW_CAP_MS: 500,
+    SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS: 200,
+    SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS: 50,
+  };
+});
+
 /* eslint-disable import/first -- after vi.mock */
 import { SignOutDeadlineError } from './sign-out-deadlines';
 import { signOutSession } from './sign-out-session';
@@ -353,8 +363,53 @@ describe('signOutSession', () => {
       accessToken: 'token-a',
       userId: userA.id,
     });
-    await vi.advanceTimersByTimeAsync(20_000);
+    await vi.advanceTimersByTimeAsync(600);
     await expect(signOutPromise).resolves.toEqual({ serverSignOutUnreachable: false });
+    expect(storageState.noteLocalSignOutPersistFailure).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('settles within the cap when storage peek hangs and a second sign-out can run', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    storageState.peekStoredPrimaryAuthSessionUserId.mockImplementation(() => new Promise(() => {}));
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userA.id);
+
+    const first = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await vi.advanceTimersByTimeAsync(600);
+    await expect(first).resolves.toEqual({ serverSignOutUnreachable: false });
+    expect(storageState.removeItem).toHaveBeenCalled();
+
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userA.id);
+    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it('does not run auth local signOut after the clear deadline when remove finishes late', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let releaseRemove!: () => void;
+    const removeGate = new Promise<void>((resolve) => {
+      releaseRemove = resolve;
+    });
+    storageState.removeItem.mockImplementation(
+      async () =>
+        new Promise<void>((resolve) => {
+          removeGate.then(() => resolve());
+        }),
+    );
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userA.id);
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userA.id);
+
+    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await vi.advanceTimersByTimeAsync(600);
+    await expect(signOutPromise).resolves.toEqual({ serverSignOutUnreachable: false });
+
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userB.id);
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userB.id);
+    releaseRemove();
+    await vi.runAllTimersAsync();
+
+    expect(authState.signOut).not.toHaveBeenCalled();
     expect(storageState.noteLocalSignOutPersistFailure).toHaveBeenCalled();
     vi.useRealTimers();
   });
