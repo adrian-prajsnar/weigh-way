@@ -2,6 +2,8 @@ import { fetchAuthUserForAccessToken } from './fetch-auth-user';
 import { signOutSession } from './sign-out-session';
 import { supabase } from './client';
 
+let validateRestoredSessionInFlight = false;
+
 const SESSION_REJECTION_CODES = new Set([
   'session_not_found',
   'user_not_found',
@@ -96,6 +98,18 @@ async function shouldSignOutAfterSessionRejection(
 
 /** Clears a restored session when the server rejects it; ignores transient and unknown errors. */
 export async function validateRestoredSessionInBackground(): Promise<void> {
+  if (validateRestoredSessionInFlight) {
+    return;
+  }
+  validateRestoredSessionInFlight = true;
+  try {
+    await runValidateRestoredSessionInBackground();
+  } finally {
+    validateRestoredSessionInFlight = false;
+  }
+}
+
+async function runValidateRestoredSessionInBackground(): Promise<void> {
   const {
     data: { session: sessionAtStart },
   } = await supabase.auth.getSession();

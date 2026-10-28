@@ -1,5 +1,5 @@
 import { authAnonHeaders, authApiUrl } from './auth-api-http';
-import { isRefreshInvalidGrantError, isAuthServerUnreachableError } from './auth-reachability-error';
+import { isAuthServerUnreachableError } from './auth-reachability-error';
 import { supabaseAuthHttpConfig } from './client';
 import {
   isSignOutDeadlineError,
@@ -93,9 +93,6 @@ export async function refreshAccessTokenForSignOut(
     }
     if (isAuthServerUnreachableError(error)) {
       throw new SignOutDeadlineError();
-    }
-    if (isRefreshInvalidGrantError(error)) {
-      throw error;
     }
     throw error;
   }

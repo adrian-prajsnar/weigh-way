@@ -1,4 +1,4 @@
-import { authApiUrl, authUserJwtHeaders } from './auth-api-http';
+import { authApiUrl, authUserJwtHeaders, parseAuthApiErrorFields } from './auth-api-http';
 import { isAuthServerUnreachableError } from './auth-reachability-error';
 import { supabaseAuthHttpConfig } from './client';
 import {
@@ -35,24 +35,18 @@ export async function fetchAuthUserForAccessToken(
       }
     });
 
-    const body = (await response.json().catch(() => null)) as {
-      id?: string;
-      code?: string;
-      msg?: string;
-      message?: string;
-      error?: string;
-      error_description?: string;
-    } | null;
+    const body = (await response.json().catch(() => null)) as { id?: string } | null;
 
-    if (response.ok && body?.id) {
+    if (response.ok && body && typeof body === 'object' && 'id' in body && body.id) {
       return { ok: true, userId: body.id };
     }
 
+    const { code, message } = parseAuthApiErrorFields(body);
     return {
       ok: false,
       status: response.status,
-      code: body?.code ?? body?.error,
-      message: body?.msg ?? body?.message ?? body?.error_description,
+      code,
+      message,
     };
   } catch (error) {
     if (

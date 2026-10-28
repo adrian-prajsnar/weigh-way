@@ -1,4 +1,4 @@
-import { authApiUrl, authUserJwtHeaders } from './auth-api-http';
+import { authApiUrl, authUserJwtLogoutHeaders, parseAuthApiErrorFields } from './auth-api-http';
 import { isAuthRateLimitedError, isAuthServerUnreachableError } from './auth-reachability-error';
 import { supabaseAuthHttpConfig } from './client';
 import {
@@ -52,15 +52,8 @@ function isAlreadyRevokedError(error: unknown): boolean {
 }
 
 function mapRevokeHttpError(status: number, body: unknown): { result: ServerRevokeResult; error?: unknown } {
-  const payload =
-    typeof body === 'object' && body !== null
-      ? (body as { code?: string; message?: string; msg?: string; error?: string })
-      : {};
-  const error = {
-    status,
-    code: payload.code ?? payload.error,
-    message: payload.message ?? payload.msg,
-  };
+  const { code, message } = parseAuthApiErrorFields(body);
+  const error = { status, code, message };
   if (status === 429 || isAuthRateLimitedError(error)) {
     return { result: 'rate_limited', error };
   }
@@ -113,7 +106,7 @@ export async function revokeSessionOnServer(
       try {
         return await fetch(authApiUrl(url, `/logout?scope=${scope}`), {
           method: 'POST',
-          headers: authUserJwtHeaders(anonKey, accessToken),
+          headers: authUserJwtLogoutHeaders(anonKey, accessToken),
           signal: controller.signal,
         });
       } finally {

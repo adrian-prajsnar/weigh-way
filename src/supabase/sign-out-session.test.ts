@@ -81,6 +81,38 @@ describe('signOutSession', () => {
     });
   });
 
+  it('sends exactly one server revoke (no second /logout from auth-js signOut)', async () => {
+    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not consume the storage persist warning (caller reads it after sign-out)', async () => {
+    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+
+    expect(storageState.consumeSignOutPersistWarning).not.toHaveBeenCalled();
+  });
+
+  it('runs at most one sign-out when invoked concurrently', async () => {
+    let resolveLogout: () => void = () => {};
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveLogout = () => resolve(new Response(null, { status: 204 }));
+          }),
+      ),
+    );
+
+    const first = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    const second = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    resolveLogout();
+    await Promise.all([first, second]);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('revokes on the server before local sign-out when a token is provided', async () => {
     await signOutSession({ accessToken: 'token-a', userId: userA.id });
 
@@ -251,8 +283,51 @@ describe('signOutSession', () => {
       userId: userA.id,
     });
     await vi.advanceTimersByTimeAsync(20_000);
-    await expect(signOutPromise).resolves.toEqual({ serverSignOutUnreachable: true });
+    await expect(signOutPromise).resolves.toEqual({ serverSignOutUnreachable: false });
     expect(storageState.noteLocalSignOutPersistFailure).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('does not clear user B when removeItem finishes after the flow cap', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    let resolveRemove: (() => void) | undefined;
+    storageState.removeItem.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveRemove = resolve;
+        }),
+    );
+    authState.getSession
+      .mockResolvedValueOnce({
+        data: { session: { access_token: 'token-a', user: userA } },
+      })
+      .mockResolvedValueOnce({
+        data: { session: { access_token: 'token-a', user: userA } },
+      })
+      .mockResolvedValue({
+        data: { session: { access_token: 'token-b', user: userB } },
+      });
+
+    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await vi.advanceTimersByTimeAsync(16_000);
+    await signOutPromise;
+    resolveRemove?.();
+    await Promise.resolve();
+
+    expect(authState.signOut).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('skips local clear when the session user check hits its deadline', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    authState.getSession.mockImplementation(() => new Promise(() => {}));
+
+    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await vi.advanceTimersByTimeAsync(20_000);
+    await signOutPromise;
+
+    expect(storageState.removeItem).not.toHaveBeenCalled();
+    expect(authState.signOut).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 });

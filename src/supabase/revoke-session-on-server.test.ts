@@ -28,9 +28,26 @@ describe('revokeSessionOnServer', () => {
         headers: expect.objectContaining({
           Authorization: 'Bearer token-a',
           apikey: 'public-anon-key',
+          'Content-Type': 'application/json',
+          'X-Supabase-Api-Version': '2024-01-01',
         }),
       }),
     );
+  });
+
+  it('treats legacy GoTrue expired logout bodies as token_expired', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json(
+          { code: 401, error_code: 'bad_jwt', msg: 'token is expired' },
+          { status: 401 },
+        ),
+      ),
+    );
+    await expect(revokeSessionOnServer('token-a')).resolves.toMatchObject({
+      result: 'token_expired',
+    });
   });
 
   it('treats session-not-found responses as already revoked', async () => {
