@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatAuthLinkError,
   formatSignInError,
+  formatSignOutError,
   formatSignOutPersistWarning,
   formatSignUpError,
   isEmailNotConfirmedError,
@@ -78,6 +79,14 @@ describe('formatAuthLinkError', () => {
         isPasswordRecovery: false,
       }),
     ).toContain('internet connection');
+  });
+});
+
+describe('formatSignOutError', () => {
+  it('maps sign-out rate limiting to a dedicated message', () => {
+    expect(formatSignOutError(new Error('sign_out_rate_limited'))).toBe(
+      'Too many attempts. Please try again in a moment.',
+    );
   });
 });
 

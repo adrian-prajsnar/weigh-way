@@ -197,6 +197,10 @@ export function formatSignOutError(error: unknown): string {
     return network;
   }
 
+  if (getErrorMessage(error).includes('sign_out_rate_limited')) {
+    return t('profile.signOutRateLimited');
+  }
+
   return t('profile.signOutFailed');
 }
 

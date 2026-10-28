@@ -181,6 +181,9 @@ describe('createResilientAuthStorage', () => {
     });
     await storage.retryPendingDiskPersistence();
     expect(disk.has('sb-localhost-auth-token')).toBe(false);
+
+    const reloadedStorage = createResilientAuthStorage();
+    await expect(reloadedStorage.getItem('sb-localhost-auth-token')).resolves.toBeNull();
   });
 
   it('clears stale disk session on the next successful write after a failed remove', async () => {

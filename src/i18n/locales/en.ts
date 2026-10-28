@@ -325,6 +325,7 @@ export default {
     signOutConfirm: 'Sign out of your account?',
     signedOut: 'Signed out.',
     signOutFailed: 'Could not sign out.',
+    signOutRateLimited: 'Too many attempts. Please try again in a moment.',
     signOutPersistFailed:
       "You're signed out. We'll try to finish clearing this device once storage is available.",
     signOutPersistFailedOffline:
