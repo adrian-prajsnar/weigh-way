@@ -1,11 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getSignedOutMarkerKey } from './resilient-auth-storage';
+import { noteLatestAuthUserIdFromEvent } from './sign-out-local-user';
 
 vi.mock('./sign-out-deadlines', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./sign-out-deadlines')>();
   return {
     ...actual,
+    SIGN_OUT_FLOW_CAP_MS: 500,
+    SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS: 100,
     SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS: 100,
     SIGN_OUT_REFRESH_TIMEOUT_MS: 100,
   };
@@ -431,5 +434,137 @@ describe('signOutSession with real Supabase auth-js', () => {
     });
 
     expect((await clientRef.current!.auth.getSession()).data.session).toBeNull();
+  });
+
+  it('clears an expired session when offline and stays out after reload', async () => {
+    const expiredAt = Math.floor(Date.now() / 1000) - 3600;
+    diskRef.map.set(SESSION_KEY, makeSessionJson('user-jwt-a', expiredAt));
+    noteLatestAuthUserIdFromEvent(USER_ID);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('Failed to fetch');
+      }),
+    );
+
+    await createTestClient({ autoRefreshToken: false });
+    await resilientStorageRef.current!.getItem(SESSION_KEY);
+    vi.spyOn(clientRef.current!.auth, 'signOut').mockResolvedValue({ error: null });
+
+    const { signOutSession } = await import('./sign-out-session');
+    await signOutSession({
+      accessToken: 'user-jwt-a',
+      userId: USER_ID,
+      refreshToken: 'refresh-token',
+    });
+
+    const reloaded = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: {
+        storage: resilientStorageRef.current!,
+        storageKey: SESSION_KEY,
+        persistSession: true,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    expect((await reloaded.auth.getSession()).data.session).toBeNull();
+    expect(diskRef.map.get(SESSION_KEY)).toBeUndefined();
+  });
+
+  it('clears when logout is expired and refresh hangs, then reload stays signed out', async () => {
+    const expiredAt = Math.floor(Date.now() / 1000) - 3600;
+    diskRef.map.set(SESSION_KEY, makeSessionJson('user-jwt-a', expiredAt));
+    noteLatestAuthUserIdFromEvent(USER_ID);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/logout')) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ code: 'bad_jwt', message: 'token is expired' }), {
+              status: 401,
+              headers: { 'Content-Type': 'application/json' },
+            }),
+          );
+        }
+        if (url.includes('/token')) {
+          return new Promise<Response>(() => {});
+        }
+        return Promise.resolve(new Response(JSON.stringify({}), { status: 404 }));
+      }),
+    );
+
+    await createTestClient({ autoRefreshToken: false });
+    await resilientStorageRef.current!.getItem(SESSION_KEY);
+    vi.spyOn(clientRef.current!.auth, 'signOut').mockResolvedValue({ error: null });
+
+    const { signOutSession } = await import('./sign-out-session');
+    await signOutSession({
+      accessToken: 'user-jwt-a',
+      userId: USER_ID,
+      refreshToken: 'refresh-token',
+    });
+
+    const reloaded = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: {
+        storage: resilientStorageRef.current!,
+        storageKey: SESSION_KEY,
+        persistSession: true,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    expect((await reloaded.auth.getSession()).data.session).toBeNull();
+    expect(diskRef.map.get(SESSION_KEY)).toBeUndefined();
+  });
+
+  it('clears under the 15s flow cap when local clear hangs and reload stays signed out', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    diskRef.map.set(SESSION_KEY, makeSessionJson('user-jwt-a'));
+    noteLatestAuthUserIdFromEvent(USER_ID);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/logout')) {
+          return new Response(null, { status: 204 });
+        }
+        return new Response(JSON.stringify({}), { status: 404 });
+      }),
+    );
+
+    await createTestClient({ autoRefreshToken: false });
+    await clientRef.current!.auth.getSession();
+
+    const { signOutSession } = await import('./sign-out-session');
+    vi.spyOn(clientRef.current!.auth, 'signOut').mockImplementation(
+      () =>
+        new Promise<{ error: null }>(() => {}) as ReturnType<
+          NonNullable<typeof clientRef.current>['auth']['signOut']
+        >,
+    );
+
+    const signOutPromise = signOutSession({
+      accessToken: 'user-jwt-a',
+      userId: USER_ID,
+      refreshToken: 'refresh-token',
+    });
+    await vi.advanceTimersByTimeAsync(600);
+    await signOutPromise;
+
+    const reloaded = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: {
+        storage: resilientStorageRef.current!,
+        storageKey: SESSION_KEY,
+        persistSession: true,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    expect((await reloaded.auth.getSession()).data.session).toBeNull();
+    vi.useRealTimers();
   });
 });

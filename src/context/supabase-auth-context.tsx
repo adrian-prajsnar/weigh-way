@@ -32,6 +32,7 @@ import {
   registerAuthStoragePersistenceRecovery,
 } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
+import { noteLatestAuthUserIdFromEvent } from '../supabase/sign-out-local-user';
 import { signOutSession, signOutSessionBestEffort } from '../supabase/sign-out-session';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
@@ -220,6 +221,16 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
       if (event !== 'INITIAL_SESSION') {
         authEventGenerationRef.current += 1;
+      }
+      if (
+        event === 'SIGNED_IN' ||
+        event === 'TOKEN_REFRESHED' ||
+        event === 'INITIAL_SESSION'
+      ) {
+        noteLatestAuthUserIdFromEvent(activeSession?.user?.id ?? null);
+      }
+      if (event === 'SIGNED_OUT') {
+        noteLatestAuthUserIdFromEvent(null);
       }
       setSession(activeSession);
       if (event === 'PASSWORD_RECOVERY' && activeSession) {

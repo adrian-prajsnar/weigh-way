@@ -8,11 +8,13 @@ import { getSupabaseAuthStorage } from './auth-session-storage';
 import { supabase } from './client';
 import { revokeSessionOnServer } from './revoke-session-on-server';
 import {
+  getLatestAuthUserIdFromEvents,
+} from './sign-out-local-user';
+import {
   isSignOutDeadlineError,
   SIGN_OUT_FLOW_CAP_MS,
   SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
-  SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS,
   withSignOutDeadline,
 } from './sign-out-deadlines';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
@@ -40,61 +42,44 @@ function flowBudgetMs(deadlineMs: number, stepMs: number): number {
   return Math.min(stepMs, Math.max(0, deadlineMs - Date.now()));
 }
 
-function isPastSignOutFlowDeadline(deadlineMs: number): boolean {
-  return Date.now() >= deadlineMs;
-}
+/** Local-only race guard: clear unless a different user is confirmed on disk or via auth events. */
+async function shouldClearLocalSession(capturedUserId: string | null): Promise<boolean> {
+  if (!capturedUserId) {
+    return true;
+  }
 
-async function shouldClearLocalSession(
-  capturedUserId: string | null,
-  deadlineMs: number,
-): Promise<boolean> {
-  if (isPastSignOutFlowDeadline(deadlineMs)) {
+  const eventUserId = getLatestAuthUserIdFromEvents();
+  if (eventUserId && eventUserId !== capturedUserId) {
     return false;
   }
-  try {
-    const { data } = await withSignOutDeadline(
-      flowBudgetMs(deadlineMs, SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS),
-      () => supabase.auth.getSession(),
-    );
-    const currentUserId = data.session?.user?.id ?? null;
-    if (!currentUserId) {
-      return true;
-    }
-    if (!capturedUserId) {
-      return true;
-    }
-    return currentUserId === capturedUserId;
-  } catch (error) {
-    if (isSignOutDeadlineError(error)) {
-      return false;
-    }
-    throw error;
+
+  const storedUserId = await getSupabaseAuthStorage().peekStoredPrimaryAuthSessionUserId();
+  if (storedUserId && storedUserId !== capturedUserId) {
+    return false;
   }
+
+  return true;
 }
 
 async function clearLocalAuthSession(
   capturedUserId: string | null,
   deadlineMs: number,
 ): Promise<void> {
-  if (isPastSignOutFlowDeadline(deadlineMs)) {
-    return;
-  }
-  if (!(await shouldClearLocalSession(capturedUserId, deadlineMs))) {
+  if (!(await shouldClearLocalSession(capturedUserId))) {
     return;
   }
 
+  getSupabaseAuthStorage().beginLocalClearForUser(capturedUserId);
+
   await withSignOutDeadline(flowBudgetMs(deadlineMs, SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS), async () => {
-    if (isPastSignOutFlowDeadline(deadlineMs)) {
+    if (!(await shouldClearLocalSession(capturedUserId))) {
       return;
     }
     const storageKey = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
     if (storageKey) {
       await getSupabaseAuthStorage().removeItem(storageKey);
     }
-    if (isPastSignOutFlowDeadline(deadlineMs)) {
-      return;
-    }
-    if (!(await shouldClearLocalSession(capturedUserId, deadlineMs))) {
+    if (!(await shouldClearLocalSession(capturedUserId))) {
       return;
     }
     const { error } = await supabase.auth.signOut({ scope: 'local' });
@@ -111,15 +96,21 @@ function scheduleLocalSignOutPersistFailureNote(deadlineMs: number): void {
 }
 
 async function resolveAccessTokenSafely(deadlineMs: number): Promise<string | null> {
-  try {
-    const { data } = await withSignOutDeadline(
-      flowBudgetMs(deadlineMs, SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS),
-      () => supabase.auth.getSession(),
-    );
-    return data.session?.access_token ?? null;
-  } catch {
-    return null;
+  const storageKey = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
+  if (storageKey) {
+    const raw = await getSupabaseAuthStorage().getItem(storageKey).catch(() => null);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw) as { access_token?: string };
+        if (parsed.access_token) {
+          return parsed.access_token;
+        }
+      } catch {
+        // fall through
+      }
+    }
   }
+  return null;
 }
 
 type RevokeOnServerResult = {

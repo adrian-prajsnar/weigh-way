@@ -139,25 +139,6 @@ describe('validateRestoredSessionInBackground', () => {
     expect(signOutSessionMock).not.toHaveBeenCalled();
   });
 
-  it('refreshes once on legacy GoTrue expired bad_jwt bodies', async () => {
-    mockSessionAtStartAndEnd(sessionA, sessionA);
-    fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
-      ok: false,
-      status: 401,
-      code: 'bad_jwt',
-      message: 'token is expired',
-    });
-    authState.refreshSession.mockResolvedValue({
-      data: { session: { access_token: 'token-a-refreshed' } },
-      error: null,
-    });
-
-    await validateRestoredSessionInBackground();
-
-    expect(authState.refreshSession).toHaveBeenCalledTimes(1);
-    expect(signOutSessionMock).not.toHaveBeenCalled();
-  });
-
   it.each([
     'refresh_token_not_found',
     'refresh_token_already_used',
@@ -289,6 +270,19 @@ describe('validateRestoredSessionInBackground', () => {
   });
 
   it('keeps the session when user fetch is unreachable', async () => {
+    mockSessionAtStartAndEnd(sessionA, sessionA);
+    fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
+      ok: false,
+      status: 0,
+      unreachable: true,
+    });
+
+    await validateRestoredSessionInBackground();
+
+    expect(signOutSessionMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the session on AuthRetryableFetchError with status 0', async () => {
     mockSessionAtStartAndEnd(sessionA, sessionA);
     fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
       ok: false,

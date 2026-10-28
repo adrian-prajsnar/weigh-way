@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
-  getSession: vi.fn(),
   signOut: vi.fn(),
+}));
+
+const localUserState = vi.hoisted(() => ({
+  getLatestAuthUserIdFromEvents: vi.fn(),
 }));
 
 const storageState = vi.hoisted(() => ({
@@ -10,12 +13,20 @@ const storageState = vi.hoisted(() => ({
   consumeSignOutPersistWarning: vi.fn(),
   forcePersistSignedOutStateForLastKnownSessionKey: vi.fn(),
   noteLocalSignOutPersistFailure: vi.fn().mockResolvedValue(undefined),
+  beginLocalClearForUser: vi.fn(),
+  peekStoredPrimaryAuthSessionUserId: vi.fn(),
   removeItem: vi.fn(),
   getLastSeenPrimaryAuthSessionKey: vi.fn(),
+  getItem: vi.fn(),
 }));
 
 const refreshState = vi.hoisted(() => ({
   refreshAccessTokenForSignOut: vi.fn(),
+}));
+
+vi.mock('./sign-out-local-user', () => ({
+  getLatestAuthUserIdFromEvents: localUserState.getLatestAuthUserIdFromEvents,
+  noteLatestAuthUserIdFromEvent: vi.fn(),
 }));
 
 vi.mock('./sign-out-token-refresh', () => ({
@@ -29,7 +40,6 @@ vi.mock('./client', () => ({
   },
   supabase: {
     auth: {
-      getSession: authState.getSession,
       signOut: authState.signOut,
     },
   },
@@ -63,22 +73,23 @@ function mockLogoutSuccess() {
 describe('signOutSession', () => {
   beforeEach(() => {
     mockLogoutSuccess();
-    authState.getSession.mockReset();
     authState.signOut.mockReset();
     refreshState.refreshAccessTokenForSignOut.mockReset();
     storageState.resetSignOutPersistWarning.mockReset();
     storageState.consumeSignOutPersistWarning.mockReset();
     storageState.removeItem.mockReset();
     storageState.getLastSeenPrimaryAuthSessionKey.mockReset();
+    storageState.beginLocalClearForUser.mockReset();
+    storageState.peekStoredPrimaryAuthSessionUserId.mockReset();
+    storageState.noteLocalSignOutPersistFailure.mockReset();
+    storageState.getItem.mockReset();
     authState.signOut.mockResolvedValue({ error: null });
     refreshState.refreshAccessTokenForSignOut.mockRejectedValue(new Error('not used'));
     storageState.consumeSignOutPersistWarning.mockReturnValue(false);
     storageState.getLastSeenPrimaryAuthSessionKey.mockReturnValue('sb-localhost-auth-token');
     storageState.removeItem.mockResolvedValue(undefined);
-    storageState.noteLocalSignOutPersistFailure.mockReset();
-    authState.getSession.mockResolvedValue({
-      data: { session: { access_token: 'token-a', user: userA } },
-    });
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userA.id);
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userA.id);
   });
 
   it('sends exactly one server revoke (no second /logout from auth-js signOut)', async () => {
@@ -124,10 +135,19 @@ describe('signOutSession', () => {
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
+  it('still clears locally when the same user has a refreshed access token on disk', async () => {
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userA.id);
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userA.id);
+
+    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+
+    expect(storageState.removeItem).toHaveBeenCalled();
+    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+  });
+
   it('skips local sign-out when another user signed in during server revoke', async () => {
-    authState.getSession.mockResolvedValue({
-      data: { session: { access_token: 'token-b', user: userB } },
-    });
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userB.id);
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userB.id);
 
     await signOutSession({ accessToken: 'token-a', userId: userA.id });
 
@@ -150,9 +170,8 @@ describe('signOutSession', () => {
       }),
     );
     refreshState.refreshAccessTokenForSignOut.mockRejectedValue(new SignOutDeadlineError());
-    authState.getSession.mockResolvedValue({
-      data: { session: { access_token: 'token-b', user: userB } },
-    });
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userB.id);
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userB.id);
 
     const result = await signOutSession({
       accessToken: 'token-a',
@@ -181,15 +200,11 @@ describe('signOutSession', () => {
     refreshState.refreshAccessTokenForSignOut.mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(
-            () => resolve({ accessToken: 'token-a2', userId: userA.id }),
-            50,
-          );
+          setTimeout(() => resolve({ accessToken: 'token-a2', userId: userA.id }), 50);
         }),
     );
-    authState.getSession.mockResolvedValue({
-      data: { session: { access_token: 'token-b', user: userB } },
-    });
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userB.id);
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userB.id);
 
     await signOutSession({
       accessToken: 'token-a',
@@ -274,6 +289,62 @@ describe('signOutSession', () => {
     expect(storageState.removeItem).toHaveBeenCalled();
   });
 
+  it('clears locally when the retry logout still sees an expired token', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/logout')) {
+          return new Response(JSON.stringify({ code: 'bad_jwt', message: 'token is expired' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({}), { status: 404 });
+      }),
+    );
+    refreshState.refreshAccessTokenForSignOut.mockResolvedValue({
+      accessToken: 'token-a2',
+      userId: userA.id,
+    });
+
+    const result = await signOutSession({
+      accessToken: 'token-a',
+      userId: userA.id,
+      refreshToken: 'refresh-a',
+    });
+
+    expect(result.serverSignOutUnreachable).toBe(true);
+    expect(storageState.removeItem).toHaveBeenCalled();
+  });
+
+  it('still clears locally when refresh hits unreachable errors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/logout')) {
+          return new Response(JSON.stringify({ code: 'bad_jwt', message: 'token is expired' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        return new Response(JSON.stringify({}), { status: 404 });
+      }),
+    );
+    refreshState.refreshAccessTokenForSignOut.mockRejectedValue(new SignOutDeadlineError());
+
+    await expect(
+      signOutSession({
+        accessToken: 'token-a',
+        userId: userA.id,
+        refreshToken: 'refresh-a',
+      }),
+    ).resolves.toEqual({ serverSignOutUnreachable: true });
+
+    expect(storageState.removeItem).toHaveBeenCalled();
+  });
+
   it('notes local persist failure when auth local sign-out hangs until deadline', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     authState.signOut.mockImplementation(() => new Promise(() => {}));
@@ -285,49 +356,6 @@ describe('signOutSession', () => {
     await vi.advanceTimersByTimeAsync(20_000);
     await expect(signOutPromise).resolves.toEqual({ serverSignOutUnreachable: false });
     expect(storageState.noteLocalSignOutPersistFailure).toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it('does not clear user B when removeItem finishes after the flow cap', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    let resolveRemove: (() => void) | undefined;
-    storageState.removeItem.mockImplementation(
-      () =>
-        new Promise<void>((resolve) => {
-          resolveRemove = resolve;
-        }),
-    );
-    authState.getSession
-      .mockResolvedValueOnce({
-        data: { session: { access_token: 'token-a', user: userA } },
-      })
-      .mockResolvedValueOnce({
-        data: { session: { access_token: 'token-a', user: userA } },
-      })
-      .mockResolvedValue({
-        data: { session: { access_token: 'token-b', user: userB } },
-      });
-
-    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
-    await vi.advanceTimersByTimeAsync(16_000);
-    await signOutPromise;
-    resolveRemove?.();
-    await Promise.resolve();
-
-    expect(authState.signOut).not.toHaveBeenCalled();
-    vi.useRealTimers();
-  });
-
-  it('skips local clear when the session user check hits its deadline', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    authState.getSession.mockImplementation(() => new Promise(() => {}));
-
-    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
-    await vi.advanceTimersByTimeAsync(20_000);
-    await signOutPromise;
-
-    expect(storageState.removeItem).not.toHaveBeenCalled();
-    expect(authState.signOut).not.toHaveBeenCalled();
     vi.useRealTimers();
   });
 });

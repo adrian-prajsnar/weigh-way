@@ -186,6 +186,59 @@ describe('createResilientAuthStorage', () => {
     await expect(reloadedStorage.getItem('sb-localhost-auth-token')).resolves.toBeNull();
   });
 
+  it('aborts a delayed pending remove when another user is on disk', async () => {
+    const sessionA = JSON.stringify({
+      access_token: 'token-a',
+      user: { id: 'user-a' },
+    });
+    const sessionB = JSON.stringify({
+      access_token: 'token-b',
+      user: { id: 'user-b' },
+    });
+    const disk = new Map<string, string>([['sb-localhost-auth-token', sessionA]]);
+
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      disk.set(key, value);
+    });
+    let sessionKeyRemoveCount = 0;
+    let releaseFirstRemove!: () => void;
+    const firstRemoveGate = new Promise<void>((resolve) => {
+      releaseFirstRemove = resolve;
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      if (key === 'sb-localhost-auth-token') {
+        sessionKeyRemoveCount += 1;
+        if (sessionKeyRemoveCount === 1) {
+          await firstRemoveGate;
+        }
+        throw securityError();
+      }
+      disk.delete(key);
+    });
+
+    const storage = createResilientAuthStorage();
+    await storage.getItem('sb-localhost-auth-token');
+    storage.beginLocalClearForUser('user-a');
+    const removePromise = storage.removeItem('sb-localhost-auth-token');
+    await storage.setItem('sb-localhost-auth-token', sessionB);
+    releaseFirstRemove();
+    await removePromise;
+
+    const onDisk = disk.get('sb-localhost-auth-token');
+    expect(onDisk).toBeDefined();
+    expect(onDisk).toContain('user-b');
+    expect(onDisk).not.toContain('user-a');
+  });
+
   it('clears stale disk session on the next successful write after a failed remove', async () => {
     const disk = new Map<string, string>([['sb-localhost-auth-token', 'user-a']]);
     let removeAttempts = 0;
