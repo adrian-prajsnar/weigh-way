@@ -76,7 +76,7 @@ export function useWeightEntries() {
   }, [isAuthenticated, isAuthLoading]);
 
   useEffect(() => {
-    void refreshEntries();
+    void refreshEntries().catch(() => undefined);
   }, [refreshEntries]);
 
   useRefreshOnAppForeground(refreshEntries, isAuthenticated);

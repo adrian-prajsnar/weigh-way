@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- vitest RN web shim
@@ -22,7 +22,6 @@ vi.mock('../storage/language-preference', () => ({
 /* eslint-disable import/first -- after vi.mock */
 import { LanguageProvider } from '../i18n/language-context';
 import { ThemeProvider } from '../theme/theme-context';
-import * as confirmDialogFocusWeb from './confirm-dialog-focus-web';
 import { listConfirmDialogFocusables } from './confirm-dialog-focus-web';
 import { ConfirmProvider, useConfirm } from './confirm-context';
 /* eslint-enable import/first */
@@ -71,6 +70,10 @@ function TestShell() {
 }
 
 describe('ConfirmProvider', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it('exposes labeled action buttons and keeps the backdrop out of the button list', async () => {
     render(<TestShell />);
 
@@ -91,9 +94,7 @@ describe('ConfirmProvider', () => {
     expect(tabStops.map((node) => node.getAttribute('aria-label'))).toEqual(['Cancel', 'Replace']);
   });
 
-  it('registers capture-phase Tab handling when a phrase confirm is open', async () => {
-    const subscribeSpy = vi.spyOn(confirmDialogFocusWeb, 'subscribeConfirmDialogKeydown');
-
+  it('cycles Tab from the phrase TextInput through capture-phase handling', async () => {
     render(
       <ThemeProvider>
         <LanguageProvider>
@@ -104,11 +105,15 @@ describe('ConfirmProvider', () => {
       </ThemeProvider>,
     );
 
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText('DELETE')).toBeTruthy();
-      expect(subscribeSpy).toHaveBeenCalled();
-    });
+    const phraseInput = await screen.findByPlaceholderText('DELETE');
+    const cancelButton = screen.getByRole('button', { name: 'Cancel' });
 
-    subscribeSpy.mockRestore();
+    phraseInput.focus();
+    expect(document.activeElement).toBe(phraseInput);
+
+    phraseInput.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    await waitFor(() => {
+      expect(document.activeElement).toBe(cancelButton);
+    });
   });
 });

@@ -87,7 +87,7 @@ export function useUserProfile() {
   }, [isAuthenticated, isAuthLoading]);
 
   useEffect(() => {
-    void refreshProfile();
+    void refreshProfile().catch(() => undefined);
   }, [refreshProfile]);
 
   useRefreshOnAppForeground(refreshProfile, isAuthenticated);

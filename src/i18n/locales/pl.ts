@@ -327,7 +327,9 @@ const pl = {
     signedOut: 'Wylogowano.',
     signOutFailed: 'Nie udało się wylogować.',
     signOutPersistFailed:
-      'Wylogowano w aplikacji, ale urządzenie może nadal pamiętać sesję, dopóki pamięć nie będzie dostępna.',
+      'Wylogowano. Spróbujemy dokończyć czyszczenie tego urządzenia, gdy pamięć będzie dostępna.',
+    signOutPersistFailedOffline:
+      'Wylogowano na tym urządzeniu. Nie udało się połączyć z serwerem.',
     deleteAccount: 'Usuń konto',
     deleteAccountConfirm:
       'Czy na pewno chcesz usunąć swoje konto? Wszystkie pomiary wagi zostaną usunięte. Tej operacji nie można cofnąć.',

@@ -1,4 +1,5 @@
 import { AppState, AppStateStatus } from 'react-native';
+import { retryAuthStorageDiskPersistence } from './auth-session-storage';
 import { supabase } from './client';
 
 let registered = false;
@@ -7,6 +8,7 @@ let refreshInFlight: Promise<void> | null = null;
 function handleAppStateChange(state: AppStateStatus): void {
   if (state === 'active') {
     supabase.auth.startAutoRefresh();
+    retryAuthStorageDiskPersistence();
     void refreshSessionOnForeground();
     return;
   }

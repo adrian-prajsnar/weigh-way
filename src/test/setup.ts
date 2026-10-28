@@ -4,6 +4,24 @@ vi.mock('@expo/vector-icons', () => ({
   Ionicons: () => null,
 }));
 
+vi.mock('react-native-reanimated', () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports -- vitest global shim
+  const React = require('react');
+  const AnimatedView = (props: { children?: unknown }) =>
+    React.createElement('div', props, props.children);
+  const animated = { View: AnimatedView };
+  return {
+    default: animated,
+    FadeIn: {},
+    FadeInDown: {},
+    useSharedValue: (initial: number) => ({ value: initial }),
+    useAnimatedStyle: (factory: () => object) => factory(),
+    withDelay: (_delay: number, animation: number) => animation,
+    withTiming: (value: number) => value,
+    useReducedMotion: () => false,
+  };
+});
+
 vi.mock('expo-localization', () => ({
   getLocales: () => [{ languageCode: 'en' }],
   useLocales: () => [{ languageCode: 'en' }],

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatAuthLinkError,
   formatSignInError,
+  formatSignOutPersistWarning,
   formatSignUpError,
   isEmailNotConfirmedError,
   isNetworkError,
@@ -77,5 +78,13 @@ describe('formatAuthLinkError', () => {
         isPasswordRecovery: false,
       }),
     ).toContain('internet connection');
+  });
+});
+
+describe('formatSignOutPersistWarning', () => {
+  it('uses offline copy when the server revoke was unreachable', () => {
+    expect(formatSignOutPersistWarning({ serverSignOutUnreachable: true })).toBe(
+      "You're signed out on this device. We couldn't reach the server.",
+    );
   });
 });

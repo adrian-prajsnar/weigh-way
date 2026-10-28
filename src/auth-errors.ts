@@ -200,7 +200,14 @@ export function formatSignOutError(error: unknown): string {
   return t('profile.signOutFailed');
 }
 
-export function formatSignOutPersistWarning(): string {
+export type SignOutPersistWarningOptions = {
+  serverSignOutUnreachable?: boolean;
+};
+
+export function formatSignOutPersistWarning(options?: SignOutPersistWarningOptions): string {
+  if (options?.serverSignOutUnreachable) {
+    return t('profile.signOutPersistFailedOffline');
+  }
   return t('profile.signOutPersistFailed');
 }
 
