@@ -37,8 +37,16 @@ vi.mock('./auth-session-storage', () => ({
 import { validateRestoredSessionInBackground } from './validate-restored-session';
 /* eslint-enable import/first */
 
-const sessionA = { access_token: 'token-a', user: { id: 'user-a' } };
-const sessionB = { access_token: 'token-b', user: { id: 'user-b' } };
+const sessionA = {
+  access_token: 'token-a',
+  refresh_token: 'refresh-a',
+  user: { id: 'user-a' },
+};
+const sessionB = {
+  access_token: 'token-b',
+  refresh_token: 'refresh-b',
+  user: { id: 'user-b' },
+};
 
 function mockSessionAtStartAndEnd(
   start: { access_token: string } | null,
@@ -73,6 +81,7 @@ describe('validateRestoredSessionInBackground', () => {
 
     await validateRestoredSessionInBackground();
 
+    expect(authState.getUser).toHaveBeenCalledWith('token-a');
     expect(storageState.resetSignOutPersistWarning).toHaveBeenCalled();
     expect(authState.adminSignOut).toHaveBeenCalledWith('token-a', 'global');
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
@@ -305,6 +314,7 @@ describe('validateRestoredSessionInBackground', () => {
 
     await validateRestoredSessionInBackground();
 
+    expect(authState.getUser).toHaveBeenCalledWith('token-a');
     expect(authState.signOut).not.toHaveBeenCalled();
   });
 });

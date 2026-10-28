@@ -1,4 +1,10 @@
 import { supabase } from './client';
+import { isAuthServerUnreachableError } from './auth-reachability-error';
+import {
+  isSignOutDeadlineError,
+  SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
+  withSignOutDeadline,
+} from './sign-out-deadlines';
 import { isNetworkError } from '../auth-errors';
 
 export type ServerRevokeResult =
@@ -42,30 +48,12 @@ function isAlreadyRevokedError(error: unknown): boolean {
   return false;
 }
 
-function isUnreachableRevokeError(error: unknown): boolean {
-  if (isNetworkError(error)) {
-    return true;
+function mapRevokeError(error: unknown): { result: ServerRevokeResult; error?: unknown } {
+  if (isSignOutDeadlineError(error) || isNetworkError(error)) {
+    return { result: 'unreachable', error };
   }
-  if (typeof error !== 'object' || error === null) {
-    return false;
-  }
-  const authError = error as { status?: number; name?: string };
-  if (authError.name === 'AuthRetryableFetchError') {
-    return true;
-  }
-  const status = authError.status;
-  return status === 0 || (typeof status === 'number' && status >= 500);
-}
-
-/** Revokes the session on the server using the user's access token (no service role). */
-export async function revokeSessionOnServer(
-  accessToken: string,
-  scope: 'global' | 'local' | 'others' = 'global',
-): Promise<{ result: ServerRevokeResult; error?: unknown }> {
-  const response = await supabase.auth.admin.signOut(accessToken, scope);
-  const error = response?.error ?? null;
-  if (!error) {
-    return { result: 'revoked' };
+  if (isAuthServerUnreachableError(error)) {
+    return { result: 'unreachable', error };
   }
   if (isExpiredAccessTokenRevokeError(error)) {
     return { result: 'token_expired', error };
@@ -73,8 +61,24 @@ export async function revokeSessionOnServer(
   if (isAlreadyRevokedError(error)) {
     return { result: 'already_revoked' };
   }
-  if (isUnreachableRevokeError(error)) {
-    return { result: 'unreachable' };
-  }
   return { result: 'failed', error };
+}
+
+/** Revokes the session on the server using the user's access token (no service role). */
+export async function revokeSessionOnServer(
+  accessToken: string,
+  scope: 'global' | 'local' | 'others' = 'global',
+): Promise<{ result: ServerRevokeResult; error?: unknown }> {
+  try {
+    const response = await withSignOutDeadline(SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS, () =>
+      supabase.auth.admin.signOut(accessToken, scope),
+    );
+    const error = response?.error ?? null;
+    if (!error) {
+      return { result: 'revoked' };
+    }
+    return mapRevokeError(error);
+  } catch (error) {
+    return mapRevokeError(error);
+  }
 }

@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
-  refreshSession: vi.fn(),
   signOut: vi.fn(),
   adminSignOut: vi.fn(),
 }));
@@ -15,11 +14,18 @@ const storageState = vi.hoisted(() => ({
   getLastSeenPrimaryAuthSessionKey: vi.fn(),
 }));
 
+const refreshState = vi.hoisted(() => ({
+  refreshAccessTokenForSignOut: vi.fn(),
+}));
+
+vi.mock('./sign-out-token-refresh', () => ({
+  refreshAccessTokenForSignOut: refreshState.refreshAccessTokenForSignOut,
+}));
+
 vi.mock('./client', () => ({
   supabase: {
     auth: {
       getSession: authState.getSession,
-      refreshSession: authState.refreshSession,
       signOut: authState.signOut,
       admin: {
         signOut: authState.adminSignOut,
@@ -42,16 +48,16 @@ const userB = { id: 'user-b' };
 describe('signOutSession', () => {
   beforeEach(() => {
     authState.getSession.mockReset();
-    authState.refreshSession.mockReset();
     authState.signOut.mockReset();
     authState.adminSignOut.mockReset();
+    refreshState.refreshAccessTokenForSignOut.mockReset();
     storageState.resetSignOutPersistWarning.mockReset();
     storageState.consumeSignOutPersistWarning.mockReset();
     storageState.removeItem.mockReset();
     storageState.getLastSeenPrimaryAuthSessionKey.mockReset();
     authState.signOut.mockResolvedValue({ error: null });
     authState.adminSignOut.mockResolvedValue({ error: null });
-    authState.refreshSession.mockResolvedValue({ data: { session: null }, error: null });
+    refreshState.refreshAccessTokenForSignOut.mockRejectedValue(new Error('not used'));
     storageState.consumeSignOutPersistWarning.mockReturnValue(false);
     storageState.getLastSeenPrimaryAuthSessionKey.mockReturnValue('sb-localhost-auth-token');
     storageState.removeItem.mockResolvedValue(undefined);
@@ -110,18 +116,52 @@ describe('signOutSession', () => {
         error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
       })
       .mockResolvedValueOnce({ error: null });
-    authState.refreshSession.mockResolvedValue({
-      data: {
-        session: { access_token: 'token-a2', user: userA },
-      },
-      error: null,
+    refreshState.refreshAccessTokenForSignOut.mockResolvedValue({
+      accessToken: 'token-a2',
+      userId: userA.id,
     });
 
-    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await signOutSession({ accessToken: 'token-a', userId: userA.id, refreshToken: 'refresh-a' });
 
-    expect(authState.refreshSession).toHaveBeenCalledTimes(1);
+    expect(refreshState.refreshAccessTokenForSignOut).toHaveBeenCalledWith('refresh-a');
     expect(authState.adminSignOut).toHaveBeenCalledTimes(2);
     expect(authState.adminSignOut).toHaveBeenLastCalledWith('token-a2', 'global');
+  });
+
+  it('still clears locally when refresh returns invalid_grant', async () => {
+    authState.adminSignOut.mockResolvedValueOnce({
+      error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
+    });
+    refreshState.refreshAccessTokenForSignOut.mockRejectedValue({
+      status: 400,
+      code: 'invalid_grant',
+      message: 'invalid',
+    });
+
+    await expect(
+      signOutSession({ accessToken: 'token-a', userId: userA.id, refreshToken: 'refresh-a' }),
+    ).resolves.toEqual({ serverSignOutUnreachable: false });
+
+    expect(storageState.removeItem).toHaveBeenCalled();
+  });
+
+  it('clears locally when the retry logout still sees an expired token', async () => {
+    authState.adminSignOut.mockResolvedValue({
+      error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
+    });
+    refreshState.refreshAccessTokenForSignOut.mockResolvedValue({
+      accessToken: 'token-a2',
+      userId: userA.id,
+    });
+
+    const result = await signOutSession({
+      accessToken: 'token-a',
+      userId: userA.id,
+      refreshToken: 'refresh-a',
+    });
+
+    expect(result.serverSignOutUnreachable).toBe(true);
+    expect(storageState.removeItem).toHaveBeenCalled();
   });
 
   it('runs at most one sign-out when invoked concurrently', async () => {

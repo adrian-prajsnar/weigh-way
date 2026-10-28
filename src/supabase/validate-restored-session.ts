@@ -99,7 +99,7 @@ export async function validateRestoredSessionInBackground(): Promise<void> {
     return;
   }
 
-  const { data, error } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser(accessTokenAtStart);
   if (!error && data.user) {
     return;
   }
@@ -114,6 +114,7 @@ export async function validateRestoredSessionInBackground(): Promise<void> {
 
   await signOutSession({
     accessToken: accessTokenAtStart,
+    refreshToken: sessionAtStart?.refresh_token ?? null,
     userId: sessionAtStart?.user?.id ?? null,
   });
 }

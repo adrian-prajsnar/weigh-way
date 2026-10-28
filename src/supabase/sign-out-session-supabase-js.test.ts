@@ -2,6 +2,15 @@ import { createClient } from '@supabase/supabase-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getSignedOutMarkerKey } from './resilient-auth-storage';
 
+vi.mock('./sign-out-deadlines', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./sign-out-deadlines')>();
+  return {
+    ...actual,
+    SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS: 100,
+    SIGN_OUT_REFRESH_TIMEOUT_MS: 100,
+  };
+});
+
 const SUPABASE_URL = 'https://example.supabase.co';
 const ANON_KEY = 'public-anon-key';
 const SERVICE_ROLE_KEY = 'service-role-secret';
@@ -34,6 +43,10 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 
 vi.mock('./client', () => ({
   isSupabaseConfigured: () => true,
+  supabaseAuthHttpConfig: {
+    url: SUPABASE_URL,
+    anonKey: ANON_KEY,
+  },
   get supabase() {
     if (!clientRef.current) {
       throw new Error('test client not initialized');
@@ -104,7 +117,6 @@ async function createTestClient(options: { autoRefreshToken: boolean }) {
 
 describe('signOutSession with real Supabase auth-js', () => {
   beforeEach(() => {
-    vi.resetModules();
     diskRef.map.clear();
     mockProbeSuccess();
   });
@@ -226,11 +238,15 @@ describe('signOutSession with real Supabase auth-js', () => {
       }),
     );
 
-    await createTestClient({ autoRefreshToken: true });
+    await createTestClient({ autoRefreshToken: false });
     await clientRef.current!.auth.getSession();
 
     const { signOutSession } = await import('./sign-out-session');
-    await signOutSession({ accessToken: 'user-jwt-a', userId: USER_ID });
+    await signOutSession({
+      accessToken: 'user-jwt-a',
+      userId: USER_ID,
+      refreshToken: 'refresh-token',
+    });
 
     const afterSignOut = await clientRef.current!.auth.getSession();
     expect(afterSignOut.data.session).toBeNull();
@@ -251,5 +267,169 @@ describe('signOutSession with real Supabase auth-js', () => {
     const afterReload = await reloadedClient.auth.getSession();
     expect(afterReload.data.session).toBeNull();
     expect(diskRef.map.get(SESSION_KEY)).toBeUndefined();
+  });
+
+  it('finishes within the revoke deadline when logout hangs and clears after reload', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    diskRef.map.set(SESSION_KEY, makeSessionJson('user-jwt-a'));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/logout')) {
+          return new Promise<Response>(() => {});
+        }
+        return Promise.resolve(new Response(JSON.stringify({}), { status: 404 }));
+      }),
+    );
+
+    await createTestClient({ autoRefreshToken: false });
+    await clientRef.current!.auth.getSession();
+
+    const { signOutSession } = await import('./sign-out-session');
+    const signOutPromise = signOutSession({
+      accessToken: 'user-jwt-a',
+      userId: USER_ID,
+      refreshToken: 'refresh-token',
+    });
+    await vi.advanceTimersByTimeAsync(150);
+    const result = await signOutPromise;
+    expect(result.serverSignOutUnreachable).toBe(true);
+
+    const afterSignOut = await clientRef.current!.auth.getSession();
+    expect(afterSignOut.data.session).toBeNull();
+
+    const reloadedClient = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: {
+        storage: resilientStorageRef.current!,
+        storageKey: SESSION_KEY,
+        persistSession: true,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    expect((await reloadedClient.auth.getSession()).data.session).toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('clears locally when refresh returns invalid_grant without throwing', async () => {
+    const expiredAt = Math.floor(Date.now() / 1000) - 3600;
+    diskRef.map.set(SESSION_KEY, makeSessionJson('user-jwt-a', expiredAt));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/logout')) {
+          return new Response(JSON.stringify({ code: 'bad_jwt', message: 'token is expired' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        if (url.includes('/token')) {
+          return new Response(
+            JSON.stringify({
+              error: 'invalid_grant',
+              error_description: 'Refresh token is invalid',
+            }),
+            {
+              status: 400,
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
+        return new Response(JSON.stringify({}), { status: 404 });
+      }),
+    );
+
+    await createTestClient({ autoRefreshToken: false });
+    await clientRef.current!.auth.getSession();
+
+    const { signOutSession } = await import('./sign-out-session');
+    await expect(
+      signOutSession({
+        accessToken: 'user-jwt-a',
+        userId: USER_ID,
+        refreshToken: 'refresh-token',
+      }),
+    ).resolves.toEqual({ serverSignOutUnreachable: false });
+
+    expect((await clientRef.current!.auth.getSession()).data.session).toBeNull();
+  });
+
+  it('clears when the captured token is expired and all storage throws during sign-out', async () => {
+    const expiredAt = Math.floor(Date.now() / 1000) - 3600;
+    diskRef.map.set(SESSION_KEY, makeSessionJson('user-jwt-a', expiredAt));
+    let diskThrows = false;
+    const signedOutMarkerKey = getSignedOutMarkerKey(SESSION_KEY);
+
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      if (diskThrows && key === signedOutMarkerKey) {
+        throw new DOMException('blocked', 'SecurityError');
+      }
+      return diskRef.map.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      if (diskThrows) {
+        throw new DOMException('blocked', 'SecurityError');
+      }
+      diskRef.map.set(key, '1');
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      if (diskThrows) {
+        throw new DOMException('blocked', 'SecurityError');
+      }
+      diskRef.map.delete(key);
+    });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.includes('/logout')) {
+          return new Response(JSON.stringify({ code: 'bad_jwt', message: 'token is expired' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+        if (url.includes('/token')) {
+          const body = JSON.stringify({
+            access_token: 'user-jwt-a2',
+            refresh_token: 'refresh-token',
+            expires_in: 3600,
+            expires_at: Math.floor(Date.now() / 1000) + 3600,
+            token_type: 'bearer',
+            user: {
+              id: USER_ID,
+              aud: 'authenticated',
+              role: 'authenticated',
+              email: 'user@example.com',
+            },
+          });
+          return new Response(body, { status: 200 });
+        }
+        return new Response(JSON.stringify({}), { status: 404 });
+      }),
+    );
+
+    await createTestClient({ autoRefreshToken: false });
+    await clientRef.current!.auth.getSession();
+    diskThrows = true;
+
+    const { signOutSession } = await import('./sign-out-session');
+    await signOutSession({
+      accessToken: 'user-jwt-a',
+      userId: USER_ID,
+      refreshToken: 'refresh-token',
+    });
+
+    expect((await clientRef.current!.auth.getSession()).data.session).toBeNull();
   });
 });

@@ -120,6 +120,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const bootstrapGeneration = authEventGenerationRef.current;
     let accessTokenAtStart: string | null = null;
     let userIdAtStart: string | null = null;
+    let refreshTokenAtStart: string | null = null;
     let flagged = false;
     let storageFlagged = false;
     let sessionApplied = false;
@@ -167,6 +168,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         signOutSessionBestEffort(accessTokenAtStart, {
           forcePersistSignedOut: true,
           userId: userIdAtStart,
+          refreshToken: refreshTokenAtStart,
         });
       })();
     };
@@ -257,6 +259,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
         accessTokenAtStart = activeSession.access_token;
         userIdAtStart = activeSession.user?.id ?? null;
+        refreshTokenAtStart = activeSession.refresh_token ?? null;
         flagged = await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
         if (!flagged) {
           if (authEventGenerationRef.current === bootstrapGeneration) {
@@ -364,6 +367,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         await signOutSession({
           accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token ?? null,
           userId: data.session.user?.id ?? null,
         });
       }
@@ -385,6 +389,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     try {
       const result = await signOutSession({
         accessToken,
+        refreshToken: session?.refresh_token ?? null,
         userId: session?.user?.id ?? null,
       });
       serverSignOutUnreachable = result.serverSignOutUnreachable;
@@ -419,6 +424,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     try {
       await signOutSession({
         accessToken,
+        refreshToken: session?.refresh_token ?? null,
         userId: session?.user?.id ?? null,
       });
     } finally {
