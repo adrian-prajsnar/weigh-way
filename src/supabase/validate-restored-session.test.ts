@@ -37,8 +37,8 @@ vi.mock('./auth-session-storage', () => ({
 import { validateRestoredSessionInBackground } from './validate-restored-session';
 /* eslint-enable import/first */
 
-const sessionA = { access_token: 'token-a' };
-const sessionB = { access_token: 'token-b' };
+const sessionA = { access_token: 'token-a', user: { id: 'user-a' } };
+const sessionB = { access_token: 'token-b', user: { id: 'user-b' } };
 
 function mockSessionAtStartAndEnd(
   start: { access_token: string } | null,

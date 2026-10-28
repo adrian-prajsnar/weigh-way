@@ -119,6 +119,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     const bootstrapGeneration = authEventGenerationRef.current;
     let accessTokenAtStart: string | null = null;
+    let userIdAtStart: string | null = null;
     let flagged = false;
     let storageFlagged = false;
     let sessionApplied = false;
@@ -142,14 +143,20 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       if (authEventGenerationRef.current !== bootstrapGeneration) {
         return false;
       }
-      if (!accessTokenAtStart) {
+      if (!accessTokenAtStart && !userIdAtStart) {
         return true;
       }
       const { data } = await supabase.auth.getSession().catch(() => ({
         data: { session: null as Session | null },
       }));
-      const currentToken = data.session?.access_token ?? null;
-      return !currentToken || currentToken === accessTokenAtStart;
+      const currentUserId = data.session?.user?.id ?? null;
+      if (!currentUserId) {
+        return true;
+      }
+      if (!userIdAtStart) {
+        return true;
+      }
+      return currentUserId === userIdAtStart;
     };
 
     const runFailClosedSignOutBestEffort = () => {
@@ -157,7 +164,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         if (!(await shouldRunFailClosedSignOut())) {
           return;
         }
-        signOutSessionBestEffort(accessTokenAtStart, { forcePersistSignedOut: true });
+        signOutSessionBestEffort(accessTokenAtStart, {
+          forcePersistSignedOut: true,
+          userId: userIdAtStart,
+        });
       })();
     };
 
@@ -246,6 +256,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         }
 
         accessTokenAtStart = activeSession.access_token;
+        userIdAtStart = activeSession.user?.id ?? null;
         flagged = await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
         if (!flagged) {
           if (authEventGenerationRef.current === bootstrapGeneration) {
@@ -351,7 +362,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
       // Supabase may auto-login when email confirmation is disabled — sign out so the user logs in manually.
       if (data.session) {
-        await signOutSession({ accessToken: data.session.access_token });
+        await signOutSession({
+          accessToken: data.session.access_token,
+          userId: data.session.user?.id ?? null,
+        });
       }
 
       return { needsEmailConfirmation };
@@ -369,7 +383,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     let persistWarning = false;
     let serverSignOutUnreachable = false;
     try {
-      const result = await signOutSession({ accessToken });
+      const result = await signOutSession({
+        accessToken,
+        userId: session?.user?.id ?? null,
+      });
       serverSignOutUnreachable = result.serverSignOutUnreachable;
     } catch (error) {
       throw new Error(formatSignOutError(error));
@@ -400,7 +417,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const accessToken = session?.access_token ?? null;
     let persistWarning = false;
     try {
-      await signOutSession({ accessToken });
+      await signOutSession({
+        accessToken,
+        userId: session?.user?.id ?? null,
+      });
     } finally {
       resetOAuthRedirectState();
       await clearAuthPendingFlows();

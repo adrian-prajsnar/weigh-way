@@ -112,5 +112,8 @@ export async function validateRestoredSessionInBackground(): Promise<void> {
     return;
   }
 
-  await signOutSession({ accessToken: accessTokenAtStart });
+  await signOutSession({
+    accessToken: accessTokenAtStart,
+    userId: sessionAtStart?.user?.id ?? null,
+  });
 }

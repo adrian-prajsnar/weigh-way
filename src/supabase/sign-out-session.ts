@@ -1,3 +1,4 @@
+import { isNetworkError } from '../auth-errors';
 import { getSupabaseAuthStorage } from './auth-session-storage';
 import { supabase } from './client';
 import { revokeSessionOnServer } from './revoke-session-on-server';
@@ -6,6 +7,7 @@ let signOutSessionInFlight = false;
 
 export type SignOutSessionOptions = {
   accessToken: string | null;
+  userId?: string | null;
   /** When true, only clears this device after server revoke. */
   localOnly?: boolean;
 };
@@ -14,21 +16,26 @@ export type SignOutSessionResult = {
   serverSignOutUnreachable: boolean;
 };
 
-async function shouldClearLocalSession(capturedAccessToken: string | null): Promise<boolean> {
+export type SignOutSessionBestEffortExtra = {
+  forcePersistSignedOut?: boolean;
+  userId?: string | null;
+};
+
+async function shouldClearLocalSession(capturedUserId: string | null): Promise<boolean> {
   const { data } = await supabase.auth.getSession();
-  const currentToken = data.session?.access_token ?? null;
-  if (!currentToken) {
+  const currentUserId = data.session?.user?.id ?? null;
+  if (!currentUserId) {
     return true;
   }
-  if (!capturedAccessToken) {
+  if (!capturedUserId) {
     return true;
   }
-  return currentToken === capturedAccessToken;
+  return currentUserId === capturedUserId;
 }
 
 /** Clears auth-js + resilient storage without a second POST /logout (storage cleared first). */
-async function clearLocalAuthSession(capturedAccessToken: string | null): Promise<void> {
-  if (!(await shouldClearLocalSession(capturedAccessToken))) {
+async function clearLocalAuthSession(capturedUserId: string | null): Promise<void> {
+  if (!(await shouldClearLocalSession(capturedUserId))) {
     return;
   }
 
@@ -43,19 +50,63 @@ async function clearLocalAuthSession(capturedAccessToken: string | null): Promis
   }
 }
 
+function isRefreshUnreachable(error: unknown): boolean {
+  if (isNetworkError(error)) {
+    return true;
+  }
+  if (typeof error !== 'object' || error === null) {
+    return false;
+  }
+  const authError = error as { status?: number; name?: string };
+  if (authError.name === 'AuthRetryableFetchError') {
+    return true;
+  }
+  const status = authError.status;
+  return status === 0 || (typeof status === 'number' && status >= 500);
+}
+
+async function revokeOnServerForSignOut(
+  capturedAccessToken: string,
+  capturedUserId: string | null,
+): Promise<{ serverSignOutUnreachable: boolean }> {
+  let serverSignOutUnreachable = false;
+  let revoke = await revokeSessionOnServer(capturedAccessToken, 'global');
+
+  if (revoke.result === 'token_expired') {
+    const { data, error: refreshError } = await supabase.auth.refreshSession();
+    if (refreshError || !data.session) {
+      if (refreshError && isRefreshUnreachable(refreshError)) {
+        serverSignOutUnreachable = true;
+      } else if (refreshError) {
+        throw refreshError instanceof Error ? refreshError : new Error('sign_out_failed');
+      }
+      return { serverSignOutUnreachable };
+    }
+    if (capturedUserId && data.session.user.id !== capturedUserId) {
+      return { serverSignOutUnreachable: false };
+    }
+    revoke = await revokeSessionOnServer(data.session.access_token, 'global');
+  }
+
+  if (revoke.result === 'unreachable') {
+    serverSignOutUnreachable = true;
+  } else if (revoke.result === 'failed') {
+    throw revoke.error instanceof Error ? revoke.error : new Error('sign_out_failed');
+  }
+
+  return { serverSignOutUnreachable };
+}
+
 async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOutSessionResult> {
+  const capturedUserId = options.userId ?? null;
   let serverSignOutUnreachable = false;
 
   if (options.accessToken && !options.localOnly) {
-    const revoke = await revokeSessionOnServer(options.accessToken, 'global');
-    if (revoke.result === 'unreachable') {
-      serverSignOutUnreachable = true;
-    } else if (revoke.result === 'failed') {
-      throw revoke.error instanceof Error ? revoke.error : new Error('sign_out_failed');
-    }
+    const revokeResult = await revokeOnServerForSignOut(options.accessToken, capturedUserId);
+    serverSignOutUnreachable = revokeResult.serverSignOutUnreachable;
   }
 
-  await clearLocalAuthSession(options.localOnly ? null : options.accessToken);
+  await clearLocalAuthSession(options.localOnly ? null : capturedUserId);
 
   return { serverSignOutUnreachable };
 }
@@ -76,19 +127,20 @@ export async function signOutSession(options: SignOutSessionOptions): Promise<Si
 
 export function signOutSessionBestEffort(
   accessToken: string | null,
-  extra?: { forcePersistSignedOut?: boolean },
+  extra?: SignOutSessionBestEffortExtra,
 ): void {
   if (signOutSessionInFlight) {
     return;
   }
   signOutSessionInFlight = true;
   getSupabaseAuthStorage().resetSignOutPersistWarning();
+  const capturedUserId = extra?.userId ?? null;
   void (async () => {
     try {
       if (accessToken) {
-        await revokeSessionOnServer(accessToken, 'global');
+        await revokeOnServerForSignOut(accessToken, capturedUserId);
       }
-      await clearLocalAuthSession(accessToken);
+      await clearLocalAuthSession(capturedUserId);
     } finally {
       signOutSessionInFlight = false;
     }

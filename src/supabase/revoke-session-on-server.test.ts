@@ -37,4 +37,14 @@ describe('revokeSessionOnServer', () => {
       result: 'already_revoked',
     });
   });
+
+  it('treats expired access tokens as needing refresh, not already revoked', async () => {
+    adminState.signOut.mockResolvedValue({
+      error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
+    });
+    await expect(revokeSessionOnServer('token-a')).resolves.toEqual({
+      result: 'token_expired',
+      error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
+    });
+  });
 });
