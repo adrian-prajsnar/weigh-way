@@ -13,6 +13,7 @@ const storageState = vi.hoisted(() => ({
   consumeSignOutPersistWarning: vi.fn(),
   forcePersistSignedOutStateForLastKnownSessionKey: vi.fn(),
   noteLocalSignOutPersistFailure: vi.fn().mockResolvedValue(undefined),
+  armSignOutPersistWarning: vi.fn(),
   beginLocalClearForUser: vi.fn(),
   peekStoredPrimaryAuthSessionUserId: vi.fn(),
   removeItem: vi.fn(),
@@ -92,6 +93,7 @@ describe('signOutSession', () => {
     storageState.beginLocalClearForUser.mockReset();
     storageState.peekStoredPrimaryAuthSessionUserId.mockReset();
     storageState.noteLocalSignOutPersistFailure.mockReset();
+    storageState.armSignOutPersistWarning.mockReset();
     storageState.getItem.mockReset();
     authState.signOut.mockResolvedValue({ error: null });
     refreshState.refreshAccessTokenForSignOut.mockRejectedValue(new Error('not used'));
@@ -294,7 +296,7 @@ describe('signOutSession', () => {
         userId: userA.id,
         refreshToken: 'refresh-a',
       }),
-    ).resolves.toEqual({ serverSignOutUnreachable: false });
+    ).resolves.toEqual({ serverSignOutUnreachable: false, localClearIncomplete: false });
 
     expect(storageState.removeItem).toHaveBeenCalled();
   });
@@ -350,7 +352,7 @@ describe('signOutSession', () => {
         userId: userA.id,
         refreshToken: 'refresh-a',
       }),
-    ).resolves.toEqual({ serverSignOutUnreachable: true });
+    ).resolves.toEqual({ serverSignOutUnreachable: true, localClearIncomplete: false });
 
     expect(storageState.removeItem).toHaveBeenCalled();
   });
@@ -364,8 +366,64 @@ describe('signOutSession', () => {
       userId: userA.id,
     });
     await vi.advanceTimersByTimeAsync(600);
-    await expect(signOutPromise).resolves.toEqual({ serverSignOutUnreachable: false });
+    await expect(signOutPromise).resolves.toEqual({
+      serverSignOutUnreachable: false,
+      localClearIncomplete: true,
+    });
+    expect(storageState.armSignOutPersistWarning).toHaveBeenCalled();
     expect(storageState.noteLocalSignOutPersistFailure).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('reports localClearIncomplete when storage peek getItem hangs until the clear deadline', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    storageState.peekStoredPrimaryAuthSessionUserId.mockImplementation(
+      () =>
+        new Promise<string>(() => {
+          /* hang */
+        }),
+    );
+    storageState.removeItem.mockImplementation(() => new Promise(() => {}));
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userA.id);
+
+    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await vi.advanceTimersByTimeAsync(600);
+    await expect(signOutPromise).resolves.toMatchObject({ localClearIncomplete: true });
+    expect(storageState.armSignOutPersistWarning).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('reports localClearIncomplete when removeItem hangs until the clear deadline', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    storageState.removeItem.mockImplementation(() => new Promise(() => {}));
+    localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userA.id);
+    storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userA.id);
+
+    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await vi.advanceTimersByTimeAsync(600);
+    await expect(signOutPromise).resolves.toEqual({
+      serverSignOutUnreachable: false,
+      localClearIncomplete: true,
+    });
+    expect(storageState.armSignOutPersistWarning).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it('arms persist warning before noteLocalSignOutPersistFailure can finish', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    storageState.removeItem.mockImplementation(() => new Promise(() => {}));
+    let noteStarted = false;
+    storageState.noteLocalSignOutPersistFailure.mockImplementation(() => {
+      noteStarted = true;
+      return new Promise(() => {});
+    });
+    storageState.armSignOutPersistWarning.mockImplementation(() => {
+      expect(noteStarted).toBe(false);
+    });
+
+    const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await vi.advanceTimersByTimeAsync(600);
+    await expect(signOutPromise).resolves.toMatchObject({ localClearIncomplete: true });
     vi.useRealTimers();
   });
 
@@ -376,7 +434,10 @@ describe('signOutSession', () => {
 
     const first = signOutSession({ accessToken: 'token-a', userId: userA.id });
     await vi.advanceTimersByTimeAsync(600);
-    await expect(first).resolves.toEqual({ serverSignOutUnreachable: false });
+    await expect(first).resolves.toEqual({
+      serverSignOutUnreachable: false,
+      localClearIncomplete: false,
+    });
     expect(storageState.removeItem).toHaveBeenCalled();
 
     storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userA.id);
@@ -402,7 +463,10 @@ describe('signOutSession', () => {
 
     const signOutPromise = signOutSession({ accessToken: 'token-a', userId: userA.id });
     await vi.advanceTimersByTimeAsync(600);
-    await expect(signOutPromise).resolves.toEqual({ serverSignOutUnreachable: false });
+    await expect(signOutPromise).resolves.toEqual({
+      serverSignOutUnreachable: false,
+      localClearIncomplete: true,
+    });
 
     localUserState.getLatestAuthUserIdFromEvents.mockReturnValue(userB.id);
     storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userB.id);

@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isDevWarningsEnabled } from '../storage/preference-storage-fallback';
-import { parseUserIdFromAuthSessionPayload } from './sign-out-local-user';
+import {
+  getLatestAuthUserIdFromEvents,
+  parseUserIdFromAuthSessionPayload,
+} from './sign-out-local-user';
 
 export type AuthSessionStorage = {
   getItem: (key: string) => Promise<string | null>;
@@ -17,6 +20,7 @@ export type ResilientAuthStorage = AuthSessionStorage & {
   getLastSeenPrimaryAuthSessionKey: () => string | null;
   forcePersistSignedOutStateForLastKnownSessionKey: () => Promise<void>;
   noteLocalSignOutPersistFailure: () => Promise<void>;
+  armSignOutPersistWarning: () => void;
   beginLocalClearForUser: (userId: string | null) => void;
   peekStoredPrimaryAuthSessionUserId: () => Promise<string | null>;
 };
@@ -160,6 +164,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     const captured = pendingRemoveCapturedUserId.get(key);
     if (!captured || !isPrimaryAuthSessionStorageKey(key)) {
       return true;
+    }
+    const eventUserId = getLatestAuthUserIdFromEvents();
+    if (eventUserId && eventUserId !== captured) {
+      pendingDiskRemoves.delete(key);
+      overlay.delete(key);
+      return false;
     }
     const current = await peekUserIdForSessionKey(key);
     if (!current || current === captured) {
@@ -353,6 +363,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       await persistSignedOutState(lastSeenPrimaryAuthSessionKey);
     },
     async noteLocalSignOutPersistFailure() {
+      signOutPersistWarning = true;
       if (!lastSeenPrimaryAuthSessionKey) {
         return;
       }
@@ -362,9 +373,11 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       }
       markTombstone(key);
       pendingDiskRemoves.add(key);
-      signOutPersistWarning = true;
       await persistSignedOutState(key);
       schedulePendingDiskRetries();
+    },
+    armSignOutPersistWarning() {
+      signOutPersistWarning = true;
     },
     beginLocalClearForUser(userId: string | null) {
       if (!lastSeenPrimaryAuthSessionKey || !userId) {

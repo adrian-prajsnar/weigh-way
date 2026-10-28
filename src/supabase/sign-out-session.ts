@@ -32,6 +32,7 @@ export type SignOutSessionOptions = {
 
 export type SignOutSessionResult = {
   serverSignOutUnreachable: boolean;
+  localClearIncomplete: boolean;
 };
 
 export type SignOutSessionBestEffortExtra = {
@@ -258,6 +259,7 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
   const deadlineMs = Date.now() + SIGN_OUT_FLOW_CAP_MS;
   const capturedUserId = options.localOnly ? null : (options.userId ?? null);
   let serverSignOutUnreachable = false;
+  let localClearIncomplete = false;
   let keepLocalSession = false;
   let serverRevokeSucceeded = false;
 
@@ -300,6 +302,8 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
           if (!serverRevokeSucceeded) {
             serverSignOutUnreachable = true;
           }
+          localClearIncomplete = true;
+          getSupabaseAuthStorage().armSignOutPersistWarning();
           void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
           scheduleLocalSignOutPersistFailureNote(deadlineMs);
         } else {
@@ -309,12 +313,12 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
     }
   }
 
-  return { serverSignOutUnreachable };
+  return { serverSignOutUnreachable, localClearIncomplete };
 }
 
 export async function signOutSession(options: SignOutSessionOptions): Promise<SignOutSessionResult> {
   if (signOutSessionInFlight) {
-    return { serverSignOutUnreachable: false };
+    return { serverSignOutUnreachable: false, localClearIncomplete: false };
   }
   signOutSessionInFlight = true;
   getSupabaseAuthStorage().resetSignOutPersistWarning();

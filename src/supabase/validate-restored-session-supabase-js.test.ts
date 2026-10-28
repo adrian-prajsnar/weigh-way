@@ -71,7 +71,7 @@ describe('validateRestoredSessionInBackground with real auth-js', () => {
   beforeEach(() => {
     diskRef.map.clear();
     signOutSessionMock.mockReset();
-    signOutSessionMock.mockResolvedValue({ serverSignOutUnreachable: false });
+    signOutSessionMock.mockResolvedValue({ serverSignOutUnreachable: false, localClearIncomplete: false });
     authState.getSession.mockReset();
     authState.refreshSession.mockReset();
   });

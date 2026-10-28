@@ -397,6 +397,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const accessToken = session?.access_token ?? null;
     let persistWarning = false;
     let serverSignOutUnreachable = false;
+    let localClearIncomplete = false;
     try {
       const result = await signOutSession({
         accessToken,
@@ -404,6 +405,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         userId: session?.user?.id ?? null,
       });
       serverSignOutUnreachable = result.serverSignOutUnreachable;
+      localClearIncomplete = result.localClearIncomplete;
     } catch (error) {
       throw new Error(formatSignOutError(error));
     } finally {
@@ -412,7 +414,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       await clearPkceVerifierBackups();
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
-    if (persistWarning) {
+    if (localClearIncomplete || persistWarning) {
       throw new Error(
         formatSignOutPersistWarning({
           localPersistFailed: true,

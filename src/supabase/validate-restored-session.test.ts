@@ -70,7 +70,7 @@ describe('validateRestoredSessionInBackground', () => {
     signOutSessionMock.mockReset();
     storageState.resetSignOutPersistWarning.mockReset();
     storageState.consumeSignOutPersistWarning.mockReset();
-    signOutSessionMock.mockResolvedValue({ serverSignOutUnreachable: false });
+    signOutSessionMock.mockResolvedValue({ serverSignOutUnreachable: false, localClearIncomplete: false });
     authState.refreshSession.mockResolvedValue({ data: { session: sessionA }, error: null });
   });
 
