@@ -11,6 +11,8 @@ const authState = vi.hoisted(() => ({
 const storageState = vi.hoisted(() => ({
   resetSignOutPersistWarning: vi.fn(),
   consumeSignOutPersistWarning: vi.fn(),
+  removeItem: vi.fn().mockResolvedValue(undefined),
+  getLastSeenPrimaryAuthSessionKey: vi.fn().mockReturnValue('sb-localhost-auth-token'),
 }));
 
 vi.mock('./client', () => ({
@@ -44,7 +46,8 @@ function mockSessionAtStartAndEnd(
 ) {
   authState.getSession
     .mockResolvedValueOnce({ data: { session: start } })
-    .mockResolvedValueOnce({ data: { session: end } });
+    .mockResolvedValueOnce({ data: { session: end } })
+    .mockResolvedValue({ data: { session: end } });
 }
 
 describe('validateRestoredSessionInBackground', () => {

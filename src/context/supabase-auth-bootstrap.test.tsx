@@ -2,7 +2,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BOOTSTRAP_SESSION_DEADLINE_MS } from './supabase-auth-context';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -16,6 +15,7 @@ const storageState = vi.hoisted(() => ({
   consumeSignOutPersistWarning: vi.fn(),
   forcePersistSignedOutStateForLastKnownSessionKey: vi.fn().mockResolvedValue(undefined),
   getLastSeenPrimaryAuthSessionKey: vi.fn().mockReturnValue('sb-localhost-auth-token'),
+  removeItem: vi.fn().mockResolvedValue(undefined),
   getItem: vi.fn(),
 }));
 
@@ -95,7 +95,11 @@ vi.mock('../storage/auth-pending-flow', () => ({
 
 /* eslint-disable import/first -- after vi.mock */
 import { getEntries } from '../supabase/weight-sync';
-import { SupabaseAuthProvider, useSupabaseAuth } from './supabase-auth-context';
+import {
+  BOOTSTRAP_SESSION_DEADLINE_MS,
+  SupabaseAuthProvider,
+  useSupabaseAuth,
+} from './supabase-auth-context';
 /* eslint-enable import/first */
 
 const sampleSession = {
@@ -142,6 +146,7 @@ describe('SupabaseAuthProvider bootstrap', () => {
   beforeEach(() => {
     adminState.signOut.mockResolvedValue({ error: null });
     authState.signOut.mockResolvedValue({ error: null });
+    authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
   });
 
   afterEach(() => {

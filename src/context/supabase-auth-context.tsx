@@ -383,7 +383,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatSignOutPersistWarning({ serverSignOutUnreachable }));
     }
     if (serverSignOutUnreachable) {
-      throw new Error(formatSignOutError(new Error('Network request failed')));
+      throw new Error(formatSignOutPersistWarning({ serverSignOutUnreachable: true }));
     }
   }, [session]);
 

@@ -14,6 +14,35 @@ export type SignOutSessionResult = {
   serverSignOutUnreachable: boolean;
 };
 
+async function shouldClearLocalSession(capturedAccessToken: string | null): Promise<boolean> {
+  const { data } = await supabase.auth.getSession();
+  const currentToken = data.session?.access_token ?? null;
+  if (!currentToken) {
+    return true;
+  }
+  if (!capturedAccessToken) {
+    return true;
+  }
+  return currentToken === capturedAccessToken;
+}
+
+/** Clears auth-js + resilient storage without a second POST /logout (storage cleared first). */
+async function clearLocalAuthSession(capturedAccessToken: string | null): Promise<void> {
+  if (!(await shouldClearLocalSession(capturedAccessToken))) {
+    return;
+  }
+
+  const storageKey = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
+  if (storageKey) {
+    await getSupabaseAuthStorage().removeItem(storageKey);
+  }
+
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+  if (error) {
+    throw error;
+  }
+}
+
 async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOutSessionResult> {
   let serverSignOutUnreachable = false;
 
@@ -26,10 +55,7 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
     }
   }
 
-  const { error } = await supabase.auth.signOut({ scope: 'local' });
-  if (error && !options.localOnly) {
-    throw error;
-  }
+  await clearLocalAuthSession(options.localOnly ? null : options.accessToken);
 
   return { serverSignOutUnreachable };
 }
@@ -44,7 +70,6 @@ export async function signOutSession(options: SignOutSessionOptions): Promise<Si
   try {
     return await runSignOutSession(options);
   } finally {
-    getSupabaseAuthStorage().consumeSignOutPersistWarning();
     signOutSessionInFlight = false;
   }
 }
@@ -63,9 +88,8 @@ export function signOutSessionBestEffort(
       if (accessToken) {
         await revokeSessionOnServer(accessToken, 'global');
       }
-      await supabase.auth.signOut({ scope: 'local' });
+      await clearLocalAuthSession(accessToken);
     } finally {
-      getSupabaseAuthStorage().consumeSignOutPersistWarning();
       signOutSessionInFlight = false;
     }
   })();

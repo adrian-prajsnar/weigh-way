@@ -329,7 +329,7 @@ const pl = {
     signOutPersistFailed:
       'Wylogowano. Spróbujemy dokończyć czyszczenie tego urządzenia, gdy pamięć będzie dostępna.',
     signOutPersistFailedOffline:
-      'Wylogowano. Spróbujemy dokończyć czyszczenie tego urządzenia, gdy pamięć będzie dostępna i połączenie wróci.',
+      'Wylogowano na tym urządzeniu. Nie udało się połączyć z serwerem.',
     deleteAccount: 'Usuń konto',
     deleteAccountConfirm:
       'Czy na pewno chcesz usunąć swoje konto? Wszystkie pomiary wagi zostaną usunięte. Tej operacji nie można cofnąć.',
