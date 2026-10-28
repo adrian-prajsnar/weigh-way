@@ -1,3 +1,4 @@
+import { fetchAuthUserForAccessToken } from './fetch-auth-user';
 import { signOutSession } from './sign-out-session';
 import { supabase } from './client';
 
@@ -60,6 +61,7 @@ function isExpiredBadJwt(error: unknown): boolean {
 async function shouldSignOutAfterSessionRejection(
   error: unknown,
   accessTokenAtStart: string,
+  userIdAtStart: string | null,
 ): Promise<boolean> {
   let rejection = error;
 
@@ -82,6 +84,9 @@ async function shouldSignOutAfterSessionRejection(
   const {
     data: { session: sessionNow },
   } = await supabase.auth.getSession();
+  if (userIdAtStart && sessionNow?.user?.id !== userIdAtStart) {
+    return false;
+  }
   if (sessionNow?.access_token !== accessTokenAtStart) {
     return false;
   }
@@ -95,19 +100,30 @@ export async function validateRestoredSessionInBackground(): Promise<void> {
     data: { session: sessionAtStart },
   } = await supabase.auth.getSession();
   const accessTokenAtStart = sessionAtStart?.access_token ?? null;
+  const userIdAtStart = sessionAtStart?.user?.id ?? null;
   if (!accessTokenAtStart) {
     return;
   }
 
-  const { data, error } = await supabase.auth.getUser(accessTokenAtStart);
-  if (!error && data.user) {
+  const userResult = await fetchAuthUserForAccessToken(accessTokenAtStart);
+  if (userResult.ok) {
     return;
   }
-  if (!error) {
+  if (userResult.unreachable) {
     return;
   }
 
-  const shouldSignOut = await shouldSignOutAfterSessionRejection(error, accessTokenAtStart);
+  const rejection = {
+    status: userResult.status,
+    code: userResult.code,
+    message: userResult.message,
+  };
+
+  const shouldSignOut = await shouldSignOutAfterSessionRejection(
+    rejection,
+    accessTokenAtStart,
+    userIdAtStart,
+  );
   if (!shouldSignOut) {
     return;
   }
@@ -115,6 +131,6 @@ export async function validateRestoredSessionInBackground(): Promise<void> {
   await signOutSession({
     accessToken: accessTokenAtStart,
     refreshToken: sessionAtStart?.refresh_token ?? null,
-    userId: sessionAtStart?.user?.id ?? null,
+    userId: userIdAtStart,
   });
 }

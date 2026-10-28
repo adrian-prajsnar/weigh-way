@@ -1,4 +1,5 @@
 import {
+  isAuthRateLimitedError,
   isAuthServerUnreachableError,
   isRefreshInvalidGrantError,
   isRefreshRateLimitedError,
@@ -8,7 +9,10 @@ import { supabase } from './client';
 import { revokeSessionOnServer } from './revoke-session-on-server';
 import {
   isSignOutDeadlineError,
+  SIGN_OUT_FLOW_CAP_MS,
+  SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
+  SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS,
   withSignOutDeadline,
 } from './sign-out-deadlines';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
@@ -19,7 +23,6 @@ export type SignOutSessionOptions = {
   accessToken: string | null;
   refreshToken?: string | null;
   userId?: string | null;
-  /** When true, only clears this device after server revoke. */
   localOnly?: boolean;
 };
 
@@ -33,50 +36,60 @@ export type SignOutSessionBestEffortExtra = {
   refreshToken?: string | null;
 };
 
-async function shouldClearLocalSession(capturedUserId: string | null): Promise<boolean> {
-  const { data } = await supabase.auth.getSession();
-  const currentUserId = data.session?.user?.id ?? null;
-  if (!currentUserId) {
-    return true;
-  }
-  if (!capturedUserId) {
-    return true;
-  }
-  return currentUserId === capturedUserId;
+function flowBudgetMs(deadlineMs: number, stepMs: number): number {
+  return Math.min(stepMs, Math.max(0, deadlineMs - Date.now()));
 }
 
-/** Clears auth-js + resilient storage without a second POST /logout (storage cleared first). */
-async function clearLocalAuthSession(
+async function shouldClearLocalSession(
   capturedUserId: string | null,
-  trustedCurrentUserId?: string | null,
-): Promise<void> {
-  if (trustedCurrentUserId !== undefined) {
-    if (
-      trustedCurrentUserId &&
-      capturedUserId &&
-      trustedCurrentUserId !== capturedUserId
-    ) {
-      return;
+  deadlineMs: number,
+): Promise<boolean> {
+  try {
+    const { data } = await withSignOutDeadline(
+      flowBudgetMs(deadlineMs, SIGN_OUT_SESSION_USER_CHECK_TIMEOUT_MS),
+      () => supabase.auth.getSession(),
+    );
+    const currentUserId = data.session?.user?.id ?? null;
+    if (!currentUserId) {
+      return true;
     }
-  } else if (!(await shouldClearLocalSession(capturedUserId))) {
-    return;
-  }
-
-  const storageKey = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
-  if (storageKey) {
-    await getSupabaseAuthStorage().removeItem(storageKey);
-  }
-
-  const { error } = await supabase.auth.signOut({ scope: 'local' });
-  if (error) {
+    if (!capturedUserId) {
+      return true;
+    }
+    return currentUserId === capturedUserId;
+  } catch (error) {
+    if (isSignOutDeadlineError(error)) {
+      return Boolean(capturedUserId);
+    }
     throw error;
   }
 }
 
-async function resolveAccessTokenSafely(): Promise<string | null> {
+async function clearLocalAuthSession(
+  capturedUserId: string | null,
+  deadlineMs: number,
+): Promise<void> {
+  if (!(await shouldClearLocalSession(capturedUserId, deadlineMs))) {
+    return;
+  }
+
+  await withSignOutDeadline(flowBudgetMs(deadlineMs, SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS), async () => {
+    const storageKey = getSupabaseAuthStorage().getLastSeenPrimaryAuthSessionKey();
+    if (storageKey) {
+      await getSupabaseAuthStorage().removeItem(storageKey);
+    }
+    const { error } = await supabase.auth.signOut({ scope: 'local' });
+    if (error) {
+      throw error;
+    }
+  });
+}
+
+async function resolveAccessTokenSafely(deadlineMs: number): Promise<string | null> {
   try {
-    const { data } = await withSignOutDeadline(SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS, () =>
-      supabase.auth.getSession(),
+    const { data } = await withSignOutDeadline(
+      flowBudgetMs(deadlineMs, SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS),
+      () => supabase.auth.getSession(),
     );
     return data.session?.access_token ?? null;
   } catch {
@@ -84,73 +97,60 @@ async function resolveAccessTokenSafely(): Promise<string | null> {
   }
 }
 
-async function refreshSessionForSignOut(
-  refreshToken: string,
-): Promise<{ session: { access_token: string; user: { id: string } } }> {
-  const refreshed = await refreshAccessTokenForSignOut(refreshToken);
-  return {
-    session: {
-      access_token: refreshed.accessToken,
-      user: { id: refreshed.userId },
-    },
-  };
-}
-
 type RevokeOnServerResult = {
   serverSignOutUnreachable: boolean;
   keepLocalSession: boolean;
-  trustedCurrentUserId?: string | null;
 };
 
 async function revokeOnServerForSignOut(
   capturedAccessToken: string,
   capturedUserId: string | null,
   capturedRefreshToken: string | null,
+  deadlineMs: number,
 ): Promise<RevokeOnServerResult> {
   let serverSignOutUnreachable = false;
-  let trustedCurrentUserId: string | null | undefined;
-  let revoke = await revokeSessionOnServer(capturedAccessToken, 'global');
+  let revoke = await revokeSessionOnServer(
+    capturedAccessToken,
+    'global',
+    flowBudgetMs(deadlineMs, SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS),
+  );
+
+  if (revoke.result === 'rate_limited') {
+    return { serverSignOutUnreachable: false, keepLocalSession: true };
+  }
 
   if (revoke.result === 'token_expired') {
     if (!capturedRefreshToken) {
-      serverSignOutUnreachable = true;
-      return { serverSignOutUnreachable, keepLocalSession: false };
+      return { serverSignOutUnreachable: true, keepLocalSession: false };
     }
-
     try {
-      const refreshed = await refreshSessionForSignOut(capturedRefreshToken);
-      if (!refreshed) {
-        return { serverSignOutUnreachable, keepLocalSession: false };
-      }
-      if (capturedUserId && refreshed.session.user.id !== capturedUserId) {
+      const refreshed = await refreshAccessTokenForSignOut(
+        capturedRefreshToken,
+        flowBudgetMs(deadlineMs, SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS),
+      );
+      if (capturedUserId && refreshed.userId !== capturedUserId) {
         return { serverSignOutUnreachable: false, keepLocalSession: false };
       }
-      trustedCurrentUserId = refreshed.session.user.id;
-      revoke = await revokeSessionOnServer(refreshed.session.access_token, 'global');
+      revoke = await revokeSessionOnServer(
+        refreshed.accessToken,
+        'global',
+        flowBudgetMs(deadlineMs, SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS),
+      );
       if (revoke.result === 'token_expired') {
         serverSignOutUnreachable = true;
       }
+      if (revoke.result === 'rate_limited') {
+        return { serverSignOutUnreachable: false, keepLocalSession: true };
+      }
     } catch (error) {
-      if (isRefreshRateLimitedError(error)) {
+      if (isRefreshRateLimitedError(error) || isAuthRateLimitedError(error)) {
         return { serverSignOutUnreachable: false, keepLocalSession: true };
       }
       if (isRefreshInvalidGrantError(error)) {
-        return {
-          serverSignOutUnreachable: false,
-          keepLocalSession: false,
-          trustedCurrentUserId: capturedUserId,
-        };
+        return { serverSignOutUnreachable: false, keepLocalSession: false };
       }
-      if (
-        isSignOutDeadlineError(error) ||
-        isAuthServerUnreachableError(error)
-      ) {
-        serverSignOutUnreachable = true;
-        return {
-          serverSignOutUnreachable,
-          keepLocalSession: false,
-          trustedCurrentUserId: capturedUserId,
-        };
+      if (isSignOutDeadlineError(error) || isAuthServerUnreachableError(error)) {
+        return { serverSignOutUnreachable: true, keepLocalSession: false };
       }
       throw error instanceof Error ? error : new Error('sign_out_failed');
     }
@@ -162,30 +162,30 @@ async function revokeOnServerForSignOut(
     throw revoke.error instanceof Error ? revoke.error : new Error('sign_out_failed');
   }
 
-  return { serverSignOutUnreachable, keepLocalSession: false, trustedCurrentUserId };
+  return { serverSignOutUnreachable, keepLocalSession: false };
 }
 
 async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOutSessionResult> {
+  const deadlineMs = Date.now() + SIGN_OUT_FLOW_CAP_MS;
   const capturedUserId = options.localOnly ? null : (options.userId ?? null);
   let serverSignOutUnreachable = false;
   let keepLocalSession = false;
-  let trustedCurrentUserId: string | null | undefined;
 
   try {
     if (!options.localOnly) {
       let accessToken = options.accessToken;
       if (!accessToken) {
-        accessToken = await resolveAccessTokenSafely();
+        accessToken = await resolveAccessTokenSafely(deadlineMs);
       }
       if (accessToken) {
         const revokeResult = await revokeOnServerForSignOut(
           accessToken,
           capturedUserId,
           options.refreshToken ?? null,
+          deadlineMs,
         );
         serverSignOutUnreachable = revokeResult.serverSignOutUnreachable;
         keepLocalSession = revokeResult.keepLocalSession;
-        trustedCurrentUserId = revokeResult.trustedCurrentUserId;
         if (keepLocalSession) {
           throw new Error('sign_out_rate_limited');
         }
@@ -195,25 +195,29 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
     if (keepLocalSession) {
       throw error;
     }
-    if (
-      isSignOutDeadlineError(error) ||
-      isAuthServerUnreachableError(error)
-    ) {
+    if (isSignOutDeadlineError(error) || isAuthServerUnreachableError(error)) {
       serverSignOutUnreachable = true;
-      trustedCurrentUserId = capturedUserId;
     } else if (!isRefreshInvalidGrantError(error)) {
       throw error;
     }
   } finally {
     if (!keepLocalSession) {
-      await clearLocalAuthSession(capturedUserId, trustedCurrentUserId);
+      try {
+        await clearLocalAuthSession(capturedUserId, deadlineMs);
+      } catch (error) {
+        if (isSignOutDeadlineError(error) || isAuthServerUnreachableError(error)) {
+          serverSignOutUnreachable = true;
+          await getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
+        } else {
+          throw error;
+        }
+      }
     }
   }
 
   return { serverSignOutUnreachable };
 }
 
-/** Server revoke (when token present) then local sign-out; at most one in flight. */
 export async function signOutSession(options: SignOutSessionOptions): Promise<SignOutSessionResult> {
   if (signOutSessionInFlight) {
     return { serverSignOutUnreachable: false };
@@ -236,33 +240,15 @@ export function signOutSessionBestEffort(
   }
   signOutSessionInFlight = true;
   getSupabaseAuthStorage().resetSignOutPersistWarning();
-  const capturedUserId = extra?.userId ?? null;
-  void (async () => {
-    let keepLocalSession = false;
-    let trustedCurrentUserId: string | null | undefined;
-    try {
-      let token = accessToken;
-      if (!token) {
-        token = await resolveAccessTokenSafely();
-      }
-      if (token) {
-        const revokeResult = await revokeOnServerForSignOut(
-          token,
-          capturedUserId,
-          extra?.refreshToken ?? null,
-        );
-        keepLocalSession = revokeResult.keepLocalSession;
-        trustedCurrentUserId = revokeResult.trustedCurrentUserId;
-      }
-    } catch {
-      // Best-effort: still attempt local clear unless rate-limited.
-    } finally {
-      if (!keepLocalSession) {
-        await clearLocalAuthSession(capturedUserId, trustedCurrentUserId).catch(() => undefined);
-      }
+  void runSignOutSession({
+    accessToken,
+    refreshToken: extra?.refreshToken ?? null,
+    userId: extra?.userId ?? null,
+  })
+    .catch(() => undefined)
+    .finally(() => {
       signOutSessionInFlight = false;
-    }
-  })();
+    });
   if (extra?.forcePersistSignedOut) {
     void getSupabaseAuthStorage().forcePersistSignedOutStateForLastKnownSessionKey();
   }

@@ -145,6 +145,44 @@ describe('createResilientAuthStorage', () => {
     expect(disk.has('sb-localhost-auth-token')).toBe(true);
   });
 
+  it('noteLocalSignOutPersistFailure arms pending removal and a persist warning', async () => {
+    const disk = new Map<string, string>([['sb-localhost-auth-token', 'user-a']]);
+    asyncStorage.getItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return '1';
+      }
+      return disk.get(key) ?? null;
+    });
+    asyncStorage.setItem.mockImplementation(async (key: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      throw securityError();
+    });
+    asyncStorage.removeItem.mockImplementation(async () => {
+      throw securityError();
+    });
+
+    const storage = createResilientAuthStorage();
+    await storage.getItem('sb-localhost-auth-token');
+    await storage.noteLocalSignOutPersistFailure();
+
+    expect(storage.hasPendingDiskPersistence()).toBe(true);
+    expect(storage.consumeSignOutPersistWarning()).toBe(true);
+
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
+      if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      disk.set(key, value);
+    });
+    asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      disk.delete(key);
+    });
+    await storage.retryPendingDiskPersistence();
+    expect(disk.has('sb-localhost-auth-token')).toBe(false);
+  });
+
   it('clears stale disk session on the next successful write after a failed remove', async () => {
     const disk = new Map<string, string>([['sb-localhost-auth-token', 'user-a']]);
     let removeAttempts = 0;

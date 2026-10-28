@@ -23,13 +23,17 @@ export function isRefreshInvalidGrantError(error: unknown): boolean {
   const authError = error as {
     status?: number;
     code?: string;
+    error_code?: string;
     message?: string;
+    msg?: string;
     error?: string;
   };
   if (authError.status !== 400) {
     return false;
   }
-  const code = authError.code ?? authError.error ?? '';
+  const code =
+    authError.error_code ?? authError.code ?? authError.error ?? '';
+  const message = (authError.msg ?? authError.message ?? '').toLowerCase();
   if (
     code === 'invalid_grant' ||
     code === 'refresh_token_not_found' ||
@@ -37,7 +41,6 @@ export function isRefreshInvalidGrantError(error: unknown): boolean {
   ) {
     return true;
   }
-  const message = (authError.message ?? '').toLowerCase();
   if (message.includes('invalid_grant') || message.includes('refresh_token')) {
     return true;
   }
@@ -48,6 +51,10 @@ export function isRefreshInvalidGrantError(error: unknown): boolean {
 }
 
 export function isRefreshRateLimitedError(error: unknown): boolean {
+  return isAuthRateLimitedError(error);
+}
+
+export function isAuthRateLimitedError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) {
     return false;
   }

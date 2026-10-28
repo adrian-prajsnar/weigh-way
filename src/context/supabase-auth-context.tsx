@@ -402,7 +402,12 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
     if (persistWarning) {
-      throw new Error(formatSignOutPersistWarning({ serverSignOutUnreachable }));
+      throw new Error(
+        formatSignOutPersistWarning({
+          localPersistFailed: true,
+          serverSignOutUnreachable,
+        }),
+      );
     }
     if (serverSignOutUnreachable) {
       throw new Error(formatSignOutPersistWarning({ serverSignOutUnreachable: true }));
@@ -434,7 +439,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
     if (persistWarning) {
-      throw new Error(formatSignOutPersistWarning());
+      throw new Error(formatSignOutPersistWarning({ localPersistFailed: true }));
     }
   }, [session]);
 

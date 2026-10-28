@@ -202,10 +202,16 @@ export function formatSignOutError(error: unknown): string {
 
 export type SignOutPersistWarningOptions = {
   serverSignOutUnreachable?: boolean;
+  localPersistFailed?: boolean;
 };
 
 export function formatSignOutPersistWarning(options?: SignOutPersistWarningOptions): string {
-  if (options?.serverSignOutUnreachable) {
+  const offline = Boolean(options?.serverSignOutUnreachable);
+  const storage = Boolean(options?.localPersistFailed);
+  if (offline && storage) {
+    return t('profile.signOutPersistFailedOfflineAndStorage');
+  }
+  if (offline) {
     return t('profile.signOutPersistFailedOffline');
   }
   return t('profile.signOutPersistFailed');

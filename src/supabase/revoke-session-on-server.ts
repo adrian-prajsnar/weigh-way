@@ -1,8 +1,10 @@
-import { supabase } from './client';
-import { isAuthServerUnreachableError } from './auth-reachability-error';
+import { authApiUrl, authUserJwtHeaders } from './auth-api-http';
+import { isAuthRateLimitedError, isAuthServerUnreachableError } from './auth-reachability-error';
+import { supabaseAuthHttpConfig } from './client';
 import {
   isSignOutDeadlineError,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
+  SignOutDeadlineError,
   withSignOutDeadline,
 } from './sign-out-deadlines';
 import { isNetworkError } from '../auth-errors';
@@ -11,6 +13,7 @@ export type ServerRevokeResult =
   | 'revoked'
   | 'already_revoked'
   | 'token_expired'
+  | 'rate_limited'
   | 'unreachable'
   | 'failed';
 
@@ -48,12 +51,40 @@ function isAlreadyRevokedError(error: unknown): boolean {
   return false;
 }
 
+function mapRevokeHttpError(status: number, body: unknown): { result: ServerRevokeResult; error?: unknown } {
+  const payload =
+    typeof body === 'object' && body !== null
+      ? (body as { code?: string; message?: string; msg?: string; error?: string })
+      : {};
+  const error = {
+    status,
+    code: payload.code ?? payload.error,
+    message: payload.message ?? payload.msg,
+  };
+  if (status === 429 || isAuthRateLimitedError(error)) {
+    return { result: 'rate_limited', error };
+  }
+  if (isExpiredAccessTokenRevokeError(error)) {
+    return { result: 'token_expired', error };
+  }
+  if (isAlreadyRevokedError(error)) {
+    return { result: 'already_revoked' };
+  }
+  if (status === 0 || status >= 500) {
+    return { result: 'unreachable', error };
+  }
+  return { result: 'failed', error };
+}
+
 function mapRevokeError(error: unknown): { result: ServerRevokeResult; error?: unknown } {
   if (isSignOutDeadlineError(error) || isNetworkError(error)) {
     return { result: 'unreachable', error };
   }
   if (isAuthServerUnreachableError(error)) {
     return { result: 'unreachable', error };
+  }
+  if (isAuthRateLimitedError(error)) {
+    return { result: 'rate_limited', error };
   }
   if (isExpiredAccessTokenRevokeError(error)) {
     return { result: 'token_expired', error };
@@ -68,17 +99,38 @@ function mapRevokeError(error: unknown): { result: ServerRevokeResult; error?: u
 export async function revokeSessionOnServer(
   accessToken: string,
   scope: 'global' | 'local' | 'others' = 'global',
+  timeoutMs: number = SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
 ): Promise<{ result: ServerRevokeResult; error?: unknown }> {
+  const { url, anonKey } = supabaseAuthHttpConfig;
+  if (!url || !anonKey) {
+    return { result: 'failed', error: new Error('sign_out_not_configured') };
+  }
+
   try {
-    const response = await withSignOutDeadline(SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS, () =>
-      supabase.auth.admin.signOut(accessToken, scope),
-    );
-    const error = response?.error ?? null;
-    if (!error) {
+    const response = await withSignOutDeadline(timeoutMs, async () => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(authApiUrl(url, `/logout?scope=${scope}`), {
+          method: 'POST',
+          headers: authUserJwtHeaders(anonKey, accessToken),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    });
+
+    if (response.ok) {
       return { result: 'revoked' };
     }
-    return mapRevokeError(error);
+
+    const body = await response.json().catch(() => null);
+    return mapRevokeHttpError(response.status, body);
   } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return mapRevokeError(new SignOutDeadlineError());
+    }
     return mapRevokeError(error);
   }
 }

@@ -15,6 +15,7 @@ export type ResilientAuthStorage = AuthSessionStorage & {
   restoredSessionNeedsServerValidation: () => Promise<boolean>;
   getLastSeenPrimaryAuthSessionKey: () => string | null;
   forcePersistSignedOutStateForLastKnownSessionKey: () => Promise<void>;
+  noteLocalSignOutPersistFailure: () => Promise<void>;
 };
 
 const PROBE_KEY = '@weigh-way/auth-storage-probe';
@@ -301,6 +302,17 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         return;
       }
       await persistSignedOutState(lastSeenPrimaryAuthSessionKey);
+    },
+    async noteLocalSignOutPersistFailure() {
+      if (!lastSeenPrimaryAuthSessionKey) {
+        return;
+      }
+      const key = lastSeenPrimaryAuthSessionKey;
+      markTombstone(key);
+      pendingDiskRemoves.add(key);
+      signOutPersistWarning = true;
+      await persistSignedOutState(key);
+      schedulePendingDiskRetries();
     },
     async retryPendingDiskPersistence() {
       await syncPendingDiskPersistence();

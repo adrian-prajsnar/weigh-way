@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => {
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- vitest RN web shim
@@ -79,6 +79,10 @@ describe('HeroWeightCard', () => {
   beforeEach(() => {
     profileState.isLoading = false;
     profileState.heightEntries = [];
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it('does not show BMI unavailable while profile height is loading', async () => {

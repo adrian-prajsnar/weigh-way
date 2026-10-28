@@ -29,20 +29,17 @@ const weightSyncState = vi.hoisted(() => ({
 
 let authStateChangeListener: ((event: string, session: unknown) => void) | null = null;
 
-const adminState = vi.hoisted(() => ({
-  signOut: vi.fn(),
-}));
-
 vi.mock('../supabase/client', () => ({
   isSupabaseConfigured: () => true,
+  supabaseAuthHttpConfig: {
+    url: 'https://example.supabase.co',
+    anonKey: 'public-anon-key',
+  },
   supabase: {
     auth: {
       getSession: authState.getSession,
       onAuthStateChange: authState.onAuthStateChange,
       signOut: authState.signOut,
-      admin: {
-        signOut: adminState.signOut,
-      },
     },
   },
 }));
@@ -144,7 +141,6 @@ function setupAuthListener() {
 
 describe('SupabaseAuthProvider bootstrap', () => {
   beforeEach(() => {
-    adminState.signOut.mockResolvedValue({ error: null });
     authState.signOut.mockResolvedValue({ error: null });
     authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
   });
@@ -315,6 +311,8 @@ describe('SupabaseAuthProvider bootstrap', () => {
       () => new Promise<void>(() => {}),
     );
     authState.signOut.mockImplementation(() => new Promise(() => {}));
+    const logoutFetch = vi.fn((_input: RequestInfo | URL) => new Promise<Response>(() => {}));
+    vi.stubGlobal('fetch', logoutFetch);
     weightSyncState.getEntries.mockResolvedValue([]);
 
     render(
@@ -328,10 +326,17 @@ describe('SupabaseAuthProvider bootstrap', () => {
     expect(screen.getByTestId('authenticated').textContent).toBe('no');
     expect(screen.getByTestId('token').textContent).toBe('none');
     expect(weightSyncState.getEntries).not.toHaveBeenCalled();
-    expect(adminState.signOut).toHaveBeenCalledWith('token-a', 'global');
+    expect(logoutFetch).toHaveBeenCalledWith(
+      expect.stringContaining('/logout?scope=global'),
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ Authorization: 'Bearer token-a' }),
+      }),
+    );
 
     await vi.advanceTimersByTimeAsync(3000);
     expect(weightSyncState.getEntries).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 
   it('skips fail-closed sign-out when auth generation changed during flagged validation', async () => {

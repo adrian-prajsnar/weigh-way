@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('react-native', () => {
@@ -15,7 +15,7 @@ vi.mock('../storage/language-preference', () => ({
 
 /* eslint-disable import/first -- after vi.mock */
 import { formatDateLabel, formatWeightValue } from '../format';
-import { getI18nLocale } from './index';
+import { getI18nLocale, setI18nLocale } from './index';
 import { LanguageProvider, useTranslation } from './language-context';
 import { getLanguagePreference } from '../storage/language-preference';
 /* eslint-enable import/first */
@@ -40,6 +40,8 @@ describe('LanguageProvider', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    cleanup();
+    setI18nLocale('en');
   });
 
   it('falls back to system language when preference storage rejects', async () => {
@@ -60,7 +62,7 @@ describe('LanguageProvider', () => {
 
   it('falls back to system when preference storage never settles', async () => {
     vi.mocked(getLanguagePreference).mockImplementation(() => new Promise(() => {}));
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     render(
       <LanguageProvider>
@@ -68,9 +70,13 @@ describe('LanguageProvider', () => {
       </LanguageProvider>,
     );
 
-    await vi.advanceTimersByTimeAsync(2000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
 
-    expect(screen.getByTestId('ready')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId('ready')).toBeTruthy();
+    });
     expect(getI18nLocale()).toBe('en');
   });
 

@@ -45,9 +45,31 @@ describe('refreshAccessTokenForSignOut', () => {
 
   it('rejects within the refresh deadline when token fetch hangs', async () => {
     const started = Date.now();
-    await expect(refreshAccessTokenForSignOut('refresh-token')).rejects.toBeInstanceOf(
+    await expect(refreshAccessTokenForSignOut('refresh-token', 50)).rejects.toBeInstanceOf(
       SignOutDeadlineError,
     );
     expect(Date.now() - started).toBeLessThan(500);
+  });
+
+  it('treats hosted refresh_token_not_found as invalid grant without retry', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json(
+          {
+            code: 400,
+            error_code: 'refresh_token_not_found',
+            msg: 'Invalid Refresh Token: Refresh Token Not Found',
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+
+    await expect(refreshAccessTokenForSignOut('refresh-token', 5000)).rejects.toMatchObject({
+      status: 400,
+      error_code: 'refresh_token_not_found',
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
