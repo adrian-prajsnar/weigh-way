@@ -33,6 +33,7 @@ import {
 } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { noteLatestAuthUserIdFromEvent } from '../supabase/sign-out-local-user';
+import { withSignOutDeadline } from '../supabase/sign-out-deadlines';
 import { signOutSession, signOutSessionBestEffort } from '../supabase/sign-out-session';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
@@ -40,6 +41,17 @@ import { isDemoMode } from '../demo/is-demo-mode';
 import { demoReadOnlyError } from '../demo/read-only';
 
 export const BOOTSTRAP_SESSION_DEADLINE_MS = 6000;
+
+const SIGN_OUT_PROVIDER_CLEANUP_TIMEOUT_MS = 3_000;
+
+async function runBoundedSignOutProviderCleanup(): Promise<void> {
+  await withSignOutDeadline(SIGN_OUT_PROVIDER_CLEANUP_TIMEOUT_MS, () =>
+    clearAuthPendingFlows(),
+  ).catch(() => undefined);
+  await withSignOutDeadline(SIGN_OUT_PROVIDER_CLEANUP_TIMEOUT_MS, () =>
+    clearPkceVerifierBackups(),
+  ).catch(() => undefined);
+}
 
 type SignUpResult = {
   needsEmailConfirmation: boolean;
@@ -410,8 +422,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatSignOutError(error));
     } finally {
       resetOAuthRedirectState();
-      await clearAuthPendingFlows();
-      await clearPkceVerifierBackups();
+      await runBoundedSignOutProviderCleanup();
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
     if (localClearIncomplete || persistWarning) {
@@ -447,8 +458,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       });
     } finally {
       resetOAuthRedirectState();
-      await clearAuthPendingFlows();
-      await clearPkceVerifierBackups();
+      await runBoundedSignOutProviderCleanup();
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
     if (persistWarning) {

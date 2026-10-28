@@ -641,11 +641,12 @@ describe('signOutSession with real Supabase auth-js', () => {
     await expect(signOutPromise).resolves.toMatchObject({ localClearIncomplete: true });
 
     noteLatestAuthUserIdFromEvent(USER_B);
-    releaseSessionRemove();
-    await resilientStorageRef.current!.setItem(
+    const setItemPromise = resilientStorageRef.current!.setItem(
       SESSION_KEY,
       makeSessionJson('user-jwt-b', undefined, USER_B),
     );
+    releaseSessionRemove();
+    await setItemPromise;
 
     await vi.runAllTimersAsync();
 
@@ -654,9 +655,11 @@ describe('signOutSession with real Supabase auth-js', () => {
     expect(logoutAuths.some((auth) => auth === 'Bearer user-jwt-a')).toBe(true);
     expect(diskRef.map.get(SESSION_KEY)).toContain('user-jwt-b');
 
+    const { createResilientAuthStorage } = await import('./resilient-auth-storage');
+    const freshStorage = createResilientAuthStorage();
     const reloaded = createClient(SUPABASE_URL, ANON_KEY, {
       auth: {
-        storage: resilientStorageRef.current!,
+        storage: freshStorage,
         storageKey: SESSION_KEY,
         persistSession: true,
         autoRefreshToken: false,

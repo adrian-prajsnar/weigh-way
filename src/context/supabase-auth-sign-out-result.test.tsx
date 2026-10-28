@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { formatSignOutPersistWarning } from '../auth-errors';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -8,6 +9,15 @@ const authState = vi.hoisted(() => ({
 }));
 
 const signOutSessionMock = vi.hoisted(() => vi.fn());
+
+const redirectState = vi.hoisted(() => ({
+  clearAuthPendingFlows: vi.fn(),
+  resetOAuthRedirectState: vi.fn(),
+}));
+
+const pkceState = vi.hoisted(() => ({
+  clearPkceVerifierBackups: vi.fn(),
+}));
 
 vi.mock('../supabase/sign-out-session', () => ({
   signOutSession: signOutSessionMock,
@@ -23,15 +33,15 @@ vi.mock('../supabase/auth-session-storage', () => ({
 }));
 
 vi.mock('../auth-redirect', () => ({
-  clearAuthPendingFlows: vi.fn(),
-  resetOAuthRedirectState: vi.fn(),
+  clearAuthPendingFlows: redirectState.clearAuthPendingFlows,
+  resetOAuthRedirectState: redirectState.resetOAuthRedirectState,
   createSessionFromUrl: vi.fn(),
   getAuthRedirectUrl: vi.fn(),
   isOAuthFlowActive: vi.fn(() => false),
 }));
 
 vi.mock('../storage/pkce-verifier-backup', () => ({
-  clearPkceVerifierBackups: vi.fn(),
+  clearPkceVerifierBackups: pkceState.clearPkceVerifierBackups,
 }));
 
 vi.mock('../storage/auth-pending-flow', () => ({
@@ -84,9 +94,15 @@ const sampleSession = {
   user: { id: 'user-a', email: 'a@example.com' },
 };
 
+const storagePersistCopy = formatSignOutPersistWarning({ localPersistFailed: true });
+
 describe('supabase auth signOut result handling', () => {
   beforeEach(() => {
     signOutSessionMock.mockReset();
+    redirectState.clearAuthPendingFlows.mockReset();
+    pkceState.clearPkceVerifierBackups.mockReset();
+    redirectState.clearAuthPendingFlows.mockResolvedValue(undefined);
+    pkceState.clearPkceVerifierBackups.mockResolvedValue(undefined);
     authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
     authState.onAuthStateChange.mockImplementation(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
@@ -106,7 +122,66 @@ describe('supabase auth signOut result handling', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
-      await expect(result.current.signOut()).rejects.toThrow(/storage/i);
+      await expect(result.current.signOut()).rejects.toThrow(storagePersistCopy);
     });
+  });
+
+  it('signOut resolves within the cleanup cap when pending-flow writes hang', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    redirectState.clearAuthPendingFlows.mockImplementation(() => new Promise(() => {}));
+    signOutSessionMock.mockResolvedValue({
+      serverSignOutUnreachable: false,
+      localClearIncomplete: true,
+    });
+
+    const { result } = renderHook(() => useSupabaseAuth(), {
+      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let message = '';
+    const signOutPromise = result.current.signOut().catch((error: unknown) => {
+      message = error instanceof Error ? error.message : String(error);
+    });
+
+    await vi.advanceTimersByTimeAsync(4_000);
+    await signOutPromise;
+
+    expect(message).toBe(storagePersistCopy);
+    vi.useRealTimers();
+  });
+
+  it('second signOut finishes within the cleanup cap when pkce backup reads hang', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    pkceState.clearPkceVerifierBackups.mockImplementation(() => new Promise(() => {}));
+    signOutSessionMock.mockResolvedValue({
+      serverSignOutUnreachable: false,
+      localClearIncomplete: true,
+    });
+
+    const { result } = renderHook(() => useSupabaseAuth(), {
+      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+    });
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    let firstMessage = '';
+    const first = result.current.signOut().catch((error: unknown) => {
+      firstMessage = error instanceof Error ? error.message : String(error);
+    });
+    await vi.advanceTimersByTimeAsync(4_000);
+    await first;
+    expect(firstMessage).toBe(storagePersistCopy);
+
+    let secondMessage = '';
+    const second = result.current.signOut().catch((error: unknown) => {
+      secondMessage = error instanceof Error ? error.message : String(error);
+    });
+    await vi.advanceTimersByTimeAsync(4_000);
+    await second;
+    expect(secondMessage).toBe(storagePersistCopy);
+
+    vi.useRealTimers();
   });
 });
