@@ -34,6 +34,7 @@ import {
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { noteLatestAuthUserIdFromEvent } from '../supabase/sign-out-local-user';
 import { withSignOutDeadline } from '../supabase/sign-out-deadlines';
+import { runPendingGlobalRevokeBeforeSessionRestore } from '../supabase/pending-global-revoke';
 import { signOutSession, signOutSessionBestEffort } from '../supabase/sign-out-session';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
@@ -267,6 +268,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
+        await runPendingGlobalRevokeBeforeSessionRestore();
         storageFlagged = await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
         const sessionResult = await supabase.auth.getSession().catch(() => ({
           data: { session: null as Session | null },

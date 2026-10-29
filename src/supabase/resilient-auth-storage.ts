@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isDevWarningsEnabled } from '../storage/preference-storage-fallback';
+import { pendingGlobalRevokeBlocksSessionRestore, readPendingGlobalRevokeMarkerUserId } from './pending-global-revoke-marker';
 import {
   getLatestAuthUserIdFromEvents,
   parseUserIdFromAuthSessionPayload,
@@ -212,11 +213,11 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   const syncPendingDiskPersistence = async () => {
+    await probePersistentAuthStorage().catch(() => false);
+
     if (pendingDiskRemoves.size === 0) {
       return;
     }
-
-    await probePersistentAuthStorage().catch(() => false);
 
     for (const key of [...pendingDiskRemoves]) {
       if (isPrimaryAuthSessionStorageKey(key)) {
@@ -236,12 +237,24 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     }
   };
 
+  const runPendingGlobalRevokeRetryIfNeeded = async () => {
+    const markerUserId = await readPendingGlobalRevokeMarkerUserId();
+    if (!markerUserId) {
+      return;
+    }
+    const pendingGlobalRevoke = await import('./pending-global-revoke');
+    await pendingGlobalRevoke.retryPendingGlobalRevokeBeforeDiskPersistence(
+      lastSeenPrimaryAuthSessionKey,
+    );
+  };
+
   const runPendingDiskSyncWithBackoff = async () => {
     if (pendingDiskSyncInFlight || pendingDiskRemoves.size === 0) {
       return;
     }
     pendingDiskSyncInFlight = true;
     try {
+      await runPendingGlobalRevokeRetryIfNeeded();
       await syncPendingDiskPersistence();
     } finally {
       pendingDiskSyncInFlight = false;
@@ -342,6 +355,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       if (isSignedOutSessionPayload(disk)) {
         return null;
       }
+      if (await pendingGlobalRevokeBlocksSessionRestore(disk)) {
+        return null;
+      }
       return disk;
     } catch {
       return null;
@@ -393,6 +409,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       return peekUserIdForSessionKey(key);
     },
     async retryPendingDiskPersistence() {
+      await runPendingGlobalRevokeRetryIfNeeded();
       await syncPendingDiskPersistence();
     },
     resetSignOutPersistWarning() {

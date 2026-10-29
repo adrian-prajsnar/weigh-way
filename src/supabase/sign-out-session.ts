@@ -19,6 +19,7 @@ import {
   type SignOutDeadlineControl,
   withSignOutDeadline,
 } from './sign-out-deadlines';
+import { armPendingGlobalRevoke } from './pending-global-revoke';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
 
 let signOutSessionInFlight = false;
@@ -262,6 +263,8 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
   let localClearIncomplete = false;
   let keepLocalSession = false;
   let serverRevokeSucceeded = false;
+  let capturedAccessToken: string | null = options.accessToken ?? null;
+  let capturedRefreshToken: string | null = options.refreshToken ?? null;
 
   try {
     if (!options.localOnly) {
@@ -270,6 +273,7 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
         accessToken = await resolveAccessTokenSafely(deadlineMs);
       }
       if (accessToken) {
+        capturedAccessToken = accessToken;
         const revokeResult = await revokeOnServerForSignOut(
           accessToken,
           capturedUserId,
@@ -311,6 +315,21 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
         }
       }
     }
+  }
+
+  if (
+    !options.localOnly &&
+    !keepLocalSession &&
+    serverSignOutUnreachable &&
+    !serverRevokeSucceeded &&
+    capturedUserId &&
+    capturedAccessToken
+  ) {
+    await armPendingGlobalRevoke({
+      userId: capturedUserId,
+      accessToken: capturedAccessToken,
+      refreshToken: capturedRefreshToken,
+    });
   }
 
   return { serverSignOutUnreachable, localClearIncomplete };
