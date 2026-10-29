@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { parseSessionIdFromAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
 import {
   isAuthRateLimitedError,
   isAuthServerUnreachableError,
@@ -7,7 +8,9 @@ import {
 } from './auth-reachability-error';
 import {
   clearPendingGlobalRevokeMarker,
-  readPendingGlobalRevokeMarkerUserId,
+  incrementPendingGlobalRevokeStartupFailCount,
+  readPendingGlobalRevokeMarkerPayload,
+  readPendingGlobalRevokeMarkerSessionId,
   writePendingGlobalRevokeMarker,
 } from './pending-global-revoke-marker';
 import { revokeSessionOnServer } from './revoke-session-on-server';
@@ -16,18 +19,26 @@ import {
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
   withSignOutDeadline,
 } from './sign-out-deadlines';
-import { getLatestAuthUserIdFromEvents, parseUserIdFromAuthSessionPayload } from './sign-out-local-user';
+import {
+  getLatestAuthSessionIdFromEvents,
+  getLatestAuthUserIdFromEvents,
+  parseUserIdFromAuthSessionPayload,
+} from './sign-out-local-user';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
 
-export type PendingGlobalRevokeTokens = {
-  userId: string;
-  accessToken: string;
-  refreshToken: string | null;
-};
+import type { PendingGlobalRevokeTokens } from './pending-global-revoke-types';
+import {
+  getInMemoryPendingGlobalRevoke as readInMemoryPending,
+  resetInMemoryPendingGlobalRevokeForTests,
+  setInMemoryPendingGlobalRevoke,
+} from './pending-global-revoke-in-memory';
 
-type RevokeAttemptOutcome = 'succeeded' | 'already_revoked' | 'rate_limited' | 'unreachable';
-
-let inMemoryPending: PendingGlobalRevokeTokens | null = null;
+type RevokeAttemptOutcome =
+  | 'succeeded'
+  | 'already_revoked'
+  | 'rate_limited'
+  | 'unreachable'
+  | 'failed_non_retryable';
 
 function isSignedOutSessionPayload(raw: string | null): boolean {
   if (!raw) {
@@ -65,12 +76,36 @@ function parseRefreshTokenFromAuthSessionPayload(raw: string | null): string | n
   }
 }
 
-export function getInMemoryPendingGlobalRevoke(): PendingGlobalRevokeTokens | null {
-  return inMemoryPending;
-}
+export { getInMemoryPendingGlobalRevoke } from './pending-global-revoke-in-memory';
 
 export function resetPendingGlobalRevokeStateForTests(): void {
-  inMemoryPending = null;
+  resetInMemoryPendingGlobalRevokeForTests();
+}
+
+function clearInMemoryPendingIfSupersededByAuthEvent(): void {
+  const eventSessionId = getLatestAuthSessionIdFromEvents();
+  if (!eventSessionId) {
+    return;
+  }
+  const pending = readInMemoryPending();
+  if (pending && pending.sessionId !== eventSessionId) {
+    setInMemoryPendingGlobalRevoke(null);
+  }
+}
+
+async function clearMarkerIfSupersededByAuthEvent(): Promise<void> {
+  const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
+  const eventSessionId = getLatestAuthSessionIdFromEvents();
+  if (markerSessionId && eventSessionId && eventSessionId !== markerSessionId) {
+    await clearPendingGlobalRevokeMarker();
+    setInMemoryPendingGlobalRevoke(null);
+  }
+}
+
+/** Call after auth SIGNED_IN / TOKEN_REFRESHED so a new session is not hidden or revoked. */
+export async function clearPendingGlobalRevokeIfSupersededByAuthEvent(): Promise<void> {
+  clearInMemoryPendingIfSupersededByAuthEvent();
+  await clearMarkerIfSupersededByAuthEvent();
 }
 
 export function dropPendingGlobalRevokeIfDifferentUserConfirmed(
@@ -81,22 +116,31 @@ export function dropPendingGlobalRevokeIfDifferentUserConfirmed(
   }
   const eventUserId = getLatestAuthUserIdFromEvents();
   if (eventUserId && eventUserId !== expectedUserId) {
-    inMemoryPending = null;
+    setInMemoryPendingGlobalRevoke(null);
     void clearPendingGlobalRevokeMarker();
   }
 }
 
-export async function armPendingGlobalRevoke(tokens: PendingGlobalRevokeTokens): Promise<void> {
-  inMemoryPending = tokens;
-  await writePendingGlobalRevokeMarker(tokens.userId);
+export async function armPendingGlobalRevokeMarker(
+  tokens: Omit<PendingGlobalRevokeTokens, 'revokeScope'>,
+): Promise<void> {
+  setInMemoryPendingGlobalRevoke({ ...tokens, revokeScope: 'global' });
+  await writePendingGlobalRevokeMarker(tokens.sessionId);
 }
 
-async function attemptGlobalRevoke(
+/** Server revoke failed but local sign-out persisted — retry with `local` scope only (in memory). */
+export function armInMemoryPendingRevokeOnly(
+  tokens: Omit<PendingGlobalRevokeTokens, 'revokeScope'>,
+): void {
+  setInMemoryPendingGlobalRevoke({ ...tokens, revokeScope: 'local' });
+}
+
+async function attemptRevoke(
   tokens: PendingGlobalRevokeTokens,
   timeoutMs: number = SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
 ): Promise<RevokeAttemptOutcome> {
   let accessToken = tokens.accessToken;
-  let revoke = await revokeSessionOnServer(accessToken, 'global', timeoutMs);
+  let revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs);
 
   if (revoke.result === 'rate_limited') {
     return 'rate_limited';
@@ -115,7 +159,7 @@ async function attemptGlobalRevoke(
         return 'succeeded';
       }
       accessToken = refreshed.accessToken;
-      revoke = await revokeSessionOnServer(accessToken, 'global', timeoutMs);
+      revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs);
       if (revoke.result === 'rate_limited') {
         return 'rate_limited';
       }
@@ -124,6 +168,9 @@ async function attemptGlobalRevoke(
       }
       if (revoke.result === 'unreachable' || revoke.result === 'token_expired') {
         return 'unreachable';
+      }
+      if (revoke.result === 'failed') {
+        return 'failed_non_retryable';
       }
     } catch (error) {
       if (isRefreshRateLimitedError(error) || isAuthRateLimitedError(error)) {
@@ -143,7 +190,7 @@ async function attemptGlobalRevoke(
     return 'unreachable';
   }
   if (revoke.result === 'failed') {
-    throw revoke.error instanceof Error ? revoke.error : new Error('sign_out_failed');
+    return 'failed_non_retryable';
   }
 
   return 'unreachable';
@@ -152,11 +199,11 @@ async function attemptGlobalRevoke(
 async function hydrateInMemoryPendingFromMarkerAndDisk(
   sessionKeyHint: string | null,
 ): Promise<void> {
-  if (inMemoryPending) {
+  if (readInMemoryPending()) {
     return;
   }
-  const markerUserId = await readPendingGlobalRevokeMarkerUserId();
-  if (!markerUserId) {
+  const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
+  if (!markerSessionId) {
     return;
   }
   let raw: string | null = null;
@@ -170,21 +217,29 @@ async function hydrateInMemoryPendingFromMarkerAndDisk(
     raw = await readPrimarySessionPayloadDirect();
   }
   if (!raw || isSignedOutSessionPayload(raw)) {
+    await clearPendingGlobalRevokeMarker();
     return;
   }
-  const sessionUserId = parseUserIdFromAuthSessionPayload(raw);
-  if (sessionUserId !== markerUserId) {
+  const diskSessionId = parseSessionIdFromAuthSessionPayload(raw);
+  if (!diskSessionId || diskSessionId !== markerSessionId) {
+    await clearPendingGlobalRevokeMarker();
     return;
   }
   const accessToken = parseAccessTokenFromAuthSessionPayload(raw);
   if (!accessToken) {
     return;
   }
-  inMemoryPending = {
-    userId: markerUserId,
+  const userId = parseUserIdFromAuthSessionPayload(raw);
+  if (!userId) {
+    return;
+  }
+  setInMemoryPendingGlobalRevoke({
+    sessionId: markerSessionId,
+    userId,
     accessToken,
     refreshToken: parseRefreshTokenFromAuthSessionPayload(raw),
-  };
+    revokeScope: 'global',
+  });
 }
 
 async function resolvePrimaryAuthSessionKey(): Promise<string | null> {
@@ -212,38 +267,73 @@ async function clearLocalAuthAfterPendingGlobalRevoke(
   await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
 }
 
+async function runPendingRevokeAttempt(
+  tokens: PendingGlobalRevokeTokens,
+): Promise<RevokeAttemptOutcome> {
+  return withSignOutDeadline(SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS, () => attemptRevoke(tokens)).catch(
+    (error) => {
+      if (isSignOutDeadlineError(error)) {
+        return 'unreachable' as RevokeAttemptOutcome;
+      }
+      throw error;
+    },
+  );
+}
+
 export async function retryPendingGlobalRevokeBeforeDiskPersistence(
   sessionKeyHint: string | null = null,
 ): Promise<void> {
-  const markerUserId = await readPendingGlobalRevokeMarkerUserId();
-  const eventUserId = getLatestAuthUserIdFromEvents();
-  if (markerUserId && eventUserId && eventUserId !== markerUserId) {
-    inMemoryPending = null;
+  await clearPendingGlobalRevokeIfSupersededByAuthEvent();
+
+  const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
+  const eventSessionId = getLatestAuthSessionIdFromEvents();
+  if (markerSessionId && eventSessionId && eventSessionId !== markerSessionId) {
+    setInMemoryPendingGlobalRevoke(null);
     await clearPendingGlobalRevokeMarker();
     return;
   }
 
-  await hydrateInMemoryPendingFromMarkerAndDisk(sessionKeyHint);
+  if (!readInMemoryPending()) {
+    await hydrateInMemoryPendingFromMarkerAndDisk(sessionKeyHint);
+  }
 
-  if (!inMemoryPending) {
+  const pending = readInMemoryPending();
+  if (!pending) {
     return;
   }
 
-  dropPendingGlobalRevokeIfDifferentUserConfirmed(inMemoryPending.userId);
+  dropPendingGlobalRevokeIfDifferentUserConfirmed(pending.userId);
 
-  if (!inMemoryPending) {
+  if (!readInMemoryPending()) {
     return;
   }
 
-  const tokens = inMemoryPending;
-  const outcome = await attemptGlobalRevoke(tokens);
-  if (outcome === 'rate_limited' || outcome === 'unreachable') {
+  const eventSid = getLatestAuthSessionIdFromEvents();
+  const pendingAfterDrop = readInMemoryPending();
+  if (!pendingAfterDrop) {
+    return;
+  }
+  if (eventSid && eventSid !== pendingAfterDrop.sessionId) {
+    setInMemoryPendingGlobalRevoke(null);
+    await clearPendingGlobalRevokeMarker();
     return;
   }
 
-  inMemoryPending = null;
+  const tokens = pendingAfterDrop;
+  const outcome = await runPendingRevokeAttempt(tokens);
+  if (
+    outcome === 'rate_limited' ||
+    outcome === 'unreachable' ||
+    outcome === 'failed_non_retryable'
+  ) {
+    return;
+  }
+
+  setInMemoryPendingGlobalRevoke(null);
   await clearPendingGlobalRevokeMarker();
-  await clearLocalAuthAfterPendingGlobalRevoke(tokens.userId, sessionKeyHint);
+  if (tokens.revokeScope === 'global') {
+    await clearLocalAuthAfterPendingGlobalRevoke(tokens.userId, sessionKeyHint);
+  }
 }
 
 async function readPrimarySessionPayloadDirect(): Promise<string | null> {
@@ -259,56 +349,106 @@ async function readPrimarySessionPayloadDirect(): Promise<string | null> {
 }
 
 /**
- * Before Supabase restores a session at startup: revoke on the server when a marker matches,
- * then clear local auth storage. Ignores markers for a different user than the stored session.
+ * Before Supabase restores a session at startup: revoke on the server when a marker matches
+ * the same session id on disk, then clear local auth storage.
  */
 export async function runPendingGlobalRevokeBeforeSessionRestore(): Promise<void> {
-  const markerUserId = await readPendingGlobalRevokeMarkerUserId();
-  if (!markerUserId) {
+  await clearPendingGlobalRevokeIfSupersededByAuthEvent();
+
+  const markerPayload = await readPendingGlobalRevokeMarkerPayload();
+  if (!markerPayload) {
     return;
   }
 
   const raw = await readPrimarySessionPayloadDirect();
   if (!raw || isSignedOutSessionPayload(raw)) {
     await clearPendingGlobalRevokeMarker();
-    inMemoryPending = null;
+    setInMemoryPendingGlobalRevoke(null);
     return;
   }
 
-  const sessionUserId = parseUserIdFromAuthSessionPayload(raw);
-  if (!sessionUserId || sessionUserId !== markerUserId) {
+  const diskSessionId = parseSessionIdFromAuthSessionPayload(raw);
+  if (!diskSessionId || diskSessionId !== markerPayload.sessionId) {
+    await clearPendingGlobalRevokeMarker();
+    setInMemoryPendingGlobalRevoke(null);
     return;
   }
 
   const accessToken = parseAccessTokenFromAuthSessionPayload(raw);
   const refreshToken = parseRefreshTokenFromAuthSessionPayload(raw);
-  if (!accessToken) {
+  const userId = parseUserIdFromAuthSessionPayload(raw);
+  if (!accessToken || !userId) {
     return;
   }
 
   const tokens: PendingGlobalRevokeTokens = {
-    userId: markerUserId,
+    sessionId: markerPayload.sessionId,
+    userId,
     accessToken,
     refreshToken,
+    revokeScope: 'global',
   };
-  inMemoryPending = tokens;
+  setInMemoryPendingGlobalRevoke(tokens);
 
-  const outcome = await withSignOutDeadline(SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS, () =>
-    attemptGlobalRevoke(tokens),
-  ).catch((error) => {
-    if (isSignOutDeadlineError(error)) {
-      return 'unreachable' as RevokeAttemptOutcome;
-    }
-    throw error;
-  });
+  const outcome = await runPendingRevokeAttempt(tokens);
+
+  if (outcome === 'failed_non_retryable') {
+    await incrementPendingGlobalRevokeStartupFailCount(markerPayload);
+    setInMemoryPendingGlobalRevoke(null);
+    return;
+  }
 
   if (outcome === 'rate_limited' || outcome === 'unreachable') {
     return;
   }
 
-  inMemoryPending = null;
+  setInMemoryPendingGlobalRevoke(null);
   await clearPendingGlobalRevokeMarker();
-  await clearLocalAuthAfterPendingGlobalRevoke(markerUserId, null);
+  await clearLocalAuthAfterPendingGlobalRevoke(userId, null);
 }
 
-export { readPendingGlobalRevokeMarkerUserId } from './pending-global-revoke-marker';
+export async function armPendingGlobalRevokeFromSignOut(options: {
+  localClearIncomplete: boolean;
+  serverSignOutUnreachable: boolean;
+  serverRevokeSucceeded: boolean;
+  keepLocalSession: boolean;
+  localOnly: boolean;
+  userId: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+}): Promise<void> {
+  if (
+    options.localOnly ||
+    options.keepLocalSession ||
+    !options.serverSignOutUnreachable ||
+    options.serverRevokeSucceeded ||
+    !options.accessToken ||
+    !options.userId
+  ) {
+    return;
+  }
+
+  const sessionId = parseSessionIdFromAccessToken(options.accessToken);
+  if (!sessionId) {
+    return;
+  }
+
+  const base = {
+    sessionId,
+    userId: options.userId,
+    accessToken: options.accessToken,
+    refreshToken: options.refreshToken,
+  };
+
+  if (options.localClearIncomplete) {
+    await armPendingGlobalRevokeMarker(base);
+    return;
+  }
+
+  armInMemoryPendingRevokeOnly(base);
+}
+
+export {
+  readPendingGlobalRevokeMarkerSessionId,
+  readPendingGlobalRevokeMarkerPayload,
+} from './pending-global-revoke-marker';

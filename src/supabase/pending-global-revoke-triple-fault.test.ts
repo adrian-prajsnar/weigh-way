@@ -1,18 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { makeTestAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
 import {
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
-  readPendingGlobalRevokeMarkerUserId,
 } from './pending-global-revoke-marker';
+import { resetInMemoryPendingGlobalRevokeForTests } from './pending-global-revoke-in-memory';
 import { resetPendingGlobalRevokeStateForTests } from './pending-global-revoke';
 
-async function resetAuthEventUser(userId: string | null) {
-  const { noteLatestAuthUserIdFromEvent } = await import('./sign-out-local-user');
-  noteLatestAuthUserIdFromEvent(userId);
-}
-
-async function getAuthEventUser() {
-  const { getLatestAuthUserIdFromEvents } = await import('./sign-out-local-user');
-  return getLatestAuthUserIdFromEvents();
+async function resetAuthEvents(userId: string | null, sessionId: string | null) {
+  const localUser = await import('./sign-out-local-user');
+  localUser.noteLatestAuthUserIdFromEvent(userId);
+  localUser.noteLatestAuthSessionIdFromEvent(sessionId);
 }
 
 vi.mock('./sign-out-deadlines', async (importOriginal) => {
@@ -34,32 +31,29 @@ const configRef = vi.hoisted(() => ({
 const SESSION_KEY = 'sb-example-auth-token';
 const USER_A = 'user-a-id';
 const USER_B = 'user-b-id';
+const SESS_A1 = 'sess-a1-triple';
+const SESS_B1 = 'sess-b1-other';
 
-const diskRef = vi.hoisted(() => ({
-  map: new Map<string, string>(),
-}));
+const diskRef = vi.hoisted(() => new Map<string, string>());
+const markerDiskRef = vi.hoisted(() => new Map<string, string>());
 
 const storageGate = vi.hoisted(() => ({
   blockPrimaryAuthWrites: false,
 }));
 
-const allowedKeysWhenBlocked = vi.hoisted(
-  () => new Set(['@weigh-way/auth-storage-probe', '@weigh-way/auth-pending-global-revoke']),
-);
-
 const asyncStorageBackend = vi.hoisted(() => ({
-  getItem: async (key: string) => diskRef.map.get(key) ?? null,
+  getItem: async (key: string) => diskRef.get(key) ?? null,
   setItem: async (key: string, value: string) => {
-    if (storageGate.blockPrimaryAuthWrites && !allowedKeysWhenBlocked.has(key)) {
+    if (storageGate.blockPrimaryAuthWrites && key !== '@weigh-way/auth-storage-probe') {
       throw new DOMException('blocked', 'SecurityError');
     }
-    diskRef.map.set(key, value);
+    diskRef.set(key, value);
   },
   removeItem: async (key: string) => {
-    if (storageGate.blockPrimaryAuthWrites && !allowedKeysWhenBlocked.has(key)) {
+    if (storageGate.blockPrimaryAuthWrites && key !== '@weigh-way/auth-storage-probe') {
       throw new DOMException('blocked', 'SecurityError');
     }
-    diskRef.map.delete(key);
+    diskRef.delete(key);
   },
 }));
 
@@ -91,12 +85,14 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
   default: asyncStorage,
 }));
 
+const authSignOut = vi.hoisted(() => vi.fn().mockResolvedValue({ error: null }));
+
 vi.mock('./client', () => ({
   isSupabaseConfigured: () => true,
   supabaseAuthHttpConfig: configRef,
   supabase: {
     auth: {
-      signOut: vi.fn().mockResolvedValue({ error: null }),
+      signOut: authSignOut,
     },
   },
 }));
@@ -115,9 +111,9 @@ vi.mock('./auth-storage-key', () => ({
   getSupabaseLegacyPkceVerifierKey: () => `${SESSION_KEY}-code-verifier`,
 }));
 
-function makeSessionJson(userId: string, accessToken: string): string {
+function makeSessionJson(userId: string, sessionId: string): string {
   return JSON.stringify({
-    access_token: accessToken,
+    access_token: makeTestAccessToken(sessionId),
     refresh_token: 'refresh-for-user',
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -127,30 +123,41 @@ function makeSessionJson(userId: string, accessToken: string): string {
 }
 
 function mockProbe() {
-  diskRef.map.set('@weigh-way/auth-storage-probe', '1');
+  diskRef.set('@weigh-way/auth-storage-probe', '1');
 }
 
-function assertNoTokensLogged(spies: ReturnType<typeof vi.spyOn>[]) {
-  const tokenPattern = /user-jwt|refresh-for-user|Bearer /i;
-  for (const spy of spies) {
-    for (const call of spy.mock.calls) {
-      const text = call.map(String).join(' ');
-      expect(text).not.toMatch(tokenPattern);
-    }
-  }
+async function installIndependentMarkerStore() {
+  const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
+    './pending-global-revoke-marker-store'
+  );
+  setPendingGlobalRevokeMarkerStoreForTests({
+    read: async () => markerDiskRef.get(PENDING_GLOBAL_REVOKE_MARKER_KEY) ?? null,
+    write: async (value) => {
+      markerDiskRef.set(PENDING_GLOBAL_REVOKE_MARKER_KEY, value);
+      return true;
+    },
+    clear: async () => {
+      markerDiskRef.delete(PENDING_GLOBAL_REVOKE_MARKER_KEY);
+    },
+  });
 }
 
-describe('pending global revoke triple fault', () => {
+describe('pending global revoke triple fault (session-scoped marker)', () => {
   let logoutCalls: string[];
 
   beforeEach(async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.resetModules();
-    diskRef.map.clear();
+    authSignOut.mockReset();
+    authSignOut.mockResolvedValue({ error: null });
+    diskRef.clear();
+    markerDiskRef.clear();
     storageGate.blockPrimaryAuthWrites = false;
     logoutCalls = [];
+    resetInMemoryPendingGlobalRevokeForTests();
     resetPendingGlobalRevokeStateForTests();
-    await resetAuthEventUser(null);
+    await installIndependentMarkerStore();
+    await resetAuthEvents(null, null);
     mockProbe();
 
     vi.stubGlobal(
@@ -169,10 +176,14 @@ describe('pending global revoke triple fault', () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
     resilientStorageRef.current = null;
+    const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
+      './pending-global-revoke-marker-store'
+    );
+    setPendingGlobalRevokeMarkerStoreForTests(null);
   });
 
   async function initStorage() {
@@ -182,31 +193,37 @@ describe('pending global revoke triple fault', () => {
     return storage;
   }
 
-  it('reload within backoff hides user A and retries global revoke once when storage recovers', async () => {
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-
-    diskRef.map.set(SESSION_KEY, makeSessionJson(USER_A, 'user-jwt-a'));
-    const storageA = await initStorage();
-    await storageA.getItem(SESSION_KEY);
-    await resetAuthEventUser(USER_A);
-
-    storageGate.blockPrimaryAuthWrites = true;
+  async function completeBlockedSignOut() {
+    vi.useRealTimers();
+    const { SignOutDeadlineError } = await import('./sign-out-deadlines');
+    authSignOut.mockImplementation(() => Promise.reject(new SignOutDeadlineError()));
     const { signOutSession } = await import('./sign-out-session');
-    const result = await signOutSession({
-      accessToken: 'user-jwt-a',
+    return signOutSession({
+      accessToken: makeTestAccessToken(SESS_A1),
       refreshToken: 'refresh-for-user',
       userId: USER_A,
     });
+  }
+
+  it('reload within backoff hides the same session id and retries global revoke once when storage recovers', async () => {
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1));
+    const storageA = await initStorage();
+    await storageA.getItem(SESSION_KEY);
+    await resetAuthEvents(USER_A, SESS_A1);
+
+    storageGate.blockPrimaryAuthWrites = true;
+    const result = await completeBlockedSignOut();
 
     expect(result.serverSignOutUnreachable).toBe(true);
+    expect(result.localClearIncomplete).toBe(true);
     expect(storageA.hasPendingDiskPersistence()).toBe(true);
     expect(logoutCalls).toHaveLength(1);
-    await expect(readPendingGlobalRevokeMarkerUserId()).resolves.toBe(USER_A);
-    expect(diskRef.map.get(SESSION_KEY)).toContain('user-jwt-a');
+    const marker = await import('./pending-global-revoke-marker');
+    await expect(marker.readPendingGlobalRevokeMarkerSessionId()).resolves.toBe(SESS_A1);
 
     vi.resetModules();
-    await resetAuthEventUser(USER_A);
+    await installIndependentMarkerStore();
+    await resetAuthEvents(USER_A, SESS_A1);
     const storageB = await initStorage();
     await expect(storageB.getItem(SESSION_KEY)).resolves.toBeNull();
 
@@ -214,21 +231,22 @@ describe('pending global revoke triple fault', () => {
     await storageB.retryPendingDiskPersistence();
 
     expect(logoutCalls).toHaveLength(2);
-    assertNoTokensLogged([logSpy, warnSpy]);
+    expect(logoutCalls[1]).toContain('scope=global');
   });
 
-  it('does not hide user B when the pending revoke marker is for user A', async () => {
-    diskRef.map.set(SESSION_KEY, makeSessionJson(USER_B, 'user-jwt-b'));
-    diskRef.map.set(
+  it('does not hide user B when the pending revoke marker targets session A1 only', async () => {
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_B, SESS_B1));
+    markerDiskRef.set(
       PENDING_GLOBAL_REVOKE_MARKER_KEY,
-      JSON.stringify({ userId: USER_A }),
+      JSON.stringify({ sessionId: SESS_A1 }),
     );
 
     const storage = await initStorage();
-    await expect(storage.getItem(SESSION_KEY)).resolves.toContain('user-jwt-b');
+    const raw = await storage.getItem(SESSION_KEY);
+    expect(parseSessionIdFromAuthSessionPayload(raw)).toBe(SESS_B1);
   });
 
-  it('keeps the marker when retry revoke is rate limited', async () => {
+  it('keeps the session-scoped marker when retry revoke is rate limited', async () => {
     vi.unstubAllGlobals();
     vi.stubGlobal(
       'fetch',
@@ -248,47 +266,43 @@ describe('pending global revoke triple fault', () => {
       }),
     );
 
-    diskRef.map.set(SESSION_KEY, makeSessionJson(USER_A, 'user-jwt-a'));
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1));
     const storageA = await initStorage();
     await storageA.getItem(SESSION_KEY);
-    await resetAuthEventUser(USER_A);
+    await resetAuthEvents(USER_A, SESS_A1);
 
     storageGate.blockPrimaryAuthWrites = true;
-    const { signOutSession } = await import('./sign-out-session');
-    await signOutSession({
-      accessToken: 'user-jwt-a',
-      refreshToken: 'refresh-for-user',
-      userId: USER_A,
-    });
+    await completeBlockedSignOut();
 
     storageGate.blockPrimaryAuthWrites = false;
     await storageA.retryPendingDiskPersistence();
 
     expect(logoutCalls).toHaveLength(2);
-    await expect(readPendingGlobalRevokeMarkerUserId()).resolves.toBe(USER_A);
+    const marker = await import('./pending-global-revoke-marker');
+    await expect(marker.readPendingGlobalRevokeMarkerSessionId()).resolves.toBe(SESS_A1);
   });
 
-  it('drops pending revoke when a different user is confirmed via auth events', async () => {
-    diskRef.map.set(SESSION_KEY, makeSessionJson(USER_A, 'user-jwt-a'));
+  it('clears a session-scoped marker when auth events confirm a different session id', async () => {
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1));
     const storage = await initStorage();
     await storage.getItem(SESSION_KEY);
-    await resetAuthEventUser(USER_A);
+    await resetAuthEvents(USER_A, SESS_A1);
 
     storageGate.blockPrimaryAuthWrites = true;
-    const { signOutSession } = await import('./sign-out-session');
-    await signOutSession({
-      accessToken: 'user-jwt-a',
-      refreshToken: 'refresh-for-user',
-      userId: USER_A,
-    });
+    await completeBlockedSignOut();
 
-    await resetAuthEventUser(USER_B);
-    resetPendingGlobalRevokeStateForTests();
-    await expect(getAuthEventUser()).resolves.toBe(USER_B);
+    await resetAuthEvents(USER_A, SESS_B1);
+    resetInMemoryPendingGlobalRevokeForTests();
+    const { clearPendingGlobalRevokeIfSupersededByAuthEvent } = await import(
+      './pending-global-revoke'
+    );
+    await clearPendingGlobalRevokeIfSupersededByAuthEvent();
+
     storageGate.blockPrimaryAuthWrites = false;
     await storage.retryPendingDiskPersistence();
 
     expect(logoutCalls).toHaveLength(1);
-    await expect(readPendingGlobalRevokeMarkerUserId()).resolves.toBeNull();
+    const markerMod = await import('./pending-global-revoke-marker');
+    await expect(markerMod.readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
   });
 });

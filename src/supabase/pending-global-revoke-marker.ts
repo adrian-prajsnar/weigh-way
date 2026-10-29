@@ -1,126 +1,112 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { parseUserIdFromAuthSessionPayload } from './sign-out-local-user';
+import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { getPendingGlobalRevokeMarkerStore } from './pending-global-revoke-marker-store';
+import {
+  isSignOutDeadlineError,
+  PENDING_GLOBAL_REVOKE_MARKER_READ_TIMEOUT_MS,
+  withSignOutDeadline,
+} from './sign-out-deadlines';
 
 export const PENDING_GLOBAL_REVOKE_MARKER_KEY = '@weigh-way/auth-pending-global-revoke';
 
-function canUseWebSessionMarker(): boolean {
-  return typeof sessionStorage !== 'undefined';
-}
+export const PENDING_GLOBAL_REVOKE_STARTUP_MAX_ATTEMPTS = 3;
 
-function parseMarkerPayload(raw: string): string | null {
+export type PendingGlobalRevokeMarkerPayload = {
+  sessionId: string;
+  startupFailCount?: number;
+};
+
+function parseMarkerPayload(raw: string): PendingGlobalRevokeMarkerPayload | null {
   if (!raw) {
     return null;
   }
   try {
-    const parsed = JSON.parse(raw) as { userId?: string };
+    const parsed = JSON.parse(raw) as {
+      sessionId?: string;
+      userId?: string;
+      startupFailCount?: number;
+    };
+    if (parsed.sessionId) {
+      return {
+        sessionId: parsed.sessionId,
+        startupFailCount: parsed.startupFailCount,
+      };
+    }
     if (parsed.userId) {
-      return parsed.userId;
-    }
-  } catch {
-    // legacy plain user id
-  }
-  return raw.length > 0 ? raw : null;
-}
-
-function serializeMarker(userId: string): string {
-  return JSON.stringify({ userId });
-}
-
-function readWebMarkerUserId(): string | null {
-  if (!canUseWebSessionMarker()) {
-    return null;
-  }
-  try {
-    const raw = sessionStorage.getItem(PENDING_GLOBAL_REVOKE_MARKER_KEY);
-    if (!raw) {
       return null;
     }
-    return parseMarkerPayload(raw);
   } catch {
     return null;
   }
+  return null;
 }
 
-function writeWebMarker(userId: string): boolean {
-  if (!canUseWebSessionMarker()) {
-    return true;
-  }
-  try {
-    sessionStorage.setItem(PENDING_GLOBAL_REVOKE_MARKER_KEY, serializeMarker(userId));
-    return true;
-  } catch {
-    return false;
-  }
+function serializeMarker(payload: PendingGlobalRevokeMarkerPayload): string {
+  return JSON.stringify(payload);
 }
 
-function clearWebMarker(): void {
-  if (!canUseWebSessionMarker()) {
-    return;
-  }
+async function readMarkerRawBounded(): Promise<string | null> {
   try {
-    sessionStorage.removeItem(PENDING_GLOBAL_REVOKE_MARKER_KEY);
-  } catch {
-    // ignore
-  }
-}
-
-async function readMarkerFromAsyncStorage(): Promise<string | null> {
-  try {
-    const raw = await AsyncStorage.getItem(PENDING_GLOBAL_REVOKE_MARKER_KEY);
-    if (!raw) {
+    return await withSignOutDeadline(PENDING_GLOBAL_REVOKE_MARKER_READ_TIMEOUT_MS, () =>
+      getPendingGlobalRevokeMarkerStore().read(),
+    );
+  } catch (error) {
+    if (isSignOutDeadlineError(error)) {
       return null;
     }
-    return parseMarkerPayload(raw);
-  } catch {
+    throw error;
+  }
+}
+
+export async function readPendingGlobalRevokeMarkerPayload(): Promise<PendingGlobalRevokeMarkerPayload | null> {
+  const raw = await readMarkerRawBounded();
+  if (!raw) {
     return null;
   }
+  return parseMarkerPayload(raw);
 }
 
-async function writeMarkerToAsyncStorage(userId: string): Promise<boolean> {
-  try {
-    await AsyncStorage.setItem(PENDING_GLOBAL_REVOKE_MARKER_KEY, serializeMarker(userId));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function clearMarkerFromAsyncStorage(): Promise<void> {
-  try {
-    await AsyncStorage.removeItem(PENDING_GLOBAL_REVOKE_MARKER_KEY);
-  } catch {
-    // ignore
-  }
-}
-
-/** Reads the pending global revoke user id from storage independent of primary auth adapter. */
-export async function readPendingGlobalRevokeMarkerUserId(): Promise<string | null> {
-  const fromAsync = await readMarkerFromAsyncStorage();
-  if (fromAsync) {
-    return fromAsync;
-  }
-  return readWebMarkerUserId();
+export async function readPendingGlobalRevokeMarkerSessionId(): Promise<string | null> {
+  const payload = await readPendingGlobalRevokeMarkerPayload();
+  return payload?.sessionId ?? null;
 }
 
 export async function clearPendingGlobalRevokeMarker(): Promise<void> {
-  clearWebMarker();
-  await clearMarkerFromAsyncStorage();
+  await getPendingGlobalRevokeMarkerStore().clear();
 }
 
-export async function writePendingGlobalRevokeMarker(userId: string): Promise<boolean> {
-  const asyncOk = await writeMarkerToAsyncStorage(userId);
-  const webOk = writeWebMarker(userId);
-  return asyncOk || webOk;
+export async function writePendingGlobalRevokeMarker(
+  sessionId: string,
+  startupFailCount?: number,
+): Promise<boolean> {
+  const payload: PendingGlobalRevokeMarkerPayload = { sessionId };
+  if (startupFailCount !== undefined) {
+    payload.startupFailCount = startupFailCount;
+  }
+  return getPendingGlobalRevokeMarkerStore().write(serializeMarker(payload));
 }
 
-/** True when a pending revoke marker matches the session user on disk (hide restore). */
+export async function incrementPendingGlobalRevokeStartupFailCount(
+  current: PendingGlobalRevokeMarkerPayload,
+): Promise<void> {
+  const next = (current.startupFailCount ?? 0) + 1;
+  if (next >= PENDING_GLOBAL_REVOKE_STARTUP_MAX_ATTEMPTS) {
+    await clearPendingGlobalRevokeMarker();
+    return;
+  }
+  await writePendingGlobalRevokeMarker(current.sessionId, next);
+}
+
+/** True when a pending revoke marker matches the same auth session on disk (hide restore). */
 export async function pendingGlobalRevokeBlocksSessionRestore(
   rawSession: string | null,
 ): Promise<boolean> {
-  const markerUserId = await readPendingGlobalRevokeMarkerUserId();
-  if (!markerUserId || !rawSession) {
+  if (!rawSession) {
     return false;
   }
-  const sessionUserId = parseUserIdFromAuthSessionPayload(rawSession);
-  return Boolean(sessionUserId && sessionUserId === markerUserId);
+  const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
+  if (!markerSessionId) {
+    return false;
+  }
+  const diskSessionId = parseSessionIdFromAuthSessionPayload(rawSession);
+  return Boolean(diskSessionId && diskSessionId === markerSessionId);
 }

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isDevWarningsEnabled } from '../storage/preference-storage-fallback';
-import { pendingGlobalRevokeBlocksSessionRestore, readPendingGlobalRevokeMarkerUserId } from './pending-global-revoke-marker';
+import { getInMemoryPendingGlobalRevoke } from './pending-global-revoke-in-memory';
+import { pendingGlobalRevokeBlocksSessionRestore, readPendingGlobalRevokeMarkerSessionId } from './pending-global-revoke-marker';
 import {
   getLatestAuthUserIdFromEvents,
   parseUserIdFromAuthSessionPayload,
@@ -238,8 +239,8 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   const runPendingGlobalRevokeRetryIfNeeded = async () => {
-    const markerUserId = await readPendingGlobalRevokeMarkerUserId();
-    if (!markerUserId) {
+    const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
+    if (!markerSessionId && !getInMemoryPendingGlobalRevoke()) {
       return;
     }
     const pendingGlobalRevoke = await import('./pending-global-revoke');

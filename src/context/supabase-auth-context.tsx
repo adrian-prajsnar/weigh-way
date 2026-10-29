@@ -32,9 +32,13 @@ import {
   registerAuthStoragePersistenceRecovery,
 } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
-import { noteLatestAuthUserIdFromEvent } from '../supabase/sign-out-local-user';
+import { parseSessionIdFromAccessToken } from '../supabase/auth-session-id';
+import {
+  clearPendingGlobalRevokeIfSupersededByAuthEvent,
+  runPendingGlobalRevokeBeforeSessionRestore,
+} from '../supabase/pending-global-revoke';
+import { noteLatestAuthUserIdFromEvent, noteLatestAuthSessionIdFromEvent } from '../supabase/sign-out-local-user';
 import { withSignOutDeadline } from '../supabase/sign-out-deadlines';
-import { runPendingGlobalRevokeBeforeSessionRestore } from '../supabase/pending-global-revoke';
 import { signOutSession, signOutSessionBestEffort } from '../supabase/sign-out-session';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
@@ -241,9 +245,14 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         event === 'INITIAL_SESSION'
       ) {
         noteLatestAuthUserIdFromEvent(activeSession?.user?.id ?? null);
+        noteLatestAuthSessionIdFromEvent(
+          parseSessionIdFromAccessToken(activeSession?.access_token) ?? null,
+        );
+        void clearPendingGlobalRevokeIfSupersededByAuthEvent();
       }
       if (event === 'SIGNED_OUT') {
         noteLatestAuthUserIdFromEvent(null);
+        noteLatestAuthSessionIdFromEvent(null);
       }
       setSession(activeSession);
       if (event === 'PASSWORD_RECOVERY' && activeSession) {
