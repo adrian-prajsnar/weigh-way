@@ -217,12 +217,12 @@ async function hydrateInMemoryPendingFromMarkerAndDisk(
     raw = await readPrimarySessionPayloadDirect();
   }
   if (!raw || isSignedOutSessionPayload(raw)) {
-    await clearPendingGlobalRevokeMarker();
     return;
   }
   const diskSessionId = parseSessionIdFromAuthSessionPayload(raw);
   if (!diskSessionId || diskSessionId !== markerSessionId) {
     await clearPendingGlobalRevokeMarker();
+    setInMemoryPendingGlobalRevoke(null);
     return;
   }
   const accessToken = parseAccessTokenFromAuthSessionPayload(raw);
@@ -362,8 +362,6 @@ export async function runPendingGlobalRevokeBeforeSessionRestore(): Promise<void
 
   const raw = await readPrimarySessionPayloadDirect();
   if (!raw || isSignedOutSessionPayload(raw)) {
-    await clearPendingGlobalRevokeMarker();
-    setInMemoryPendingGlobalRevoke(null);
     return;
   }
 

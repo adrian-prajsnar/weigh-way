@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
 import { getPendingGlobalRevokeMarkerStore } from './pending-global-revoke-marker-store';
 import {
@@ -94,6 +95,42 @@ export async function incrementPendingGlobalRevokeStartupFailCount(
     return;
   }
   await writePendingGlobalRevokeMarker(current.sessionId, next);
+}
+
+function isSignedOutSessionPayload(raw: string | null): boolean {
+  if (!raw) {
+    return false;
+  }
+  try {
+    const parsed = JSON.parse(raw) as { signedOut?: boolean };
+    return parsed.signedOut === true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * While a session-scoped pending global revoke is outstanding, keep the auth session
+ * payload on disk (reads stay hidden via the marker) until revoke completes.
+ */
+export async function shouldDeferPrimaryAuthSessionRemoval(sessionKey: string): Promise<boolean> {
+  const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
+  if (!markerSessionId) {
+    return false;
+  }
+  try {
+    const raw = await AsyncStorage.getItem(sessionKey);
+    if (!raw) {
+      return true;
+    }
+    if (isSignedOutSessionPayload(raw)) {
+      return true;
+    }
+    const diskSessionId = parseSessionIdFromAuthSessionPayload(raw);
+    return diskSessionId === markerSessionId;
+  } catch {
+    return true;
+  }
 }
 
 /** True when a pending revoke marker matches the same auth session on disk (hide restore). */

@@ -1,7 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { isDevWarningsEnabled } from '../storage/preference-storage-fallback';
 import { getInMemoryPendingGlobalRevoke } from './pending-global-revoke-in-memory';
-import { pendingGlobalRevokeBlocksSessionRestore, readPendingGlobalRevokeMarkerSessionId } from './pending-global-revoke-marker';
+import {
+  pendingGlobalRevokeBlocksSessionRestore,
+  readPendingGlobalRevokeMarkerSessionId,
+  shouldDeferPrimaryAuthSessionRemoval,
+} from './pending-global-revoke-marker';
 import {
   getLatestAuthUserIdFromEvents,
   parseUserIdFromAuthSessionPayload,
@@ -187,6 +191,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       if (!(await abortPendingRemoveIfUserChanged(key))) {
         continue;
       }
+      if (
+        isPrimaryAuthSessionStorageKey(key) &&
+        (await shouldDeferPrimaryAuthSessionRemoval(key))
+      ) {
+        continue;
+      }
       const removed = await tryRemoveFromDisk(key);
       if (!removed) {
         continue;
@@ -199,6 +209,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   };
 
   const persistSignedOutState = async (sessionKey: string) => {
+    if (
+      isPrimaryAuthSessionStorageKey(sessionKey) &&
+      (await shouldDeferPrimaryAuthSessionRemoval(sessionKey))
+    ) {
+      return;
+    }
     if (!(await abortPendingRemoveIfUserChanged(sessionKey))) {
       return;
     }
@@ -222,6 +238,9 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
 
     for (const key of [...pendingDiskRemoves]) {
       if (isPrimaryAuthSessionStorageKey(key)) {
+        if (await shouldDeferPrimaryAuthSessionRemoval(key)) {
+          continue;
+        }
         if (await abortPendingRemoveIfUserChanged(key)) {
           await persistSignedOutState(key);
         }
@@ -388,6 +407,12 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       if (!(await abortPendingRemoveIfUserChanged(key))) {
         return;
       }
+      if (await shouldDeferPrimaryAuthSessionRemoval(key)) {
+        pendingDiskRemoves.add(key);
+        markTombstone(key);
+        schedulePendingDiskRetries();
+        return;
+      }
       markTombstone(key);
       pendingDiskRemoves.add(key);
       await persistSignedOutState(key);
@@ -469,6 +494,14 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       schedulePendingDiskRetries();
 
       if (!(await abortPendingRemoveIfUserChanged(key))) {
+        return;
+      }
+
+      if (
+        isPrimaryAuthSessionStorageKey(key) &&
+        (await shouldDeferPrimaryAuthSessionRemoval(key))
+      ) {
+        schedulePendingDiskRetries();
         return;
       }
 
