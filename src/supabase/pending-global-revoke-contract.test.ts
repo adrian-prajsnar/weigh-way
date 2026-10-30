@@ -1,7 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
 import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 import {
@@ -13,6 +10,7 @@ import {
   pendingRevokeMarkerKeyForAccessToken,
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
 } from './pending-global-revoke-marker';
+import { PENDING_SUPERSEDED_REVOKE_STORAGE_KEY } from './pending-superseded-revoke';
 
 async function resetAuthEvents(userId: string | null, sessionId: string | null) {
   const localUser = await import('./sign-out-local-user');
@@ -43,6 +41,7 @@ const SESS_A2 = 'sess-a2-contract';
 
 const diskRef = vi.hoisted(() => new Map<string, string>());
 const markerDiskRef = vi.hoisted(() => new Map<string, string>());
+const supersededDiskRef = vi.hoisted(() => new Map<string, string>());
 const serverRef = vi.hoisted(() => ({
   registry: null as GotrueSessionRegistry | null,
 }));
@@ -100,7 +99,7 @@ vi.mock('./auth-storage-key', () => ({
 }));
 
 function makeSessionJson(userId: string, sessionId: string, refreshToken: string): string {
-  const accessToken = makeTestAccessToken(sessionId);
+  const accessToken = makeTestAccessToken(sessionId, { sub: userId });
   serverRef.registry?.register(userId, sessionId, accessToken);
   return JSON.stringify({
     access_token: accessToken,
@@ -119,6 +118,7 @@ describe('pending revoke contract pins', () => {
     vi.resetModules();
     diskRef.clear();
     markerDiskRef.clear();
+    supersededDiskRef.clear();
     serverRef.registry = createGotrueSessionRegistry();
     networkRef.online = true;
     networkRef.blockLogout = false;
@@ -141,6 +141,21 @@ describe('pending revoke contract pins', () => {
       },
       clear: async () => {
         markerDiskRef.delete(PENDING_GLOBAL_REVOKE_MARKER_KEY);
+      },
+    });
+    const { setPendingSupersededRevokeStoreForTests } = await import(
+      './pending-superseded-revoke'
+    );
+    setPendingSupersededRevokeStoreForTests({
+      read: async () => {
+        const raw = supersededDiskRef.get(PENDING_SUPERSEDED_REVOKE_STORAGE_KEY);
+        if (!raw) {
+          return {};
+        }
+        return JSON.parse(raw) as import('./pending-superseded-revoke').PersistedSupersededRevokeMap;
+      },
+      write: async (map) => {
+        supersededDiskRef.set(PENDING_SUPERSEDED_REVOKE_STORAGE_KEY, JSON.stringify(map));
       },
     });
     await resetAuthEvents(null, null);
@@ -173,6 +188,10 @@ describe('pending revoke contract pins', () => {
       './pending-global-revoke-marker-store'
     );
     setPendingGlobalRevokeMarkerStoreForTests(null);
+    const { setPendingSupersededRevokeStoreForTests } = await import(
+      './pending-superseded-revoke'
+    );
+    setPendingSupersededRevokeStoreForTests(null);
   });
 
   async function initStorage() {
@@ -244,6 +263,43 @@ describe('pending revoke contract pins', () => {
     expect(serverRef.registry!.isAlive(SESS_A1)).toBe(false);
     expect(serverRef.registry!.isAlive(SESS_A2)).toBe(true);
     expect(logoutCalls.filter((c) => c.url.includes('scope=local')).length).toBeGreaterThan(0);
+    expect(supersededDiskRef.has(PENDING_SUPERSEDED_REVOKE_STORAGE_KEY)).toBe(true);
+  });
+
+  it('reload revokes persisted A1 with scope=local while A2 session stays on disk', async () => {
+    const tokenA1 = makeTestAccessToken(SESS_A1, { sub: USER_A });
+    serverRef.registry!.register(USER_A, SESS_A1, tokenA1);
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
+    markerDiskRef.set(PENDING_GLOBAL_REVOKE_MARKER_KEY, JSON.stringify({ sessionId: SESS_A1 }));
+    supersededDiskRef.set(
+      PENDING_SUPERSEDED_REVOKE_STORAGE_KEY,
+      JSON.stringify({
+        [SESS_A1]: {
+          sessionId: SESS_A1,
+          userId: USER_A,
+          accessToken: tokenA1,
+          refreshToken: 'refresh-a1',
+          createdAtMs: Date.now(),
+          attemptCount: 0,
+        },
+      }),
+    );
+
+    await resetAuthEvents(USER_A, SESS_A2);
+    const storage = await initStorage();
+    await storage.getItem(SESSION_KEY);
+
+    const pending = await import('./pending-global-revoke');
+    await pending.runPendingGlobalRevokeBeforeSessionRestore();
+
+    expect(serverRef.registry!.isAlive(SESS_A1)).toBe(false);
+    expect(serverRef.registry!.isAlive(SESS_A2)).toBe(true);
+    expect(parseSessionIdFromAuthSessionPayload(await storage.getItem(SESSION_KEY))).toBe(SESS_A2);
+    const a1Logout = logoutCalls.find((c) => c.authorization?.includes(tokenA1));
+    expect(a1Logout?.url).toContain('scope=local');
+    expect(logoutCalls.every((c) => !c.authorization?.includes(makeTestAccessToken(SESS_A2)))).toBe(
+      true,
+    );
   });
 
   it('clears local session when abandoning a no-session_id pending revoke', async () => {
@@ -273,31 +329,42 @@ describe('pending revoke contract pins', () => {
     expect(await storage.getItem(SESSION_KEY)).toBeNull();
   });
 
-  it('pins production source: delayed revoke stays scope=local and guarded abandon clear', () => {
-    const pendingSrc = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), 'pending-global-revoke.ts'),
-      'utf8',
-    );
-    expect(pendingSrc).toMatch(
-      /armPendingGlobalRevokeMarker[\s\S]*?revokeScope:\s*'local'/,
-    );
-    expect(pendingSrc).toMatch(
-      /revokeSupersededSessionBestEffort[\s\S]*?revokeScope:\s*'local'/,
-    );
-    expect(pendingSrc).toMatch(
-      /abandonPendingRevokeWhenAccessTokenHasNoSessionId[\s\S]*?clearLocalAuthAfterPendingGlobalRevokeIfStillPending/,
-    );
-    expect(pendingSrc).toMatch(
-      /clearLocalAuthAfterPendingGlobalRevoke[\s\S]*?sessionStillMatchesPendingGlobalRevokeMarker/,
-    );
-  });
-
-  it('does not sign out locally when A2 replaces A1 during a slow pending clear removeItem', async () => {
-    markerDiskRef.set(PENDING_GLOBAL_REVOKE_MARKER_KEY, JSON.stringify({ sessionId: SESS_A1 }));
-    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1, 'refresh-a1'));
+  it('compare-and-delete skips remove when the live session id no longer matches', async () => {
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
     const storage = await initStorage();
     await storage.getItem(SESSION_KEY);
-    await resetAuthEvents(USER_A, SESS_A1);
+    await resetAuthEvents(USER_A, SESS_A2);
+
+    const removed = await storage.removePrimaryAuthSessionIfSessionIdMatches(
+      SESSION_KEY,
+      SESS_A1,
+    );
+
+    expect(removed).toBe(false);
+    expect(parseSessionIdFromAuthSessionPayload(await storage.getItem(SESSION_KEY))).toBe(SESS_A2);
+    expect(signOutLocalCalls).toHaveLength(0);
+  });
+
+  it('runtime retry keeps A2 when compare-and-delete races A2 sign-in', async () => {
+    const tokenA1 = makeTestAccessToken(SESS_A1, { sub: USER_A });
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
+    markerDiskRef.set(PENDING_GLOBAL_REVOKE_MARKER_KEY, JSON.stringify({ sessionId: SESS_A1 }));
+    supersededDiskRef.set(
+      PENDING_SUPERSEDED_REVOKE_STORAGE_KEY,
+      JSON.stringify({
+        [SESS_A1]: {
+          sessionId: SESS_A1,
+          userId: USER_A,
+          accessToken: tokenA1,
+          refreshToken: 'refresh-a1',
+          createdAtMs: Date.now(),
+          attemptCount: 0,
+        },
+      }),
+    );
+    const storage = await initStorage();
+    await storage.getItem(SESSION_KEY);
+    await resetAuthEvents(USER_A, SESS_A2);
 
     let releaseRemove!: () => void;
     const removeGate = new Promise<void>((resolve) => {
@@ -311,15 +378,20 @@ describe('pending revoke contract pins', () => {
     });
 
     const pending = await import('./pending-global-revoke');
-    const restorePromise = pending.runPendingGlobalRevokeBeforeSessionRestore();
+    const retryPromise = pending.retryPendingGlobalRevokeBeforeDiskPersistence(SESSION_KEY);
 
-    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
+    await vi.waitFor(() => {
+      expect(logoutCalls.some((c) => c.authorization?.includes(tokenA1))).toBe(true);
+    });
+
+    await storage.setItem(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
     await resetAuthEvents(USER_A, SESS_A2);
     releaseRemove();
-    await restorePromise;
+    await retryPromise;
 
     expect(parseSessionIdFromAuthSessionPayload(await storage.getItem(SESSION_KEY))).toBe(SESS_A2);
-    expect(signOutLocalCalls).toHaveLength(0);
-    expect(serverRef.registry!.isAlive(SESS_A2)).toBe(true);
+    expect(logoutCalls.every((c) => !c.authorization?.includes(makeTestAccessToken(SESS_A2)))).toBe(
+      true,
+    );
   });
 });

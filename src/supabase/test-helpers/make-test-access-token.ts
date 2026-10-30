@@ -5,7 +5,11 @@ export function makeTestAccessToken(
 ): string {
   const header =
     typeof btoa !== 'undefined' ? btoa('{"alg":"none"}') : Buffer.from('{"alg":"none"}').toString('base64');
-  const payloadJson = JSON.stringify({ session_id: sessionId, ...extraPayload });
+  const payloadJson = JSON.stringify({
+    session_id: sessionId || undefined,
+    sub: extraPayload.sub,
+    ...extraPayload,
+  });
   const payload =
     typeof btoa !== 'undefined'
       ? btoa(payloadJson).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/u, '')

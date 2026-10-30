@@ -37,3 +37,13 @@ export function parseSessionIdFromAuthSessionPayload(raw: string | null): string
     return null;
   }
 }
+
+/** Reads JWT `sub` (auth user id) from an access token. */
+export function parseSubFromAccessToken(accessToken: string | null | undefined): string | null {
+  if (!accessToken) {
+    return null;
+  }
+  const payload = decodeJwtPayload(accessToken);
+  const sub = payload?.sub;
+  return typeof sub === 'string' && sub.length > 0 ? sub : null;
+}

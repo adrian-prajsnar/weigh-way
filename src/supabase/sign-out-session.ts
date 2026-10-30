@@ -20,7 +20,10 @@ import {
   type SignOutDeadlineControl,
   withSignOutDeadline,
 } from './sign-out-deadlines';
-import { armPendingGlobalRevokeFromSignOut } from './pending-global-revoke';
+import {
+  armPendingGlobalRevokeFromSignOut,
+  clearRetainedSupersededRevokesAfterSignOut,
+} from './pending-global-revoke';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
 
 let signOutSessionInFlight = false;
@@ -266,6 +269,10 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
   let serverRevokeSucceeded = false;
   let capturedAccessToken: string | null = options.accessToken ?? null;
   let capturedRefreshToken: string | null = options.refreshToken ?? null;
+
+  if (!options.localOnly && capturedUserId && capturedAccessToken) {
+    await clearRetainedSupersededRevokesAfterSignOut(capturedUserId, capturedAccessToken);
+  }
 
   try {
     if (!options.localOnly) {

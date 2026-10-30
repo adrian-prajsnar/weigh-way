@@ -1,6 +1,4 @@
-import { parseSessionIdFromAccessToken } from '../auth-session-id';
-
-/** In-memory GoTrue sessions for tests (session_id per user). */
+import { parseSessionIdFromAccessToken, parseSubFromAccessToken } from '../auth-session-id';
 export type GotrueSessionRegistry = {
   register: (userId: string, sessionId: string, accessToken?: string) => void;
   isAlive: (sessionId: string) => boolean;
@@ -31,12 +29,12 @@ export function createGotrueSessionRegistry(): GotrueSessionRegistry {
       const scope = scopeFromUrl ?? '';
 
       if (!sessionId) {
-        const userId = accessTokenToUser.get(accessToken);
-        if (!userId) {
+        const sub = parseSubFromAccessToken(accessToken) ?? accessTokenToUser.get(accessToken);
+        if (!sub) {
           return 403;
         }
         for (const [sid, uid] of sessionToUser) {
-          if (uid === userId) {
+          if (uid === sub) {
             alive.delete(sid);
           }
         }

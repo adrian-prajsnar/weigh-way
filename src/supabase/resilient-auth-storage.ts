@@ -5,6 +5,7 @@ import {
   pendingGlobalRevokeBlocksSessionRestore,
   readPendingGlobalRevokeMarkerSessionId,
   clearPendingGlobalRevokeMarkerIfServerRevokeDoneOnly,
+  sessionPayloadMatchesPendingRevokeMarker,
   shouldDeferPrimaryAuthSessionRemoval,
 } from './pending-global-revoke-marker';
 import {
@@ -30,6 +31,10 @@ export type ResilientAuthStorage = AuthSessionStorage & {
   noteLocalSignOutPersistFailure: () => Promise<void>;
   armSignOutPersistWarning: () => void;
   beginLocalClearForUser: (userId: string | null, pendingMarkerSessionId?: string | null) => void;
+  removePrimaryAuthSessionIfSessionIdMatches: (
+    sessionKey: string,
+    expectedSessionId: string,
+  ) => Promise<boolean>;
   peekStoredPrimaryAuthSessionUserId: () => Promise<string | null>;
 };
 
@@ -95,6 +100,16 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   let pendingRetryBackoffMs = PENDING_DISK_RETRY_INITIAL_MS;
   let pendingDiskSyncInFlight = false;
   const markerReadFailedSessionKeys = new Set<string>();
+
+  let storageOpChain: Promise<void> = Promise.resolve();
+  const runStorageSerialized = <T>(operation: () => Promise<T>): Promise<T> => {
+    const result = storageOpChain.then(operation, operation);
+    storageOpChain = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
+  };
 
   const readOverlay = (key: string): string | null | undefined => {
     if (!overlay.has(key)) {
@@ -451,6 +466,61 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         );
       }
     },
+    removePrimaryAuthSessionIfSessionIdMatches(sessionKey, expectedSessionId) {
+      return runStorageSerialized(async () => {
+        trackPrimaryAuthKey(sessionKey);
+        if (!isPrimaryAuthSessionStorageKey(sessionKey)) {
+          return false;
+        }
+        const overlayVal = readOverlay(sessionKey);
+        let raw: string | null;
+        if (overlayVal === undefined) {
+          raw = await tryReadFromDisk(sessionKey);
+        } else if (overlayVal === null) {
+          raw = await tryReadFromDisk(sessionKey);
+        } else {
+          raw = overlayVal;
+        }
+        if (!raw || isSignedOutSessionPayload(raw)) {
+          return false;
+        }
+        if (!sessionPayloadMatchesPendingRevokeMarker(expectedSessionId, raw)) {
+          return false;
+        }
+        if (!(await abortPendingRemoveIfUserChanged(sessionKey))) {
+          return false;
+        }
+        const rereadOverlay = readOverlay(sessionKey);
+        let rereadRaw: string | null;
+        if (rereadOverlay === undefined) {
+          rereadRaw = await tryReadFromDisk(sessionKey);
+        } else if (rereadOverlay === null) {
+          rereadRaw = await tryReadFromDisk(sessionKey);
+        } else {
+          rereadRaw = rereadOverlay;
+        }
+        if (
+          !rereadRaw ||
+          isSignedOutSessionPayload(rereadRaw) ||
+          !sessionPayloadMatchesPendingRevokeMarker(expectedSessionId, rereadRaw)
+        ) {
+          return false;
+        }
+        markTombstone(sessionKey);
+        pendingDiskRemoves.add(sessionKey);
+        const removed = await tryRemoveFromDisk(sessionKey);
+        if (removed) {
+          pendingDiskRemoves.delete(sessionKey);
+          pendingRemoveCapturedUserId.delete(sessionKey);
+          pendingRemoveCapturedMarkerSessionId.delete(sessionKey);
+          overlay.delete(sessionKey);
+          await clearSignedOutMarkerOnDisk(sessionKey);
+          return true;
+        }
+        schedulePendingDiskRetries();
+        return false;
+      });
+    },
     async peekStoredPrimaryAuthSessionUserId() {
       const key = lastSeenPrimaryAuthSessionKey;
       if (!key) {
@@ -548,9 +618,6 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         if (!(await abortPendingRemoveIfUserChanged(key))) {
           return;
         }
-        // When the server revoke succeeded but storage cannot persist local sign-out, a reload
-        // can still show Home until /user rejects the JWT. An offline sign-out that reached the
-        // server survives a reload once storage recovers.
         await persistSignedOutState(key);
         signOutPersistWarning = true;
         schedulePendingDiskRetries();
