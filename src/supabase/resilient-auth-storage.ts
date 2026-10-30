@@ -4,6 +4,7 @@ import { getInMemoryPendingGlobalRevoke } from './pending-global-revoke-in-memor
 import {
   pendingGlobalRevokeBlocksSessionRestore,
   readPendingGlobalRevokeMarkerSessionId,
+  clearPendingGlobalRevokeMarkerIfServerRevokeDoneOnly,
   shouldDeferPrimaryAuthSessionRemoval,
 } from './pending-global-revoke-marker';
 import {
@@ -254,6 +255,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
         clearTimeout(pendingRetryTimeout);
         pendingRetryTimeout = null;
       }
+      await clearPendingGlobalRevokeMarkerIfServerRevokeDoneOnly();
     }
   };
 

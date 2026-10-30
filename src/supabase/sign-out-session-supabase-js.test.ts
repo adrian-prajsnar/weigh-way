@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { PENDING_GLOBAL_REVOKE_MARKER_KEY } from './pending-global-revoke-marker';
 import { getSignedOutMarkerKey } from './resilient-auth-storage';
 import { noteLatestAuthUserIdFromEvent } from './sign-out-local-user';
 import { createSerializedAsyncStorageQueue } from './serialized-async-storage-queue';
@@ -131,10 +132,23 @@ describe('signOutSession with real Supabase auth-js', () => {
     mockProbeSuccess();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (vi.isFakeTimers()) {
+      await vi.advanceTimersByTimeAsync(120_000);
+    }
+    if (resilientStorageRef.current) {
+      await resilientStorageRef.current.retryPendingDiskPersistence().catch(() => undefined);
+    }
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     clientRef.current = null;
     resilientStorageRef.current = null;
+    const pending = await import('./pending-global-revoke');
+    pending.resetPendingGlobalRevokeStateForTests();
+    const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
+      './pending-global-revoke-marker-store'
+    );
+    setPendingGlobalRevokeMarkerStoreForTests(null);
   });
 
   it('sends exactly one POST /logout when auth storage throws during sign-out', async () => {
@@ -154,17 +168,25 @@ describe('signOutSession with real Supabase auth-js', () => {
       return diskRef.map.get(key) ?? null;
     });
 
-    asyncStorage.setItem.mockImplementation(async (key: string) => {
+    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
       if (key === '@weigh-way/auth-storage-probe') {
+        return;
+      }
+      if (key === PENDING_GLOBAL_REVOKE_MARKER_KEY) {
+        diskRef.map.set(key, value);
         return;
       }
       if (diskThrows) {
         throw new DOMException('blocked', 'SecurityError');
       }
-      diskRef.map.set(key, '1');
+      diskRef.map.set(key, value);
     });
 
     asyncStorage.removeItem.mockImplementation(async (key: string) => {
+      if (key === PENDING_GLOBAL_REVOKE_MARKER_KEY) {
+        diskRef.map.delete(key);
+        return;
+      }
       if (diskThrows) {
         throw new DOMException('blocked', 'SecurityError');
       }
@@ -193,13 +215,30 @@ describe('signOutSession with real Supabase auth-js', () => {
 
     diskThrows = true;
     const { signOutSession } = await import('./sign-out-session');
-    await signOutSession({ accessToken: 'user-jwt-a', userId: USER_ID });
+    const result = await signOutSession({ accessToken: 'user-jwt-a', userId: USER_ID });
 
+    expect(result.localClearIncomplete).toBe(true);
     expect(logoutCalls).toHaveLength(1);
     expect(logoutCalls[0]?.url).toContain('/logout?scope=global');
     expect(logoutCalls[0]?.authorization).toBe('Bearer user-jwt-a');
     expect(logoutCalls[0]?.apikey).toBe(ANON_KEY);
     expect(logoutCalls[0]?.apikey).not.toBe(SERVICE_ROLE_KEY);
+
+    const markerRaw = diskRef.map.get(PENDING_GLOBAL_REVOKE_MARKER_KEY);
+    expect(markerRaw).toContain('h:');
+
+    const { createResilientAuthStorage } = await import('./resilient-auth-storage');
+    const reloadedStorage = createResilientAuthStorage();
+    const reloaded = createClient(SUPABASE_URL, ANON_KEY, {
+      auth: {
+        storage: reloadedStorage,
+        storageKey: SESSION_KEY,
+        persistSession: true,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
+    expect((await reloaded.auth.getSession()).data.session).toBeNull();
   });
 
   it('clears the session after reload when the captured access token was expired at sign-out', async () => {
@@ -576,6 +615,10 @@ describe('signOutSession with real Supabase auth-js', () => {
   });
 
   it('keeps user B when B signs in during an abandoned clear with serialized storage', async () => {
+    vi.useRealTimers();
+    vi.clearAllTimers();
+    const pendingReset = await import('./pending-global-revoke');
+    pendingReset.resetPendingGlobalRevokeStateForTests();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     const USER_B = '22222222-2222-2222-2222-222222222222';
     let releaseSessionRemove!: () => void;
@@ -622,6 +665,47 @@ describe('signOutSession with real Supabase auth-js', () => {
           logoutAuths.push(new Headers(init?.headers).get('Authorization') ?? '');
           return new Response(null, { status: 204 });
         }
+        if (url.includes('/user')) {
+          const auth = new Headers(init?.headers).get('Authorization') ?? '';
+          if (auth.includes('user-jwt-b')) {
+            return new Response(
+              JSON.stringify({
+                id: USER_B,
+                aud: 'authenticated',
+                role: 'authenticated',
+                email: 'b@example.com',
+              }),
+              { status: 200, headers: { 'Content-Type': 'application/json' } },
+            );
+          }
+          return new Response(
+            JSON.stringify({
+              id: USER_ID,
+              aud: 'authenticated',
+              role: 'authenticated',
+              email: 'user@example.com',
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
+        if (url.includes('/token')) {
+          return new Response(
+            JSON.stringify({
+              access_token: 'user-jwt-b',
+              refresh_token: 'refresh-token',
+              expires_in: 3600,
+              expires_at: Math.floor(Date.now() / 1000) + 3600,
+              token_type: 'bearer',
+              user: {
+                id: USER_B,
+                aud: 'authenticated',
+                role: 'authenticated',
+                email: 'b@example.com',
+              },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          );
+        }
         return new Response(JSON.stringify({}), { status: 404 });
       }),
     );
@@ -641,14 +725,14 @@ describe('signOutSession with real Supabase auth-js', () => {
     await expect(signOutPromise).resolves.toMatchObject({ localClearIncomplete: true });
 
     noteLatestAuthUserIdFromEvent(USER_B);
+    const { clearPendingGlobalRevokeIfSupersededByAuthEvent } = await import('./pending-global-revoke');
+    await clearPendingGlobalRevokeIfSupersededByAuthEvent();
     const setItemPromise = resilientStorageRef.current!.setItem(
       SESSION_KEY,
       makeSessionJson('user-jwt-b', undefined, USER_B),
     );
     releaseSessionRemove();
     await setItemPromise;
-
-    await vi.runAllTimersAsync();
 
     expect(signOutSpy).not.toHaveBeenCalled();
     expect(logoutAuths.some((auth) => auth === 'Bearer user-jwt-b')).toBe(false);

@@ -12,6 +12,7 @@ import {
 } from './sign-out-local-user';
 import {
   isSignOutDeadlineError,
+  PENDING_GLOBAL_REVOKE_MARKER_WRITE_TIMEOUT_MS,
   SIGN_OUT_FLOW_CAP_MS,
   SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
@@ -298,6 +299,7 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
       throw error;
     }
   } finally {
+    let clearFailureHandled = false;
     if (!keepLocalSession) {
       try {
         await clearLocalAuthSession(capturedUserId, deadlineMs);
@@ -307,11 +309,25 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
             serverSignOutUnreachable = true;
           }
           localClearIncomplete = true;
+          clearFailureHandled = true;
           getSupabaseAuthStorage().armSignOutPersistWarning();
           void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
           scheduleLocalSignOutPersistFailureNote(deadlineMs);
         } else {
-          throw error;
+          localClearIncomplete = true;
+          clearFailureHandled = true;
+          getSupabaseAuthStorage().armSignOutPersistWarning();
+          void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
+          scheduleLocalSignOutPersistFailureNote(deadlineMs);
+        }
+      }
+
+      if (getSupabaseAuthStorage().hasPendingDiskPersistence()) {
+        localClearIncomplete = true;
+        if (!clearFailureHandled) {
+          getSupabaseAuthStorage().armSignOutPersistWarning();
+          void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
+          scheduleLocalSignOutPersistFailureNote(deadlineMs);
         }
       }
     }
@@ -326,6 +342,7 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
     userId: capturedUserId,
     accessToken: capturedAccessToken,
     refreshToken: capturedRefreshToken,
+    markerWriteTimeoutMs: flowBudgetMs(deadlineMs, PENDING_GLOBAL_REVOKE_MARKER_WRITE_TIMEOUT_MS),
   });
 
   return { serverSignOutUnreachable, localClearIncomplete };

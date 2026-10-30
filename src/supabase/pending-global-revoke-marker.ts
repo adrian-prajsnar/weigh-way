@@ -1,9 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { hashAuthCode } from '../storage/auth-code-hash';
+import { parseSessionIdFromAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
 import { getPendingGlobalRevokeMarkerStore } from './pending-global-revoke-marker-store';
 import {
   isSignOutDeadlineError,
+  PENDING_GLOBAL_REVOKE_MARKER_CLEAR_TIMEOUT_MS,
   PENDING_GLOBAL_REVOKE_MARKER_READ_TIMEOUT_MS,
+  PENDING_GLOBAL_REVOKE_MARKER_WRITE_TIMEOUT_MS,
   withSignOutDeadline,
 } from './sign-out-deadlines';
 
@@ -11,10 +14,19 @@ export const PENDING_GLOBAL_REVOKE_MARKER_KEY = '@weigh-way/auth-pending-global-
 
 export const PENDING_GLOBAL_REVOKE_STARTUP_MAX_ATTEMPTS = 3;
 
+export const PENDING_REVOKE_HASH_PREFIX = 'h:';
+
 export type PendingGlobalRevokeMarkerPayload = {
   sessionId: string;
   startupFailCount?: number;
+  /** Server global revoke already succeeded; marker only hides until local disk clear finishes. */
+  serverRevokeDone?: boolean;
 };
+
+export type PendingGlobalRevokeMarkerReadState =
+  | { status: 'absent' }
+  | { status: 'timeout' }
+  | { status: 'ok'; payload: PendingGlobalRevokeMarkerPayload };
 
 function parseMarkerPayload(raw: string): PendingGlobalRevokeMarkerPayload | null {
   if (!raw) {
@@ -25,11 +37,13 @@ function parseMarkerPayload(raw: string): PendingGlobalRevokeMarkerPayload | nul
       sessionId?: string;
       userId?: string;
       startupFailCount?: number;
+      serverRevokeDone?: boolean;
     };
     if (parsed.sessionId) {
       return {
         sessionId: parsed.sessionId,
         startupFailCount: parsed.startupFailCount,
+        serverRevokeDone: parsed.serverRevokeDone,
       };
     }
     if (parsed.userId) {
@@ -45,25 +59,68 @@ function serializeMarker(payload: PendingGlobalRevokeMarkerPayload): string {
   return JSON.stringify(payload);
 }
 
-async function readMarkerRawBounded(): Promise<string | null> {
+/** Marker key: JWT `session_id`, or `h:<access-token-hash>` when the JWT has no session id. */
+export function pendingRevokeMarkerKeyForAccessToken(accessToken: string): string {
+  const sessionId = parseSessionIdFromAccessToken(accessToken);
+  if (sessionId) {
+    return sessionId;
+  }
+  return `${PENDING_REVOKE_HASH_PREFIX}${hashAuthCode(accessToken)}`;
+}
+
+export function sessionPayloadMatchesPendingRevokeMarker(
+  markerSessionId: string,
+  rawSession: string,
+): boolean {
+  const diskSessionId = parseSessionIdFromAuthSessionPayload(rawSession);
+  if (diskSessionId && diskSessionId === markerSessionId) {
+    return true;
+  }
+  if (!markerSessionId.startsWith(PENDING_REVOKE_HASH_PREFIX)) {
+    return false;
+  }
+  const expectedHash = markerSessionId.slice(PENDING_REVOKE_HASH_PREFIX.length);
   try {
-    return await withSignOutDeadline(PENDING_GLOBAL_REVOKE_MARKER_READ_TIMEOUT_MS, () =>
+    const parsed = JSON.parse(rawSession) as { access_token?: string };
+    const accessToken = parsed.access_token;
+    return Boolean(accessToken && hashAuthCode(accessToken) === expectedHash);
+  } catch {
+    return false;
+  }
+}
+
+async function readMarkerRawBounded(): Promise<{ raw: string | null; timedOut: boolean }> {
+  try {
+    const raw = await withSignOutDeadline(PENDING_GLOBAL_REVOKE_MARKER_READ_TIMEOUT_MS, () =>
       getPendingGlobalRevokeMarkerStore().read(),
     );
+    return { raw, timedOut: false };
   } catch (error) {
     if (isSignOutDeadlineError(error)) {
-      return null;
+      return { raw: null, timedOut: true };
     }
     throw error;
   }
 }
 
-export async function readPendingGlobalRevokeMarkerPayload(): Promise<PendingGlobalRevokeMarkerPayload | null> {
-  const raw = await readMarkerRawBounded();
-  if (!raw) {
-    return null;
+export async function readPendingGlobalRevokeMarkerState(): Promise<PendingGlobalRevokeMarkerReadState> {
+  const { raw, timedOut } = await readMarkerRawBounded();
+  if (timedOut) {
+    return { status: 'timeout' };
   }
-  return parseMarkerPayload(raw);
+  if (!raw) {
+    return { status: 'absent' };
+  }
+  const payload = parseMarkerPayload(raw);
+  if (!payload) {
+    return { status: 'absent' };
+  }
+  return { status: 'ok', payload };
+}
+
+export async function readPendingGlobalRevokeMarkerPayload(): Promise<PendingGlobalRevokeMarkerPayload | null> {
+  const state = await readPendingGlobalRevokeMarkerState();
+  return state.status === 'ok' ? state.payload : null;
 }
 
 export async function readPendingGlobalRevokeMarkerSessionId(): Promise<string | null> {
@@ -71,30 +128,62 @@ export async function readPendingGlobalRevokeMarkerSessionId(): Promise<string |
   return payload?.sessionId ?? null;
 }
 
-export async function clearPendingGlobalRevokeMarker(): Promise<void> {
-  await getPendingGlobalRevokeMarkerStore().clear();
+export async function readPendingGlobalRevokeMarkerServerRevokeDone(): Promise<boolean> {
+  const payload = await readPendingGlobalRevokeMarkerPayload();
+  return payload?.serverRevokeDone === true;
+}
+
+export async function clearPendingGlobalRevokeMarkerIfServerRevokeDoneOnly(): Promise<void> {
+  const payload = await readPendingGlobalRevokeMarkerPayload();
+  if (payload?.serverRevokeDone) {
+    await clearPendingGlobalRevokeMarker();
+  }
+}
+
+export async function clearPendingGlobalRevokeMarker(
+  timeoutMs: number = PENDING_GLOBAL_REVOKE_MARKER_CLEAR_TIMEOUT_MS,
+): Promise<void> {
+  try {
+    await withSignOutDeadline(timeoutMs, () => getPendingGlobalRevokeMarkerStore().clear());
+  } catch (error) {
+    if (isSignOutDeadlineError(error)) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function writePendingGlobalRevokeMarker(
   sessionId: string,
   startupFailCount?: number,
+  timeoutMs: number = PENDING_GLOBAL_REVOKE_MARKER_WRITE_TIMEOUT_MS,
+  options?: { serverRevokeDone?: boolean },
 ): Promise<boolean> {
   const payload: PendingGlobalRevokeMarkerPayload = { sessionId };
   if (startupFailCount !== undefined) {
     payload.startupFailCount = startupFailCount;
   }
-  return getPendingGlobalRevokeMarkerStore().write(serializeMarker(payload));
+  if (options?.serverRevokeDone) {
+    payload.serverRevokeDone = true;
+  }
+  try {
+    return await withSignOutDeadline(timeoutMs, () =>
+      getPendingGlobalRevokeMarkerStore().write(serializeMarker(payload)),
+    );
+  } catch (error) {
+    if (isSignOutDeadlineError(error)) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 export async function incrementPendingGlobalRevokeStartupFailCount(
   current: PendingGlobalRevokeMarkerPayload,
 ): Promise<void> {
   const next = (current.startupFailCount ?? 0) + 1;
-  if (next >= PENDING_GLOBAL_REVOKE_STARTUP_MAX_ATTEMPTS) {
-    await clearPendingGlobalRevokeMarker();
-    return;
-  }
-  await writePendingGlobalRevokeMarker(current.sessionId, next);
+  const capped = Math.min(next, PENDING_GLOBAL_REVOKE_STARTUP_MAX_ATTEMPTS);
+  await writePendingGlobalRevokeMarker(current.sessionId, capped);
 }
 
 function isSignedOutSessionPayload(raw: string | null): boolean {
@@ -109,25 +198,28 @@ function isSignedOutSessionPayload(raw: string | null): boolean {
   }
 }
 
+async function markerBlocksSessionKey(sessionKey: string, raw: string | null): Promise<boolean> {
+  const state = await readPendingGlobalRevokeMarkerState();
+  if (state.status === 'timeout') {
+    return true;
+  }
+  if (state.status === 'absent') {
+    return false;
+  }
+  if (!raw || isSignedOutSessionPayload(raw)) {
+    return true;
+  }
+  return sessionPayloadMatchesPendingRevokeMarker(state.payload.sessionId, raw);
+}
+
 /**
  * While a session-scoped pending global revoke is outstanding, keep the auth session
  * payload on disk (reads stay hidden via the marker) until revoke completes.
  */
 export async function shouldDeferPrimaryAuthSessionRemoval(sessionKey: string): Promise<boolean> {
-  const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
-  if (!markerSessionId) {
-    return false;
-  }
   try {
     const raw = await AsyncStorage.getItem(sessionKey);
-    if (!raw) {
-      return true;
-    }
-    if (isSignedOutSessionPayload(raw)) {
-      return true;
-    }
-    const diskSessionId = parseSessionIdFromAuthSessionPayload(raw);
-    return diskSessionId === markerSessionId;
+    return markerBlocksSessionKey(sessionKey, raw);
   } catch {
     return true;
   }
@@ -138,12 +230,15 @@ export async function pendingGlobalRevokeBlocksSessionRestore(
   rawSession: string | null,
 ): Promise<boolean> {
   if (!rawSession) {
+    const state = await readPendingGlobalRevokeMarkerState();
+    return state.status === 'timeout';
+  }
+  const state = await readPendingGlobalRevokeMarkerState();
+  if (state.status === 'timeout') {
+    return true;
+  }
+  if (state.status === 'absent') {
     return false;
   }
-  const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
-  if (!markerSessionId) {
-    return false;
-  }
-  const diskSessionId = parseSessionIdFromAuthSessionPayload(rawSession);
-  return Boolean(diskSessionId && diskSessionId === markerSessionId);
+  return sessionPayloadMatchesPendingRevokeMarker(state.payload.sessionId, rawSession);
 }
