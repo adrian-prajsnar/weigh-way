@@ -48,38 +48,12 @@ function isClearSessionRejection(error: unknown): boolean {
   return false;
 }
 
-function isExpiredBadJwt(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) {
-    return false;
-  }
-  const authError = error as { status?: number; code?: string; message?: string };
-  if (authError.code !== 'bad_jwt' || authError.status !== 401) {
-    return false;
-  }
-  const message = (authError.message ?? '').toLowerCase();
-  return message.includes('expired') || message.includes('token is expired');
-}
-
 async function shouldSignOutAfterSessionRejection(
   error: unknown,
   accessTokenAtStart: string,
   userIdAtStart: string | null,
 ): Promise<boolean> {
-  let rejection = error;
-
-  if (isExpiredBadJwt(rejection)) {
-    const { data, error: refreshError } = await supabase.auth.refreshSession();
-    if (!refreshError && data.session) {
-      return false;
-    }
-    if (!refreshError) {
-      return false;
-    }
-    if (!isClearSessionRejection(refreshError)) {
-      return false;
-    }
-    rejection = refreshError;
-  } else if (!isClearSessionRejection(rejection)) {
+  if (!isClearSessionRejection(error)) {
     return false;
   }
 
@@ -93,7 +67,7 @@ async function shouldSignOutAfterSessionRejection(
     return false;
   }
 
-  return isClearSessionRejection(rejection);
+  return true;
 }
 
 /** Clears a restored session when the server rejects it; ignores transient and unknown errors. */

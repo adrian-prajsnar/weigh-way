@@ -3,7 +3,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
-  refreshSession: vi.fn(),
 }));
 
 const signOutSessionMock = vi.hoisted(() => vi.fn());
@@ -20,7 +19,6 @@ vi.mock('./client', () => ({
   supabase: {
     auth: {
       getSession: authState.getSession,
-      refreshSession: authState.refreshSession,
     },
   },
 }));
@@ -47,19 +45,15 @@ describe('validateRestoredSessionInBackground with direct GET /user', () => {
       ),
     );
     authState.getSession.mockReset();
-    authState.refreshSession.mockReset();
     signOutSessionMock.mockReset();
     authState.getSession
       .mockResolvedValueOnce({ data: { session: sessionA } })
       .mockResolvedValueOnce({ data: { session: sessionA } })
       .mockResolvedValue({ data: { session: sessionA } });
-    authState.refreshSession.mockResolvedValue({
-      data: { session: { access_token: 'token-a-refreshed' } },
-      error: null,
-    });
+    signOutSessionMock.mockResolvedValue({ serverSignOutUnreachable: false });
   });
 
-  it('refreshes on legacy GoTrue expired body without calling auth-js getUser', async () => {
+  it('signs out on legacy GoTrue expired body from GET /user', async () => {
     await validateRestoredSessionInBackground();
 
     expect(fetch).toHaveBeenCalledWith(
@@ -71,7 +65,10 @@ describe('validateRestoredSessionInBackground with direct GET /user', () => {
         }),
       }),
     );
-    expect(authState.refreshSession).toHaveBeenCalledTimes(1);
-    expect(signOutSessionMock).not.toHaveBeenCalled();
+    expect(signOutSessionMock).toHaveBeenCalledWith({
+      accessToken: 'token-a',
+      refreshToken: 'refresh-a',
+      userId: 'user-a',
+    });
   });
 });

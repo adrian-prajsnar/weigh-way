@@ -21,15 +21,6 @@ const pkceState = vi.hoisted(() => ({
 
 vi.mock('../supabase/sign-out-session', () => ({
   signOutSession: signOutSessionMock,
-  signOutSessionBestEffort: vi.fn(),
-}));
-
-vi.mock('../supabase/auth-session-storage', () => ({
-  getSupabaseAuthStorage: () => ({
-    consumeSignOutPersistWarning: () => false,
-    resetSignOutPersistWarning: vi.fn(),
-  }),
-  registerAuthStoragePersistenceRecovery: vi.fn(() => vi.fn()),
 }));
 
 vi.mock('../auth-redirect', () => ({
@@ -94,7 +85,7 @@ const sampleSession = {
   user: { id: 'user-a', email: 'a@example.com' },
 };
 
-const storagePersistCopy = formatSignOutPersistWarning({ localPersistFailed: true });
+const offlineCopy = formatSignOutPersistWarning({ serverSignOutUnreachable: true });
 
 describe('supabase auth signOut result handling', () => {
   beforeEach(() => {
@@ -109,10 +100,9 @@ describe('supabase auth signOut result handling', () => {
     }));
   });
 
-  it('throws storage persist copy instead of resolving when local clear is incomplete', async () => {
+  it('throws offline copy when the server revoke is unreachable but still clears locally', async () => {
     signOutSessionMock.mockResolvedValue({
-      serverSignOutUnreachable: false,
-      localClearIncomplete: true,
+      serverSignOutUnreachable: true,
     });
 
     const { result } = renderHook(() => useSupabaseAuth(), {
@@ -122,66 +112,10 @@ describe('supabase auth signOut result handling', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     await act(async () => {
-      await expect(result.current.signOut()).rejects.toThrow(storagePersistCopy);
-    });
-  });
-
-  it('signOut resolves within the cleanup cap when pending-flow writes hang', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    redirectState.clearAuthPendingFlows.mockImplementation(() => new Promise(() => {}));
-    signOutSessionMock.mockResolvedValue({
-      serverSignOutUnreachable: false,
-      localClearIncomplete: true,
+      await expect(result.current.signOut()).rejects.toThrow(offlineCopy);
     });
 
-    const { result } = renderHook(() => useSupabaseAuth(), {
-      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
-    });
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    let message = '';
-    const signOutPromise = result.current.signOut().catch((error: unknown) => {
-      message = error instanceof Error ? error.message : String(error);
-    });
-
-    await vi.advanceTimersByTimeAsync(4_000);
-    await signOutPromise;
-
-    expect(message).toBe(storagePersistCopy);
-    vi.useRealTimers();
-  });
-
-  it('second signOut finishes within the cleanup cap when pkce backup reads hang', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    pkceState.clearPkceVerifierBackups.mockImplementation(() => new Promise(() => {}));
-    signOutSessionMock.mockResolvedValue({
-      serverSignOutUnreachable: false,
-      localClearIncomplete: true,
-    });
-
-    const { result } = renderHook(() => useSupabaseAuth(), {
-      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
-    });
-
-    await waitFor(() => expect(result.current.isLoading).toBe(false));
-
-    let firstMessage = '';
-    const first = result.current.signOut().catch((error: unknown) => {
-      firstMessage = error instanceof Error ? error.message : String(error);
-    });
-    await vi.advanceTimersByTimeAsync(4_000);
-    await first;
-    expect(firstMessage).toBe(storagePersistCopy);
-
-    let secondMessage = '';
-    const second = result.current.signOut().catch((error: unknown) => {
-      secondMessage = error instanceof Error ? error.message : String(error);
-    });
-    await vi.advanceTimersByTimeAsync(4_000);
-    await second;
-    expect(secondMessage).toBe(storagePersistCopy);
-
-    vi.useRealTimers();
+    expect(redirectState.clearAuthPendingFlows).toHaveBeenCalled();
+    expect(pkceState.clearPkceVerifierBackups).toHaveBeenCalled();
   });
 });
