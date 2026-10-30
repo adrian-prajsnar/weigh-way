@@ -12,6 +12,10 @@ const validateState = vi.hoisted(() => ({
   validateRestoredSessionInBackground: vi.fn(),
 }));
 
+const storageState = vi.hoisted(() => ({
+  readPersistedAuthSession: vi.fn(),
+}));
+
 const weightSyncState = vi.hoisted(() => ({
   getEntries: vi.fn(),
 }));
@@ -40,6 +44,10 @@ vi.mock('../supabase/app-lifecycle', () => ({
 
 vi.mock('../supabase/validate-restored-session', () => ({
   validateRestoredSessionInBackground: validateState.validateRestoredSessionInBackground,
+}));
+
+vi.mock('../supabase/auth-storage-key', () => ({
+  readPersistedAuthSession: storageState.readPersistedAuthSession,
 }));
 
 vi.mock('../supabase/weight-sync', () => ({
@@ -125,6 +133,7 @@ describe('SupabaseAuthProvider bootstrap', () => {
     authState.getSession.mockReset();
     authState.onAuthStateChange.mockReset();
     validateState.validateRestoredSessionInBackground.mockReset();
+    storageState.readPersistedAuthSession.mockReset();
     weightSyncState.getEntries.mockReset();
     authStateChangeListener = null;
     setupAuthListener();
@@ -152,9 +161,34 @@ describe('SupabaseAuthProvider bootstrap', () => {
     });
   });
 
+  it('restores the persisted session when getSession hangs past the bootstrap deadline', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    authState.getSession.mockImplementation(() => new Promise(() => {}));
+    storageState.readPersistedAuthSession.mockResolvedValue(sampleSession);
+    validateState.validateRestoredSessionInBackground.mockResolvedValue(undefined);
+    weightSyncState.getEntries.mockResolvedValue([]);
+
+    render(
+      <SupabaseAuthProvider>
+        <AuthAndWeightProbe />
+      </SupabaseAuthProvider>,
+    );
+
+    await vi.advanceTimersByTimeAsync(BOOTSTRAP_SESSION_DEADLINE_MS);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('auth-loading').textContent).toBe('no');
+      expect(screen.getByTestId('authenticated').textContent).toBe('yes');
+      expect(screen.getByTestId('token').textContent).toBe('token-a');
+    });
+    expect(storageState.readPersistedAuthSession).toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
   it('ends loading within the bootstrap deadline when getSession hangs', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     authState.getSession.mockImplementation(() => new Promise(() => {}));
+    storageState.readPersistedAuthSession.mockResolvedValue(null);
 
     render(
       <SupabaseAuthProvider>

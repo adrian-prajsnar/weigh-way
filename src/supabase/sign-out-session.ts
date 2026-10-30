@@ -1,3 +1,4 @@
+import { isNetworkError } from '../auth-errors';
 import {
   isAuthRateLimitedError,
   isAuthServerUnreachableError,
@@ -6,15 +7,10 @@ import {
 } from './auth-reachability-error';
 import { supabase } from './client';
 import { revokeSessionOnServer } from './revoke-session-on-server';
-import { getLatestAuthUserIdFromEvents } from './sign-out-local-user';
-import {
-  isSignOutDeadlineError,
-  SIGN_OUT_REFRESH_TIMEOUT_MS,
-  SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
-} from './sign-out-deadlines';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
 
-let signOutSessionInFlight = false;
+const SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS = 10_000;
+const SIGN_OUT_REFRESH_TIMEOUT_MS = 10_000;
 
 export type SignOutSessionOptions = {
   accessToken: string | null;
@@ -27,32 +23,25 @@ export type SignOutSessionResult = {
   serverSignOutUnreachable: boolean;
 };
 
-async function shouldClearLocalSession(capturedUserId: string | null): Promise<boolean> {
-  const eventUserId = getLatestAuthUserIdFromEvents();
-  if (eventUserId && capturedUserId && eventUserId !== capturedUserId) {
-    return false;
-  }
-
-  const { data } = await supabase.auth.getSession();
-  const currentUserId = data.session?.user?.id ?? null;
-  if (!currentUserId) {
-    return true;
-  }
-  if (!capturedUserId) {
-    return true;
-  }
-  return currentUserId === capturedUserId;
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError';
 }
 
-async function clearLocalAuthSession(capturedUserId: string | null): Promise<void> {
-  if (!(await shouldClearLocalSession(capturedUserId))) {
+async function clearLocalAuthSession(): Promise<void> {
+  const { error } = await supabase.auth.signOut({ scope: 'local' });
+  if (!error) {
     return;
   }
-
-  const { error } = await supabase.auth.signOut({ scope: 'local' });
-  if (error) {
-    throw error;
+  if (isNetworkError(error)) {
+    return;
   }
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    return;
+  }
+  throw error;
 }
 
 type RevokeOnServerResult = {
@@ -102,7 +91,7 @@ async function revokeOnServerForSignOut(
       if (isRefreshInvalidGrantError(error)) {
         return { serverSignOutUnreachable: false, keepLocalSession: false };
       }
-      if (isSignOutDeadlineError(error) || isAuthServerUnreachableError(error)) {
+      if (isAbortError(error) || isAuthServerUnreachableError(error) || isNetworkError(error)) {
         return { serverSignOutUnreachable: true, keepLocalSession: false };
       }
       throw error instanceof Error ? error : new Error('sign_out_failed');
@@ -120,7 +109,6 @@ async function revokeOnServerForSignOut(
 }
 
 async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOutSessionResult> {
-  const capturedUserId = options.localOnly ? null : (options.userId ?? null);
   let serverSignOutUnreachable = false;
   let keepLocalSession = false;
 
@@ -128,7 +116,7 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
     if (!options.localOnly && options.accessToken) {
       const revokeResult = await revokeOnServerForSignOut(
         options.accessToken,
-        capturedUserId,
+        options.userId ?? null,
         options.refreshToken ?? null,
       );
       serverSignOutUnreachable = revokeResult.serverSignOutUnreachable;
@@ -141,14 +129,18 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
     if (keepLocalSession) {
       throw error;
     }
-    if (isSignOutDeadlineError(error) || isAuthServerUnreachableError(error)) {
+    if (
+      isAbortError(error) ||
+      isAuthServerUnreachableError(error) ||
+      isNetworkError(error)
+    ) {
       serverSignOutUnreachable = true;
     } else if (!isRefreshInvalidGrantError(error)) {
       throw error;
     }
   } finally {
     if (!keepLocalSession) {
-      await clearLocalAuthSession(capturedUserId);
+      await clearLocalAuthSession();
     }
   }
 
@@ -156,13 +148,5 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
 }
 
 export async function signOutSession(options: SignOutSessionOptions): Promise<SignOutSessionResult> {
-  if (signOutSessionInFlight) {
-    return { serverSignOutUnreachable: false };
-  }
-  signOutSessionInFlight = true;
-  try {
-    return await runSignOutSession(options);
-  } finally {
-    signOutSessionInFlight = false;
-  }
+  return runSignOutSession(options);
 }

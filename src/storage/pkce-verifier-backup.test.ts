@@ -2,12 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const storage = vi.hoisted(() => new Map<string, string>());
 
-vi.mock('../supabase/auth-storage-key', () => ({
-  getSupabaseLegacyPkceVerifierKey: () => 'sb-test-auth-token-code-verifier',
-}));
-
-vi.mock('../supabase/auth-session-storage', () => ({
-  getSupabaseAuthStorage: () => ({
+vi.mock('@react-native-async-storage/async-storage', () => ({
+  default: {
     getItem: (key: string) => Promise.resolve(storage.get(key) ?? null),
     setItem: (key: string, value: string) => {
       storage.set(key, value);
@@ -17,7 +13,11 @@ vi.mock('../supabase/auth-session-storage', () => ({
       storage.delete(key);
       return Promise.resolve();
     },
-  }),
+  },
+}));
+
+vi.mock('../supabase/auth-storage-key', () => ({
+  getSupabaseLegacyPkceVerifierKey: () => 'sb-test-auth-token-code-verifier',
 }));
 
 // eslint-disable-next-line import/first -- load after vi.mock

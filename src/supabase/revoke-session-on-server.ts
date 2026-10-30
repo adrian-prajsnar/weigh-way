@@ -1,13 +1,9 @@
+import { isNetworkError } from '../auth-errors';
 import { authApiUrl, authUserJwtLogoutHeaders, parseAuthApiErrorFields } from './auth-api-http';
 import { isAuthRateLimitedError, isAuthServerUnreachableError } from './auth-reachability-error';
 import { supabaseAuthHttpConfig } from './client';
-import {
-  isSignOutDeadlineError,
-  SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
-  SignOutDeadlineError,
-  withSignOutDeadline,
-} from './sign-out-deadlines';
-import { isNetworkError } from '../auth-errors';
+
+export const SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS = 10_000;
 
 export type ServerRevokeResult =
   | 'revoked'
@@ -17,7 +13,7 @@ export type ServerRevokeResult =
   | 'unreachable'
   | 'failed';
 
-export function isExpiredAccessTokenRevokeError(error: unknown): boolean {
+function isExpiredAccessTokenRevokeError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) {
     return false;
   }
@@ -70,7 +66,10 @@ function mapRevokeHttpError(status: number, body: unknown): { result: ServerRevo
 }
 
 function mapRevokeError(error: unknown): { result: ServerRevokeResult; error?: unknown } {
-  if (isSignOutDeadlineError(error) || isNetworkError(error)) {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return { result: 'unreachable', error };
+  }
+  if (isNetworkError(error)) {
     return { result: 'unreachable', error };
   }
   if (isAuthServerUnreachableError(error)) {
@@ -100,19 +99,18 @@ export async function revokeSessionOnServer(
   }
 
   try {
-    const response = await withSignOutDeadline(timeoutMs, async () => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        return await fetch(authApiUrl(url, `/logout?scope=${scope}`), {
-          method: 'POST',
-          headers: authUserJwtLogoutHeaders(anonKey, accessToken),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timer);
-      }
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await fetch(authApiUrl(url, `/logout?scope=${scope}`), {
+        method: 'POST',
+        headers: authUserJwtLogoutHeaders(anonKey, accessToken),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     if (response.ok) {
       return { result: 'revoked' };
@@ -121,9 +119,6 @@ export async function revokeSessionOnServer(
     const body = await response.json().catch(() => null);
     return mapRevokeHttpError(response.status, body);
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      return mapRevokeError(new SignOutDeadlineError());
-    }
     return mapRevokeError(error);
   }
 }

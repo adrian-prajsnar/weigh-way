@@ -1,8 +1,7 @@
-/** Matches `@supabase/auth-js` DEFAULT_HEADERS (see lib/constants.ts). */
-export const AUTH_JS_CLIENT_INFO = 'gotrue-js/2.112.4';
+const AUTH_JS_CLIENT_INFO = 'gotrue-js/2.112.4';
 export const SUPABASE_AUTH_API_VERSION = '2024-01-01';
 
-export function normalizeSupabaseUrl(url: string): string {
+function normalizeSupabaseUrl(url: string): string {
   return url.replace(/\/+$/, '');
 }
 

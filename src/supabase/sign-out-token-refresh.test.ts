@@ -1,13 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('./sign-out-deadlines', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('./sign-out-deadlines')>();
-  return {
-    ...actual,
-    SIGN_OUT_REFRESH_TIMEOUT_MS: 50,
-  };
-});
-
 vi.mock('./client', () => ({
   supabaseAuthHttpConfig: {
     url: 'https://example.supabase.co',
@@ -16,7 +8,6 @@ vi.mock('./client', () => ({
 }));
 
 /* eslint-disable import/first -- after vi.mock */
-import { SignOutDeadlineError } from './sign-out-deadlines';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
 /* eslint-enable import/first */
 
@@ -46,7 +37,7 @@ describe('refreshAccessTokenForSignOut', () => {
   it('rejects within the refresh deadline when token fetch hangs', async () => {
     const started = Date.now();
     await expect(refreshAccessTokenForSignOut('refresh-token', 50)).rejects.toBeInstanceOf(
-      SignOutDeadlineError,
+      DOMException,
     );
     expect(Date.now() - started).toBeLessThan(500);
   });

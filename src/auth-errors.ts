@@ -204,21 +204,8 @@ export function formatSignOutError(error: unknown): string {
   return t('profile.signOutFailed');
 }
 
-export type SignOutPersistWarningOptions = {
-  serverSignOutUnreachable?: boolean;
-  localPersistFailed?: boolean;
-};
-
-export function formatSignOutPersistWarning(options?: SignOutPersistWarningOptions): string {
-  const offline = Boolean(options?.serverSignOutUnreachable);
-  const storage = Boolean(options?.localPersistFailed);
-  if (offline && storage) {
-    return t('profile.signOutPersistFailedOfflineAndStorage');
-  }
-  if (offline) {
-    return t('profile.signOutPersistFailedOffline');
-  }
-  return t('profile.signOutPersistFailed');
+export function formatSignOutOfflineNotice(): string {
+  return t('profile.signOutPersistFailedOffline');
 }
 
 export function formatDeleteAccountError(error: unknown): string {

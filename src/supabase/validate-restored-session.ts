@@ -2,8 +2,6 @@ import { fetchAuthUserForAccessToken } from './fetch-auth-user';
 import { signOutSession } from './sign-out-session';
 import { supabase } from './client';
 
-let validateRestoredSessionInFlight = false;
-
 const SESSION_REJECTION_CODES = new Set([
   'session_not_found',
   'user_not_found',
@@ -48,42 +46,8 @@ function isClearSessionRejection(error: unknown): boolean {
   return false;
 }
 
-async function shouldSignOutAfterSessionRejection(
-  error: unknown,
-  accessTokenAtStart: string,
-  userIdAtStart: string | null,
-): Promise<boolean> {
-  if (!isClearSessionRejection(error)) {
-    return false;
-  }
-
-  const {
-    data: { session: sessionNow },
-  } = await supabase.auth.getSession();
-  if (userIdAtStart && sessionNow?.user?.id !== userIdAtStart) {
-    return false;
-  }
-  if (sessionNow?.access_token !== accessTokenAtStart) {
-    return false;
-  }
-
-  return true;
-}
-
 /** Clears a restored session when the server rejects it; ignores transient and unknown errors. */
 export async function validateRestoredSessionInBackground(): Promise<void> {
-  if (validateRestoredSessionInFlight) {
-    return;
-  }
-  validateRestoredSessionInFlight = true;
-  try {
-    await runValidateRestoredSessionInBackground();
-  } finally {
-    validateRestoredSessionInFlight = false;
-  }
-}
-
-async function runValidateRestoredSessionInBackground(): Promise<void> {
   const {
     data: { session: sessionAtStart },
   } = await supabase.auth.getSession();
@@ -107,12 +71,7 @@ async function runValidateRestoredSessionInBackground(): Promise<void> {
     message: userResult.message,
   };
 
-  const shouldSignOut = await shouldSignOutAfterSessionRejection(
-    rejection,
-    accessTokenAtStart,
-    userIdAtStart,
-  );
-  if (!shouldSignOut) {
+  if (!isClearSessionRejection(rejection)) {
     return;
   }
 

@@ -1,11 +1,6 @@
 import { authAnonHeaders, authApiUrl } from './auth-api-http';
 import { isAuthServerUnreachableError } from './auth-reachability-error';
 import { supabaseAuthHttpConfig } from './client';
-import {
-  isSignOutDeadlineError,
-  SignOutDeadlineError,
-  withSignOutDeadline,
-} from './sign-out-deadlines';
 
 export type RefreshedSignOutTokens = {
   accessToken: string;
@@ -37,23 +32,22 @@ export async function refreshAccessTokenForSignOut(
   }
 
   try {
-    const response = await withSignOutDeadline(timeoutMs, async () => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        return await fetch(authApiUrl(url, '/token?grant_type=refresh_token'), {
-          method: 'POST',
-          headers: {
-            ...authAnonHeaders(anonKey),
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timer);
-      }
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await fetch(authApiUrl(url, '/token?grant_type=refresh_token'), {
+        method: 'POST',
+        headers: {
+          ...authAnonHeaders(anonKey),
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     const body = (await response.json().catch(() => null)) as unknown;
     if (!response.ok) {
@@ -85,14 +79,11 @@ export async function refreshAccessTokenForSignOut(
     }
     return parsed;
   } catch (error) {
-    if (isSignOutDeadlineError(error)) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
       throw error;
     }
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new SignOutDeadlineError();
-    }
     if (isAuthServerUnreachableError(error)) {
-      throw new SignOutDeadlineError();
+      throw error;
     }
     throw error;
   }

@@ -9,7 +9,7 @@ import {
   formatGoogleSignInError,
   formatSignInError,
   formatSignOutError,
-  formatSignOutPersistWarning,
+  formatSignOutOfflineNotice,
   formatSignUpError,
   formatUpdatePasswordError,
 } from '../auth-errors';
@@ -27,8 +27,8 @@ import {
 import { getAuthLinkErrorContext } from '../storage/auth-pending-flow';
 import { clearPkceVerifierBackups } from '../storage/pkce-verifier-backup';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
+import { readPersistedAuthSession } from '../supabase/auth-storage-key';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
-import { noteLatestAuthUserIdFromEvent } from '../supabase/sign-out-local-user';
 import { signOutSession } from '../supabase/sign-out-session';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
@@ -109,6 +109,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     const bootstrapGeneration = authEventGenerationRef.current;
     let bootstrapFinished = false;
+    let sessionApplied = false;
     let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
 
     const clearBootstrapDeadline = () => {
@@ -121,22 +122,23 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     deadlineTimer = setTimeout(() => {
       if (!bootstrapFinished) {
         setIsLoading(false);
+        if (!sessionApplied && authEventGenerationRef.current === bootstrapGeneration) {
+          void readPersistedAuthSession().then((restored) => {
+            if (
+              restored &&
+              authEventGenerationRef.current === bootstrapGeneration
+            ) {
+              setSession(restored);
+              void validateRestoredSessionInBackground();
+            }
+          });
+        }
       }
     }, BOOTSTRAP_SESSION_DEADLINE_MS);
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
       if (event !== 'INITIAL_SESSION') {
         authEventGenerationRef.current += 1;
-      }
-      if (
-        event === 'SIGNED_IN' ||
-        event === 'TOKEN_REFRESHED' ||
-        event === 'INITIAL_SESSION'
-      ) {
-        noteLatestAuthUserIdFromEvent(activeSession?.user?.id ?? null);
-      }
-      if (event === 'SIGNED_OUT') {
-        noteLatestAuthUserIdFromEvent(null);
       }
       setSession(activeSession);
       if (event === 'PASSWORD_RECOVERY' && activeSession) {
@@ -166,6 +168,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
           setSession(data.session);
           void validateRestoredSessionInBackground();
         }
+        sessionApplied = true;
       } finally {
         bootstrapFinished = true;
         clearBootstrapDeadline();
@@ -264,24 +267,23 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     const accessToken = session?.access_token ?? null;
+    let offlineNotice = false;
     try {
       const result = await signOutSession({
         accessToken,
         refreshToken: session?.refresh_token ?? null,
         userId: session?.user?.id ?? null,
       });
-      if (result.serverSignOutUnreachable) {
-        throw new Error(formatSignOutPersistWarning({ serverSignOutUnreachable: true }));
-      }
+      offlineNotice = result.serverSignOutUnreachable;
     } catch (error) {
-      if (error instanceof Error && error.message === formatSignOutPersistWarning({ serverSignOutUnreachable: true })) {
-        throw error;
-      }
       throw new Error(formatSignOutError(error));
     } finally {
       resetOAuthRedirectState();
       await clearAuthPendingFlows();
       await clearPkceVerifierBackups();
+    }
+    if (offlineNotice) {
+      throw new Error(formatSignOutOfflineNotice());
     }
   }, [session]);
 

@@ -3,7 +3,7 @@ import {
   formatAuthLinkError,
   formatSignInError,
   formatSignOutError,
-  formatSignOutPersistWarning,
+  formatSignOutOfflineNotice,
   formatSignUpError,
   isEmailNotConfirmedError,
   isNetworkError,
@@ -90,25 +90,10 @@ describe('formatSignOutError', () => {
   });
 });
 
-describe('formatSignOutPersistWarning', () => {
+describe('formatSignOutOfflineNotice', () => {
   it('uses offline copy when the server revoke was unreachable', () => {
-    expect(formatSignOutPersistWarning({ serverSignOutUnreachable: true })).toBe(
+    expect(formatSignOutOfflineNotice()).toBe(
       "You're signed out on this device. We couldn't reach the server.",
     );
-  });
-
-  it('uses combined copy when offline revoke and storage persist both failed', () => {
-    expect(
-      formatSignOutPersistWarning({
-        serverSignOutUnreachable: true,
-        localPersistFailed: true,
-      }),
-    ).toContain("couldn't reach the server");
-    expect(
-      formatSignOutPersistWarning({
-        serverSignOutUnreachable: true,
-        localPersistFailed: true,
-      }),
-    ).toContain('storage');
   });
 });

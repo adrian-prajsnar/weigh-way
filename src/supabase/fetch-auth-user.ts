@@ -1,11 +1,9 @@
+import { isNetworkError } from '../auth-errors';
 import { authApiUrl, authUserJwtHeaders, parseAuthApiErrorFields } from './auth-api-http';
 import { isAuthServerUnreachableError } from './auth-reachability-error';
 import { supabaseAuthHttpConfig } from './client';
-import {
-  isSignOutDeadlineError,
-  VALIDATION_AUTH_USER_TIMEOUT_MS,
-  withSignOutDeadline,
-} from './sign-out-deadlines';
+
+export const VALIDATION_AUTH_USER_TIMEOUT_MS = 10_000;
 
 export type FetchAuthUserResult =
   | { ok: true; userId: string }
@@ -21,19 +19,18 @@ export async function fetchAuthUserForAccessToken(
   }
 
   try {
-    const response = await withSignOutDeadline(VALIDATION_AUTH_USER_TIMEOUT_MS, async () => {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), VALIDATION_AUTH_USER_TIMEOUT_MS);
-      try {
-        return await fetch(authApiUrl(url, '/user'), {
-          method: 'GET',
-          headers: authUserJwtHeaders(anonKey, accessToken),
-          signal: controller.signal,
-        });
-      } finally {
-        clearTimeout(timer);
-      }
-    });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), VALIDATION_AUTH_USER_TIMEOUT_MS);
+    let response: Response;
+    try {
+      response = await fetch(authApiUrl(url, '/user'), {
+        method: 'GET',
+        headers: authUserJwtHeaders(anonKey, accessToken),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
 
     const body = (await response.json().catch(() => null)) as { id?: string } | null;
 
@@ -50,8 +47,8 @@ export async function fetchAuthUserForAccessToken(
     };
   } catch (error) {
     if (
-      isSignOutDeadlineError(error) ||
       (error instanceof DOMException && error.name === 'AbortError') ||
+      isNetworkError(error) ||
       isAuthServerUnreachableError(error)
     ) {
       return { ok: false, status: 0, message: 'unreachable', unreachable: true };

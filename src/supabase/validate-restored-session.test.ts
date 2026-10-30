@@ -35,21 +35,6 @@ const sessionA = {
   refresh_token: 'refresh-a',
   user: { id: 'user-a' },
 };
-const sessionB = {
-  access_token: 'token-b',
-  refresh_token: 'refresh-b',
-  user: { id: 'user-b' },
-};
-
-function mockSessionAtStartAndEnd(
-  start: typeof sessionA | null,
-  end: typeof sessionA | null,
-) {
-  authState.getSession
-    .mockResolvedValueOnce({ data: { session: start } })
-    .mockResolvedValueOnce({ data: { session: end } })
-    .mockResolvedValue({ data: { session: end } });
-}
 
 describe('validateRestoredSessionInBackground', () => {
   beforeEach(() => {
@@ -60,7 +45,7 @@ describe('validateRestoredSessionInBackground', () => {
   });
 
   it('clears a session rejected with 401', async () => {
-    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getSession.mockResolvedValue({ data: { session: sessionA } });
     fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
       ok: false,
       status: 401,
@@ -69,7 +54,6 @@ describe('validateRestoredSessionInBackground', () => {
 
     await validateRestoredSessionInBackground();
 
-    expect(fetchUserState.fetchAuthUserForAccessToken).toHaveBeenCalledWith('token-a');
     expect(signOutSessionMock).toHaveBeenCalledWith({
       accessToken: 'token-a',
       refreshToken: 'refresh-a',
@@ -77,34 +61,7 @@ describe('validateRestoredSessionInBackground', () => {
     });
   });
 
-  it('clears a session rejected with 403', async () => {
-    mockSessionAtStartAndEnd(sessionA, sessionA);
-    fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
-      ok: false,
-      status: 403,
-      message: 'forbidden',
-    });
-
-    await validateRestoredSessionInBackground();
-
-    expect(signOutSessionMock).toHaveBeenCalled();
-  });
-
   it('clears a session rejected with bad_jwt including expired tokens', async () => {
-    mockSessionAtStartAndEnd(sessionA, sessionA);
-    fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
-      ok: false,
-      status: 401,
-      code: 'bad_jwt',
-      message: 'token is expired',
-    });
-
-    await validateRestoredSessionInBackground();
-
-    expect(signOutSessionMock).toHaveBeenCalled();
-  });
-
-  it('runs at most one sign-out when validation is invoked concurrently', async () => {
     authState.getSession.mockResolvedValue({ data: { session: sessionA } });
     fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
       ok: false,
@@ -113,16 +70,13 @@ describe('validateRestoredSessionInBackground', () => {
       message: 'token is expired',
     });
 
-    await Promise.all([
-      validateRestoredSessionInBackground(),
-      validateRestoredSessionInBackground(),
-    ]);
+    await validateRestoredSessionInBackground();
 
-    expect(signOutSessionMock).toHaveBeenCalledTimes(1);
+    expect(signOutSessionMock).toHaveBeenCalled();
   });
 
   it.each([500, 503, 429])('keeps the session when user fetch returns %s', async (status) => {
-    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getSession.mockResolvedValue({ data: { session: sessionA } });
     fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
       ok: false,
       status,
@@ -135,7 +89,7 @@ describe('validateRestoredSessionInBackground', () => {
   });
 
   it('keeps the session when user fetch is unreachable', async () => {
-    mockSessionAtStartAndEnd(sessionA, sessionA);
+    authState.getSession.mockResolvedValue({ data: { session: sessionA } });
     fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
       ok: false,
       status: 0,
@@ -144,21 +98,6 @@ describe('validateRestoredSessionInBackground', () => {
 
     await validateRestoredSessionInBackground();
 
-    expect(signOutSessionMock).not.toHaveBeenCalled();
-  });
-
-  it('does not clear a newer session when a stale rejection arrives for token A', async () => {
-    mockSessionAtStartAndEnd(sessionA, sessionB);
-    fetchUserState.fetchAuthUserForAccessToken.mockResolvedValue({
-      ok: false,
-      status: 403,
-      code: 'session_not_found',
-      message: 'not found',
-    });
-
-    await validateRestoredSessionInBackground();
-
-    expect(fetchUserState.fetchAuthUserForAccessToken).toHaveBeenCalledWith('token-a');
     expect(signOutSessionMock).not.toHaveBeenCalled();
   });
 });
