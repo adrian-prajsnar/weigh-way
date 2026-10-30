@@ -13,6 +13,10 @@ vi.mock('./sign-out-token-refresh', () => ({
   refreshAccessTokenForSignOut: refreshState.refreshAccessTokenForSignOut,
 }));
 
+vi.mock('./auth-storage-key', () => ({
+  clearPersistedAuthSession: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('./client', () => ({
   supabaseAuthHttpConfig: {
     url: 'https://example.supabase.co',

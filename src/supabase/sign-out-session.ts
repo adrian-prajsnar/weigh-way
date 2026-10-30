@@ -5,6 +5,7 @@ import {
   isRefreshInvalidGrantError,
   isRefreshRateLimitedError,
 } from './auth-reachability-error';
+import { clearPersistedAuthSession } from './auth-storage-key';
 import { supabase } from './client';
 import { revokeSessionOnServer } from './revoke-session-on-server';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
@@ -28,6 +29,7 @@ function isAbortError(error: unknown): boolean {
 }
 
 async function clearLocalAuthSession(): Promise<void> {
+  await clearPersistedAuthSession();
   const { error } = await supabase.auth.signOut({ scope: 'local' });
   if (!error) {
     return;

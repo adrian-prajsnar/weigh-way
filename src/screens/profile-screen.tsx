@@ -188,8 +188,12 @@ export function ProfileScreen({
       }
       void (async () => {
         try {
-          await signOut();
-          showInfo(t('profile.signedOut'));
+          const { offlineNotice } = await signOut();
+          showInfo(
+            offlineNotice
+              ? t('profile.signOutPersistFailedOffline')
+              : t('profile.signedOut'),
+          );
         } catch (signOutError) {
           const message =
             signOutError instanceof Error ? signOutError.message : t('profile.signOutFailed');

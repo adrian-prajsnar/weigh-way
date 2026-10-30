@@ -25,3 +25,9 @@ export async function readPersistedAuthSession(): Promise<Session | null> {
     return null;
   }
 }
+
+/** Removes persisted Supabase auth keys so auth-js local sign-out skips /logout. */
+export async function clearPersistedAuthSession(): Promise<void> {
+  const key = getSupabaseAuthStorageKey();
+  await AsyncStorage.multiRemove([key, `${key}-user`, getSupabaseLegacyPkceVerifierKey()]);
+}

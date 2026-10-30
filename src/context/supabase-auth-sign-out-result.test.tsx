@@ -24,6 +24,10 @@ const pkceState = vi.hoisted(() => ({
   clearPkceVerifierBackups: vi.fn(),
 }));
 
+const storageClearState = vi.hoisted(() => ({
+  clearPersistedAuthSession: vi.fn(),
+}));
+
 vi.mock('../auth-redirect', () => ({
   clearAuthPendingFlows: redirectState.clearAuthPendingFlows,
   resetOAuthRedirectState: redirectState.resetOAuthRedirectState,
@@ -59,12 +63,21 @@ vi.mock('../supabase/client', () => ({
   },
 }));
 
+vi.mock('../supabase/sign-out-session', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../supabase/sign-out-session')>();
+  return {
+    ...actual,
+    signOutSession: vi.fn(),
+  };
+});
+
 vi.mock('../supabase/validate-restored-session', () => ({
   validateRestoredSessionInBackground: vi.fn(),
 }));
 
 vi.mock('../supabase/auth-storage-key', () => ({
   readPersistedAuthSession: vi.fn().mockResolvedValue(null),
+  clearPersistedAuthSession: storageClearState.clearPersistedAuthSession,
 }));
 
 vi.mock('../supabase/weight-sync', () => ({
@@ -82,8 +95,11 @@ vi.mock('expo-linking', () => ({
 }));
 
 /* eslint-disable import/first -- after vi.mock */
+import { signOutSession } from '../supabase/sign-out-session';
 import { SupabaseAuthProvider, useSupabaseAuth } from './supabase-auth-context';
 /* eslint-enable import/first */
+
+const signOutSessionMock = vi.mocked(signOutSession);
 
 const sampleSession = {
   access_token: 'token-a',
@@ -93,30 +109,21 @@ const sampleSession = {
   user: { id: 'user-a', email: 'a@example.com' },
 };
 
-const offlineCopy = "You're signed out on this device. We couldn't reach the server.";
-
 describe('supabase auth signOut result handling', () => {
   beforeEach(() => {
+    signOutSessionMock.mockReset();
     redirectState.clearAuthPendingFlows.mockReset();
     pkceState.clearPkceVerifierBackups.mockReset();
-    authState.signOut.mockReset();
     redirectState.clearAuthPendingFlows.mockResolvedValue(undefined);
     pkceState.clearPkceVerifierBackups.mockResolvedValue(undefined);
     authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
-    authState.signOut.mockResolvedValue({ error: null });
     authState.onAuthStateChange.mockImplementation(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
     }));
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))),
-    );
   });
 
-  it('throws offline copy when the server revoke is unreachable and local sign-out hits a network error', async () => {
-    authState.signOut.mockResolvedValue({
-      error: { message: 'Network request failed' },
-    });
+  it('returns offlineNotice when the server revoke is unreachable', async () => {
+    signOutSessionMock.mockResolvedValue({ serverSignOutUnreachable: true });
 
     const { result } = renderHook(() => useSupabaseAuth(), {
       wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
@@ -124,11 +131,12 @@ describe('supabase auth signOut result handling', () => {
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
+    let offlineNotice = false;
     await act(async () => {
-      await expect(result.current.signOut()).rejects.toThrow(offlineCopy);
+      ({ offlineNotice } = await result.current.signOut());
     });
 
-    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(offlineNotice).toBe(true);
     expect(redirectState.clearAuthPendingFlows).toHaveBeenCalled();
     expect(pkceState.clearPkceVerifierBackups).toHaveBeenCalled();
   });

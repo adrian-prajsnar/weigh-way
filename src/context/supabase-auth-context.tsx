@@ -9,7 +9,6 @@ import {
   formatGoogleSignInError,
   formatSignInError,
   formatSignOutError,
-  formatSignOutOfflineNotice,
   formatSignUpError,
   formatUpdatePasswordError,
 } from '../auth-errors';
@@ -53,7 +52,7 @@ type SupabaseAuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<boolean>;
   signUp: (email: string, password: string) => Promise<SignUpResult>;
-  signOut: () => Promise<void>;
+  signOut: () => Promise<{ offlineNotice: boolean }>;
   deleteAccount: () => Promise<void>;
   resendConfirmationEmail: (email: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -282,9 +281,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       await clearAuthPendingFlows();
       await clearPkceVerifierBackups();
     }
-    if (offlineNotice) {
-      throw new Error(formatSignOutOfflineNotice());
-    }
+    return { offlineNotice };
   }, [session]);
 
   const deleteAccount = useCallback(async () => {
