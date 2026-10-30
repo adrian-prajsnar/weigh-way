@@ -232,7 +232,7 @@ describe('pending global revoke triple fault (session-scoped marker)', () => {
     await storageB.retryPendingDiskPersistence();
 
     expect(logoutCalls).toHaveLength(2);
-    expect(logoutCalls[1]).toContain('scope=global');
+    expect(logoutCalls[1]).toContain('scope=local');
   });
 
   it('does not hide user B when the pending revoke marker targets session A1 only', async () => {

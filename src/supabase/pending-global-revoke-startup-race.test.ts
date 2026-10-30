@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { parseSessionIdFromAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
 import { makeTestAccessToken } from './test-helpers/make-test-access-token';
+import {
+  createGotrueSessionRegistry,
+  gotrueLogoutFetchHandler,
+  type GotrueSessionRegistry,
+} from './test-helpers/gotrue-session-logout-mock';
 import {
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
   readPendingGlobalRevokeMarkerSessionId,
@@ -42,9 +47,8 @@ const SESS_A2 = 'sess-a2-startup-race';
 
 const diskRef = vi.hoisted(() => new Map<string, string>());
 const markerDiskRef = vi.hoisted(() => new Map<string, string>());
-const raceRef = vi.hoisted(() => ({
-  a2SignedIn: false,
-  globalLogoutCompletedAfterA2: false,
+const serverRef = vi.hoisted(() => ({
+  registry: null as GotrueSessionRegistry | null,
 }));
 
 const asyncStorage = vi.hoisted(() => ({
@@ -92,6 +96,7 @@ vi.mock('./auth-storage-key', () => ({
 }));
 
 function makeSessionJson(userId: string, sessionId: string, refreshToken: string): string {
+  serverRef.registry?.register(userId, sessionId);
   return JSON.stringify({
     access_token: makeTestAccessToken(sessionId),
     refresh_token: refreshToken,
@@ -102,16 +107,12 @@ function makeSessionJson(userId: string, sessionId: string, refreshToken: string
   });
 }
 
-describe('startup pending global revoke vs re-sign-in', () => {
-  let logoutCalls: { url: string; completedAfterA2: boolean }[];
-
+describe('startup pending local revoke vs re-sign-in', () => {
   beforeEach(async () => {
     vi.resetModules();
     diskRef.clear();
     markerDiskRef.clear();
-    raceRef.a2SignedIn = false;
-    raceRef.globalLogoutCompletedAfterA2 = false;
-    logoutCalls = [];
+    serverRef.registry = createGotrueSessionRegistry();
     resetInMemoryPendingGlobalRevokeForTests();
     resetPendingGlobalRevokeStateForTests();
     const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
@@ -132,18 +133,12 @@ describe('startup pending global revoke vs re-sign-in', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = typeof input === 'string' ? input : input.toString();
-        if (url.includes('/logout') && url.includes('scope=global')) {
-          await delay(624);
-          const completedAfterA2 = raceRef.a2SignedIn;
-          logoutCalls.push({ url, completedAfterA2 });
-          if (completedAfterA2) {
-            raceRef.globalLogoutCompletedAfterA2 = true;
-          }
-          return new Response(null, { status: 204 });
+        if (url.includes('/logout') && url.includes('scope=local')) {
+          return gotrueLogoutFetchHandler(serverRef.registry!, input, init, { delayMs: 624 });
         }
-        return new Response(JSON.stringify({}), { status: 404 });
+        return gotrueLogoutFetchHandler(serverRef.registry!, input, init);
       }),
     );
   });
@@ -151,6 +146,7 @@ describe('startup pending global revoke vs re-sign-in', () => {
   afterEach(async () => {
     vi.unstubAllGlobals();
     resilientStorageRef.current = null;
+    serverRef.registry = null;
     const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
       './pending-global-revoke-marker-store'
     );
@@ -164,7 +160,7 @@ describe('startup pending global revoke vs re-sign-in', () => {
     return storage;
   }
 
-  it('does not clear A2 when A2 signs in during a slow startup global revoke', async () => {
+  it('revokes only A1 on the server and keeps A2 locally when re-sign-in overlaps startup revoke', async () => {
     diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1, 'refresh-a1'));
     markerDiskRef.set(PENDING_GLOBAL_REVOKE_MARKER_KEY, JSON.stringify({ sessionId: SESS_A1 }));
     const storage = await initStorage();
@@ -174,21 +170,66 @@ describe('startup pending global revoke vs re-sign-in', () => {
     const pendingRevoke = await import('./pending-global-revoke');
     const startupPromise = pendingRevoke.runPendingGlobalRevokeBeforeSessionRestore();
 
-    await delay(35);
-    await delay(65);
+    await delay(100);
     diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
-    raceRef.a2SignedIn = true;
     await resetAuthEvents(USER_A, SESS_A2);
     await pendingRevoke.clearPendingGlobalRevokeIfSupersededByAuthEvent();
 
     await startupPromise;
 
-    expect(raceRef.globalLogoutCompletedAfterA2).toBe(false);
-    expect(logoutCalls.every((call) => !call.completedAfterA2)).toBe(true);
+    expect(serverRef.registry!.isAlive(SESS_A1)).toBe(false);
+    expect(serverRef.registry!.isAlive(SESS_A2)).toBe(true);
 
     const raw = await storage.getItem(SESSION_KEY);
     expect(parseSessionIdFromAuthSessionPayload(raw)).toBe(SESS_A2);
     expect(diskRef.has(SESSION_KEY)).toBe(true);
     await expect(readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
+  });
+
+  it('keeps a cold-start session on disk when the marker targets an older session id', async () => {
+    serverRef.registry!.register(USER_A, SESS_A2);
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
+    markerDiskRef.set(PENDING_GLOBAL_REVOKE_MARKER_KEY, JSON.stringify({ sessionId: SESS_A1 }));
+    serverRef.registry!.register(USER_A, SESS_A1);
+
+    const storage = await initStorage();
+    await storage.getItem(SESSION_KEY);
+    await resetAuthEvents(USER_A, SESS_A2);
+
+    const pendingRevoke = await import('./pending-global-revoke');
+    await pendingRevoke.runPendingGlobalRevokeBeforeSessionRestore();
+
+    expect(serverRef.registry!.isAlive(SESS_A2)).toBe(true);
+    expect(parseSessionIdFromAuthSessionPayload(await storage.getItem(SESSION_KEY))).toBe(SESS_A2);
+    await expect(readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
+  });
+
+  it('drops the marker without /logout when the pending token has no JWT session_id', async () => {
+    const plainToken = makeTestAccessToken('');
+    expect(parseSessionIdFromAccessToken(plainToken)).toBeNull();
+    diskRef.set(
+      SESSION_KEY,
+      JSON.stringify({
+        access_token: plainToken,
+        refresh_token: 'refresh-a1',
+        expires_in: 3600,
+        expires_at: Math.floor(Date.now() / 1000) + 3600,
+        token_type: 'bearer',
+        user: { id: USER_A, aud: 'authenticated', role: 'authenticated', email: 'a@example.com' },
+      }),
+    );
+    markerDiskRef.set(
+      PENDING_GLOBAL_REVOKE_MARKER_KEY,
+      JSON.stringify({ sessionId: 'h:deadbeef' }),
+    );
+
+    const storage = await initStorage();
+    await storage.getItem(SESSION_KEY);
+
+    const pendingRevoke = await import('./pending-global-revoke');
+    await pendingRevoke.runPendingGlobalRevokeBeforeSessionRestore();
+
+    await expect(readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
+    expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
   });
 });

@@ -7,6 +7,11 @@ import {
 } from './pending-global-revoke-marker';
 import { resetInMemoryPendingGlobalRevokeForTests } from './pending-global-revoke-in-memory';
 import { resetPendingGlobalRevokeStateForTests } from './pending-global-revoke';
+import {
+  createGotrueSessionRegistry,
+  gotrueLogoutFetchHandler,
+  type GotrueSessionRegistry,
+} from './test-helpers/gotrue-session-logout-mock';
 
 async function resetAuthEvents(userId: string | null, sessionId: string | null) {
   const localUser = await import('./sign-out-local-user');
@@ -37,6 +42,9 @@ const SESS_A2 = 'sess-a2-resign';
 
 const diskRef = vi.hoisted(() => new Map<string, string>());
 const markerDiskRef = vi.hoisted(() => new Map<string, string>());
+const serverRef = vi.hoisted(() => ({
+  registry: null as GotrueSessionRegistry | null,
+}));
 
 const asyncStorage = vi.hoisted(() => ({
   getItem: vi.fn(async (key: string) => diskRef.get(key) ?? null),
@@ -86,6 +94,7 @@ vi.mock('./auth-storage-key', () => ({
 }));
 
 function makeSessionJson(userId: string, sessionId: string, refreshToken: string): string {
+  serverRef.registry?.register(userId, sessionId);
   return JSON.stringify({
     access_token: makeTestAccessToken(sessionId),
     refresh_token: refreshToken,
@@ -108,6 +117,7 @@ describe('offline sign-out then sign-in keeps the new session', () => {
     vi.resetModules();
     diskRef.clear();
     markerDiskRef.clear();
+    serverRef.registry = createGotrueSessionRegistry();
     networkOnline = false;
     logoutCalls = [];
     resetInMemoryPendingGlobalRevokeForTests();
@@ -141,7 +151,7 @@ describe('offline sign-out then sign-in keeps the new session', () => {
           if (!networkOnline) {
             return new Response(JSON.stringify({ msg: 'offline' }), { status: 503 });
           }
-          return new Response(null, { status: 204 });
+          return gotrueLogoutFetchHandler(serverRef.registry!, input, init);
         }
         return new Response(JSON.stringify({}), { status: 404 });
       }),
@@ -222,6 +232,8 @@ describe('offline sign-out then sign-in keeps the new session', () => {
       globalLogoutCountBeforeA2,
     );
     expect(logoutCalls.filter((c) => c.url.includes('scope=local'))).toHaveLength(1);
+    expect(serverRef.registry!.isAlive(SESS_A2)).toBe(true);
+    expect(serverRef.registry!.isAlive(SESS_A1)).toBe(false);
   });
 
   it('revokes the old session locally before dropping pending revoke on same-account re-sign-in', async () => {
@@ -273,7 +285,7 @@ describe('offline sign-out then sign-in keeps the new session', () => {
       userId: USER_A,
       accessToken: plainAccessToken,
       refreshToken: 'refresh-a1',
-      revokeScope: 'global',
+      revokeScope: 'local',
     });
 
     const pendingRevoke = await import('./pending-global-revoke');

@@ -256,7 +256,7 @@ describe('pending global revoke when storage recovers before network', () => {
 
     expect(logoutCalls.length - logoutsBeforeOnline).toBe(1);
     const lastLogout = logoutCalls[logoutCalls.length - 1];
-    expect(lastLogout?.url).toContain('scope=global');
+    expect(lastLogout?.url).toContain('scope=local');
     expect(lastLogout?.authorization).toContain(makeTestAccessToken(SESS_A1));
 
     await expect(storageB.getItem(SESSION_KEY)).resolves.toBeNull();

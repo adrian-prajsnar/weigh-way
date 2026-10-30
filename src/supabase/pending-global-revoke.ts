@@ -85,16 +85,9 @@ export { getInMemoryPendingGlobalRevoke } from './pending-global-revoke-in-memor
 
 export function resetPendingGlobalRevokeStateForTests(): void {
   resetInMemoryPendingGlobalRevokeForTests();
-  abortInFlightStartupGlobalRevoke();
 }
 
 let dedupedGlobalRevokeWork: Promise<void> | null = null;
-let inFlightStartupGlobalRevokeAbort: AbortController | null = null;
-
-function abortInFlightStartupGlobalRevoke(): void {
-  inFlightStartupGlobalRevokeAbort?.abort();
-  inFlightStartupGlobalRevokeAbort = null;
-}
 
 async function runDedupedGlobalRevokeWork(work: () => Promise<void>): Promise<void> {
   if (dedupedGlobalRevokeWork) {
@@ -128,7 +121,6 @@ async function revokeOldSessionIfSameUserResignedIn(): Promise<void> {
   if (eventUserId && eventUserId !== pending.userId) {
     return;
   }
-  abortInFlightStartupGlobalRevoke();
   await revokeSupersededSessionBestEffort(pending);
 }
 
@@ -159,7 +151,6 @@ async function clearMarkerIfSupersededByAuthEvent(): Promise<void> {
   const eventSessionId = getLatestAuthSessionIdFromEvents();
   const eventUserId = getLatestAuthUserIdFromEvents();
   if (eventSessionId && eventSessionId !== markerSessionId) {
-    abortInFlightStartupGlobalRevoke();
     if (pendingBefore && (!eventUserId || eventUserId === pendingBefore.userId)) {
       await revokeSupersededSessionBestEffort(pendingBefore);
     }
@@ -200,7 +191,7 @@ export async function armPendingGlobalRevokeMarker(
 ): Promise<void> {
   setInMemoryPendingGlobalRevoke({
     ...tokens,
-    revokeScope: serverRevokeDone ? 'local' : 'global',
+    revokeScope: 'local',
   });
   const markerKey = pendingRevokeMarkerKeyForAccessToken(tokens.accessToken);
   await writePendingGlobalRevokeMarker(markerKey, undefined, markerWriteTimeoutMs, {
@@ -218,10 +209,9 @@ export function armInMemoryPendingRevokeOnly(
 async function attemptRevoke(
   tokens: PendingGlobalRevokeTokens,
   timeoutMs: number = SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
-  signal?: AbortSignal,
 ): Promise<RevokeAttemptOutcome> {
   let accessToken = tokens.accessToken;
-  let revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs, signal);
+  let revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs);
 
   if (revoke.result === 'rate_limited') {
     return 'rate_limited';
@@ -240,7 +230,7 @@ async function attemptRevoke(
         return 'succeeded';
       }
       accessToken = refreshed.accessToken;
-      revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs, signal);
+      revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs);
       if (revoke.result === 'rate_limited') {
         return 'rate_limited';
       }
@@ -330,8 +320,20 @@ async function hydrateInMemoryPendingFromMarkerAndDisk(
     userId,
     accessToken,
     refreshToken: parseRefreshTokenFromAuthSessionPayload(raw),
-    revokeScope: 'global',
+    revokeScope: 'local',
   });
+}
+
+/** GoTrue treats logout without JWT `session_id` as global regardless of scope — skip server revoke. */
+async function abandonPendingRevokeWhenAccessTokenHasNoSessionId(
+  accessToken: string,
+): Promise<boolean> {
+  if (parseSessionIdFromAccessToken(accessToken)) {
+    return false;
+  }
+  await clearPendingGlobalRevokeMarker();
+  setInMemoryPendingGlobalRevoke(null);
+  return true;
 }
 
 async function resolvePrimaryAuthSessionKey(): Promise<string | null> {
@@ -409,7 +411,6 @@ async function clearLocalAuthAfterPendingGlobalRevokeIfStillPending(
 
 type PendingRevokeAttemptOptions = {
   timeoutMs?: number;
-  signal?: AbortSignal;
 };
 
 async function runPendingRevokeAttempt(
@@ -417,9 +418,7 @@ async function runPendingRevokeAttempt(
   options?: PendingRevokeAttemptOptions,
 ): Promise<RevokeAttemptOutcome> {
   const timeoutMs = options?.timeoutMs ?? SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS;
-  return withSignOutDeadline(timeoutMs, () =>
-    attemptRevoke(tokens, timeoutMs, options?.signal),
-  ).catch(
+  return withSignOutDeadline(timeoutMs, () => attemptRevoke(tokens, timeoutMs)).catch(
     (error) => {
       if (isSignOutDeadlineError(error)) {
         return 'unreachable' as RevokeAttemptOutcome;
@@ -484,6 +483,9 @@ async function retryPendingGlobalRevokeBeforeDiskPersistenceBody(
   }
 
   const tokens = pendingAfterDrop;
+  if (await abandonPendingRevokeWhenAccessTokenHasNoSessionId(tokens.accessToken)) {
+    return;
+  }
   const outcome = await runPendingRevokeAttempt(tokens);
   if (
     outcome === 'rate_limited' ||
@@ -495,9 +497,11 @@ async function retryPendingGlobalRevokeBeforeDiskPersistenceBody(
 
   setInMemoryPendingGlobalRevoke(null);
   await clearPendingGlobalRevokeMarker();
-  if (tokens.revokeScope === 'global') {
-    await clearLocalAuthAfterPendingGlobalRevoke(tokens.userId, sessionKeyHint);
-  }
+  await clearLocalAuthAfterPendingGlobalRevokeIfStillPending(
+    tokens.sessionId,
+    tokens.userId,
+    sessionKeyHint,
+  );
 }
 
 async function readPrimarySessionPayloadDirect(): Promise<string | null> {
@@ -579,23 +583,17 @@ async function runPendingGlobalRevokeBeforeSessionRestoreBody(): Promise<void> {
     userId,
     accessToken,
     refreshToken,
-    revokeScope: 'global',
+    revokeScope: 'local',
   };
   setInMemoryPendingGlobalRevoke(tokens);
 
-  const startupAbort = new AbortController();
-  inFlightStartupGlobalRevokeAbort = startupAbort;
-  let outcome: RevokeAttemptOutcome;
-  try {
-    outcome = await runPendingRevokeAttempt(tokens, {
-      timeoutMs: PENDING_GLOBAL_REVOKE_STARTUP_REVOKE_TIMEOUT_MS,
-      signal: startupAbort.signal,
-    });
-  } finally {
-    if (inFlightStartupGlobalRevokeAbort === startupAbort) {
-      inFlightStartupGlobalRevokeAbort = null;
-    }
+  if (await abandonPendingRevokeWhenAccessTokenHasNoSessionId(accessToken)) {
+    return;
   }
+
+  const outcome = await runPendingRevokeAttempt(tokens, {
+    timeoutMs: PENDING_GLOBAL_REVOKE_STARTUP_REVOKE_TIMEOUT_MS,
+  });
 
   if (outcome === 'failed_non_retryable') {
     await incrementPendingGlobalRevokeStartupFailCount(markerPayload);
