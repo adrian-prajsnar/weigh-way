@@ -326,8 +326,7 @@ const pl = {
     signOutConfirm: 'Wylogować się z konta?',
     signedOut: 'Wylogowano.',
     signOutFailed: 'Nie udało się wylogować.',
-    signOutPersistFailed:
-      'Wylogowano. Spróbujemy dokończyć czyszczenie tego urządzenia, gdy pamięć będzie dostępna.',
+    signOutRateLimited: 'Zbyt wiele prób. Spróbuj ponownie za chwilę.',
     signOutPersistFailedOffline:
       'Wylogowano na tym urządzeniu. Nie udało się połączyć z serwerem.',
     deleteAccount: 'Usuń konto',

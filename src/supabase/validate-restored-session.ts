@@ -1,3 +1,4 @@
+import { fetchAuthUserForAccessToken } from './fetch-auth-user';
 import { signOutSession } from './sign-out-session';
 import { supabase } from './client';
 
@@ -45,75 +46,38 @@ function isClearSessionRejection(error: unknown): boolean {
   return false;
 }
 
-function isExpiredBadJwt(error: unknown): boolean {
-  if (typeof error !== 'object' || error === null) {
-    return false;
-  }
-  const authError = error as { status?: number; code?: string; message?: string };
-  if (authError.code !== 'bad_jwt' || authError.status !== 401) {
-    return false;
-  }
-  const message = (authError.message ?? '').toLowerCase();
-  return message.includes('expired') || message.includes('token is expired');
-}
-
-async function shouldSignOutAfterSessionRejection(
-  error: unknown,
-  accessTokenAtStart: string,
-): Promise<boolean> {
-  let rejection = error;
-
-  if (isExpiredBadJwt(rejection)) {
-    const { data, error: refreshError } = await supabase.auth.refreshSession();
-    if (!refreshError && data.session) {
-      return false;
-    }
-    if (!refreshError) {
-      return false;
-    }
-    if (!isClearSessionRejection(refreshError)) {
-      return false;
-    }
-    rejection = refreshError;
-  } else if (!isClearSessionRejection(rejection)) {
-    return false;
-  }
-
-  const {
-    data: { session: sessionNow },
-  } = await supabase.auth.getSession();
-  if (sessionNow?.access_token !== accessTokenAtStart) {
-    return false;
-  }
-
-  return isClearSessionRejection(rejection);
-}
-
 /** Clears a restored session when the server rejects it; ignores transient and unknown errors. */
 export async function validateRestoredSessionInBackground(): Promise<void> {
   const {
     data: { session: sessionAtStart },
   } = await supabase.auth.getSession();
   const accessTokenAtStart = sessionAtStart?.access_token ?? null;
+  const userIdAtStart = sessionAtStart?.user?.id ?? null;
   if (!accessTokenAtStart) {
     return;
   }
 
-  const { data, error } = await supabase.auth.getUser();
-  if (!error && data.user) {
+  const userResult = await fetchAuthUserForAccessToken(accessTokenAtStart);
+  if (userResult.ok) {
     return;
   }
-  if (!error) {
+  if (userResult.unreachable) {
     return;
   }
 
-  const shouldSignOut = await shouldSignOutAfterSessionRejection(error, accessTokenAtStart);
-  if (!shouldSignOut) {
+  const rejection = {
+    status: userResult.status,
+    code: userResult.code,
+    message: userResult.message,
+  };
+
+  if (!isClearSessionRejection(rejection)) {
     return;
   }
 
   await signOutSession({
     accessToken: accessTokenAtStart,
-    userId: sessionAtStart?.user?.id ?? null,
+    refreshToken: sessionAtStart?.refresh_token ?? null,
+    userId: userIdAtStart,
   });
 }

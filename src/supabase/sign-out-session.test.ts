@@ -1,143 +1,110 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  refreshSession: vi.fn(),
   signOut: vi.fn(),
-  adminSignOut: vi.fn(),
+  getSession: vi.fn(),
 }));
 
-const storageState = vi.hoisted(() => ({
-  resetSignOutPersistWarning: vi.fn(),
-  consumeSignOutPersistWarning: vi.fn(),
-  forcePersistSignedOutStateForLastKnownSessionKey: vi.fn(),
-  removeItem: vi.fn(),
-  getLastSeenPrimaryAuthSessionKey: vi.fn(),
+const refreshState = vi.hoisted(() => ({
+  refreshAccessTokenForSignOut: vi.fn(),
+}));
+
+vi.mock('./sign-out-token-refresh', () => ({
+  refreshAccessTokenForSignOut: refreshState.refreshAccessTokenForSignOut,
+}));
+
+vi.mock('./auth-storage-key', () => ({
+  clearPersistedAuthSession: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('./client', () => ({
+  supabaseAuthHttpConfig: {
+    url: 'https://example.supabase.co',
+    anonKey: 'public-anon-key',
+  },
   supabase: {
     auth: {
-      getSession: authState.getSession,
-      refreshSession: authState.refreshSession,
       signOut: authState.signOut,
-      admin: {
-        signOut: authState.adminSignOut,
-      },
+      getSession: authState.getSession,
     },
   },
-}));
-
-vi.mock('./auth-session-storage', () => ({
-  getSupabaseAuthStorage: () => storageState,
 }));
 
 /* eslint-disable import/first -- after vi.mock */
 import { signOutSession } from './sign-out-session';
 /* eslint-enable import/first */
 
-const userA = { id: 'user-a' };
-const userB = { id: 'user-b' };
+function mockLogoutSuccess() {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+      if (url.includes('/logout')) {
+        return new Response(null, { status: 204 });
+      }
+      return new Response(JSON.stringify({}), { status: 404 });
+    }),
+  );
+}
 
 describe('signOutSession', () => {
   beforeEach(() => {
-    authState.getSession.mockReset();
-    authState.refreshSession.mockReset();
+    mockLogoutSuccess();
     authState.signOut.mockReset();
-    authState.adminSignOut.mockReset();
-    storageState.resetSignOutPersistWarning.mockReset();
-    storageState.consumeSignOutPersistWarning.mockReset();
-    storageState.removeItem.mockReset();
-    storageState.getLastSeenPrimaryAuthSessionKey.mockReset();
+    authState.getSession.mockReset();
+    refreshState.refreshAccessTokenForSignOut.mockReset();
     authState.signOut.mockResolvedValue({ error: null });
-    authState.adminSignOut.mockResolvedValue({ error: null });
-    authState.refreshSession.mockResolvedValue({ data: { session: null }, error: null });
-    storageState.consumeSignOutPersistWarning.mockReturnValue(false);
-    storageState.getLastSeenPrimaryAuthSessionKey.mockReturnValue('sb-localhost-auth-token');
-    storageState.removeItem.mockResolvedValue(undefined);
-    authState.getSession.mockResolvedValue({
-      data: { session: { access_token: 'token-a', user: userA } },
-    });
-  });
-
-  it('revokes on the server before local sign-out when a token is provided', async () => {
-    await signOutSession({ accessToken: 'token-a', userId: userA.id });
-
-    expect(authState.adminSignOut).toHaveBeenCalledTimes(1);
-    expect(authState.adminSignOut).toHaveBeenCalledWith('token-a', 'global');
-    expect(storageState.removeItem).toHaveBeenCalledWith('sb-localhost-auth-token');
-    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    authState.getSession.mockResolvedValue({ data: { session: null } });
+    refreshState.refreshAccessTokenForSignOut.mockRejectedValue(new Error('not used'));
   });
 
   it('sends exactly one server revoke (no second /logout from auth-js signOut)', async () => {
-    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await signOutSession({ accessToken: 'token-a', userId: 'user-a' });
 
-    expect(authState.adminSignOut).toHaveBeenCalledTimes(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('does not consume the storage persist warning (caller reads it after sign-out)', async () => {
-    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+  it('revokes on the server before local sign-out when a token is provided', async () => {
+    await signOutSession({ accessToken: 'token-a', userId: 'user-a' });
 
-    expect(storageState.consumeSignOutPersistWarning).not.toHaveBeenCalled();
-  });
-
-  it('still clears locally when the same user has a refreshed access token', async () => {
-    authState.getSession.mockResolvedValue({
-      data: { session: { access_token: 'token-a2', user: userA } },
-    });
-
-    await signOutSession({ accessToken: 'token-a', userId: userA.id });
-
-    expect(storageState.removeItem).toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/logout?scope=global'),
+      expect.objectContaining({ method: 'POST' }),
+    );
     expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
-  it('skips local sign-out when another user signed in during server revoke', async () => {
-    authState.getSession.mockResolvedValue({
-      data: { session: { access_token: 'token-b', user: userB } },
-    });
+  it('returns unreachable when logout fetch fails and still clears locally', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
 
-    await signOutSession({ accessToken: 'token-a', userId: userA.id });
+    await expect(
+      signOutSession({ accessToken: 'token-a', userId: 'user-a' }),
+    ).resolves.toEqual({ serverSignOutUnreachable: true });
 
-    expect(authState.adminSignOut).toHaveBeenCalledWith('token-a', 'global');
-    expect(storageState.removeItem).not.toHaveBeenCalled();
-    expect(authState.signOut).not.toHaveBeenCalled();
+    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
   });
 
-  it('refreshes and retries global revoke once when the captured token is expired on logout', async () => {
-    authState.adminSignOut
-      .mockResolvedValueOnce({
-        error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
-      })
-      .mockResolvedValueOnce({ error: null });
-    authState.refreshSession.mockResolvedValue({
-      data: {
-        session: { access_token: 'token-a2', user: userA },
-      },
-      error: null,
+  it('treats network errors from local sign-out as success when clearing offline', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('Failed to fetch'))));
+    authState.signOut.mockResolvedValue({
+      error: { message: 'Network request failed' },
     });
 
-    await signOutSession({ accessToken: 'token-a', userId: userA.id });
-
-    expect(authState.refreshSession).toHaveBeenCalledTimes(1);
-    expect(authState.adminSignOut).toHaveBeenCalledTimes(2);
-    expect(authState.adminSignOut).toHaveBeenLastCalledWith('token-a2', 'global');
+    await expect(
+      signOutSession({ accessToken: 'token-a', userId: 'user-a' }),
+    ).resolves.toEqual({ serverSignOutUnreachable: true });
   });
 
-  it('runs at most one sign-out when invoked concurrently', async () => {
-    let resolveAdmin: () => void = () => {};
-    authState.adminSignOut.mockImplementation(
-      () =>
-        new Promise<{ error: null }>((resolve) => {
-          resolveAdmin = () => resolve({ error: null });
-        }),
+  it('keeps the local session when revoke returns 429', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 429 })),
     );
 
-    const first = signOutSession({ accessToken: 'token-a', userId: userA.id });
-    const second = signOutSession({ accessToken: 'token-a', userId: userA.id });
-    resolveAdmin();
-    await Promise.all([first, second]);
+    await expect(
+      signOutSession({ accessToken: 'token-a', userId: 'user-a' }),
+    ).rejects.toThrow('sign_out_rate_limited');
 
-    expect(authState.adminSignOut).toHaveBeenCalledTimes(1);
+    expect(authState.signOut).not.toHaveBeenCalled();
   });
 });

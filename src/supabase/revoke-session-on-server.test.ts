@@ -1,16 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const adminState = vi.hoisted(() => ({
-  signOut: vi.fn(),
-}));
-
 vi.mock('./client', () => ({
-  supabase: {
-    auth: {
-      admin: {
-        signOut: adminState.signOut,
-      },
-    },
+  supabaseAuthHttpConfig: {
+    url: 'https://example.supabase.co',
+    anonKey: 'public-anon-key',
   },
 }));
 
@@ -20,31 +13,81 @@ import { revokeSessionOnServer } from './revoke-session-on-server';
 
 describe('revokeSessionOnServer', () => {
   beforeEach(() => {
-    adminState.signOut.mockReset();
-    adminState.signOut.mockResolvedValue({ error: null });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
   });
 
-  it('calls admin signOut with the access token', async () => {
+  it('POSTs /logout with the user access token', async () => {
     await revokeSessionOnServer('token-a', 'global');
-    expect(adminState.signOut).toHaveBeenCalledWith('token-a', 'global');
+    expect(fetch).toHaveBeenCalledWith(
+      'https://example.supabase.co/auth/v1/logout?scope=global',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({
+          Authorization: 'Bearer token-a',
+          apikey: 'public-anon-key',
+          'Content-Type': 'application/json',
+          'X-Supabase-Api-Version': '2024-01-01',
+        }),
+      }),
+    );
+  });
+
+  it('treats legacy GoTrue expired logout bodies as token_expired', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json(
+          { code: 401, error_code: 'bad_jwt', msg: 'token is expired' },
+          { status: 401 },
+        ),
+      ),
+    );
+    await expect(revokeSessionOnServer('token-a')).resolves.toMatchObject({
+      result: 'token_expired',
+    });
   });
 
   it('treats session-not-found responses as already revoked', async () => {
-    adminState.signOut.mockResolvedValue({
-      error: { status: 403, code: 'session_not_found', message: 'not found' },
-    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ code: 'session_not_found' }), {
+          status: 403,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
     await expect(revokeSessionOnServer('token-a')).resolves.toEqual({
       result: 'already_revoked',
     });
   });
 
   it('treats expired access tokens as needing refresh, not already revoked', async () => {
-    adminState.signOut.mockResolvedValue({
-      error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
-    });
-    await expect(revokeSessionOnServer('token-a')).resolves.toEqual({
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ code: 'bad_jwt', message: 'token is expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    );
+    await expect(revokeSessionOnServer('token-a')).resolves.toMatchObject({
       result: 'token_expired',
-      error: { status: 401, code: 'bad_jwt', message: 'token is expired' },
+    });
+  });
+
+  it('treats revoke 429 as rate limited', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 429 })),
+    );
+    await expect(revokeSessionOnServer('token-a')).resolves.toEqual({
+      result: 'rate_limited',
+      error: expect.objectContaining({ status: 429 }),
     });
   });
 });

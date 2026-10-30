@@ -1,5 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
-import { getSupabaseAuthStorage } from './auth-session-storage';
 import { resolveDevSupabaseUrl } from './resolve-dev-supabase-url';
 
 const supabaseUrl = resolveDevSupabaseUrl(process.env.EXPO_PUBLIC_SUPABASE_URL ?? '');
@@ -9,9 +9,14 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseUrl && supabaseAnonKey);
 }
 
+export const supabaseAuthHttpConfig = {
+  url: supabaseUrl,
+  anonKey: supabaseAnonKey,
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: getSupabaseAuthStorage(),
+    storage: AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,

@@ -197,18 +197,15 @@ export function formatSignOutError(error: unknown): string {
     return network;
   }
 
+  if (getErrorMessage(error).includes('sign_out_rate_limited')) {
+    return t('profile.signOutRateLimited');
+  }
+
   return t('profile.signOutFailed');
 }
 
-export type SignOutPersistWarningOptions = {
-  serverSignOutUnreachable?: boolean;
-};
-
-export function formatSignOutPersistWarning(options?: SignOutPersistWarningOptions): string {
-  if (options?.serverSignOutUnreachable) {
-    return t('profile.signOutPersistFailedOffline');
-  }
-  return t('profile.signOutPersistFailed');
+export function formatSignOutOfflineNotice(): string {
+  return t('profile.signOutPersistFailedOffline');
 }
 
 export function formatDeleteAccountError(error: unknown): string {

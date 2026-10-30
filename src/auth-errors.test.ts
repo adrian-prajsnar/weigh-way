@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   formatAuthLinkError,
   formatSignInError,
-  formatSignOutPersistWarning,
+  formatSignOutError,
+  formatSignOutOfflineNotice,
   formatSignUpError,
   isEmailNotConfirmedError,
   isNetworkError,
@@ -81,9 +82,17 @@ describe('formatAuthLinkError', () => {
   });
 });
 
-describe('formatSignOutPersistWarning', () => {
+describe('formatSignOutError', () => {
+  it('maps sign-out rate limiting to a dedicated message', () => {
+    expect(formatSignOutError(new Error('sign_out_rate_limited'))).toBe(
+      'Too many attempts. Please try again in a moment.',
+    );
+  });
+});
+
+describe('formatSignOutOfflineNotice', () => {
   it('uses offline copy when the server revoke was unreachable', () => {
-    expect(formatSignOutPersistWarning({ serverSignOutUnreachable: true })).toBe(
+    expect(formatSignOutOfflineNotice()).toBe(
       "You're signed out on this device. We couldn't reach the server.",
     );
   });

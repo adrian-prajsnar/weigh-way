@@ -1,4 +1,4 @@
-import { getSupabaseAuthStorage } from '../supabase/auth-session-storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getSupabaseLegacyPkceVerifierKey } from '../supabase/auth-storage-key';
 
 export type PkceBackupKind = 'signup' | 'recovery';
@@ -7,29 +7,25 @@ function backupStorageKey(kind: PkceBackupKind): string {
   return `@weigh-way/pkce-verifier-backup/${kind}`;
 }
 
-function authStorage() {
-  return getSupabaseAuthStorage();
-}
-
 async function readLegacyVerifier(): Promise<string | null> {
-  return authStorage().getItem(getSupabaseLegacyPkceVerifierKey());
+  return AsyncStorage.getItem(getSupabaseLegacyPkceVerifierKey());
 }
 
 export async function snapshotLegacyVerifierForFlow(kind: PkceBackupKind): Promise<void> {
   const verifier = await readLegacyVerifier();
   if (!verifier) {
-    await authStorage().removeItem(backupStorageKey(kind));
+    await AsyncStorage.removeItem(backupStorageKey(kind));
     return;
   }
-  await authStorage().setItem(backupStorageKey(kind), verifier);
+  await AsyncStorage.setItem(backupStorageKey(kind), verifier);
 }
 
 export async function restoreLegacyVerifierForFlow(kind: PkceBackupKind): Promise<boolean> {
-  const backup = await authStorage().getItem(backupStorageKey(kind));
+  const backup = await AsyncStorage.getItem(backupStorageKey(kind));
   if (!backup) {
     return false;
   }
-  await authStorage().setItem(getSupabaseLegacyPkceVerifierKey(), backup);
+  await AsyncStorage.setItem(getSupabaseLegacyPkceVerifierKey(), backup);
   return true;
 }
 
@@ -40,12 +36,12 @@ export async function backupLegacyVerifierForRollback(): Promise<(() => Promise<
   }
   const snapshot = current;
   return async () => {
-    await authStorage().setItem(getSupabaseLegacyPkceVerifierKey(), snapshot);
+    await AsyncStorage.setItem(getSupabaseLegacyPkceVerifierKey(), snapshot);
   };
 }
 
 export async function clearPkceVerifierBackup(kind: PkceBackupKind): Promise<void> {
-  await authStorage().removeItem(backupStorageKey(kind));
+  await AsyncStorage.removeItem(backupStorageKey(kind));
 }
 
 export async function clearPkceVerifierBackups(): Promise<void> {

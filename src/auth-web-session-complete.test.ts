@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('expo-web-browser', () => ({
   maybeCompleteAuthSession: vi.fn(),
@@ -10,6 +10,14 @@ import { safeMaybeCompleteAuthSession } from './auth-web-session-complete';
 /* eslint-enable import/first */
 
 describe('safeMaybeCompleteAuthSession', () => {
+  beforeEach(() => {
+    vi.mocked(WebBrowser.maybeCompleteAuthSession).mockReset();
+  });
+
+  afterEach(() => {
+    vi.mocked(WebBrowser.maybeCompleteAuthSession).mockReset();
+  });
+
   it('delegates to maybeCompleteAuthSession on the happy path', () => {
     safeMaybeCompleteAuthSession();
     expect(WebBrowser.maybeCompleteAuthSession).toHaveBeenCalledTimes(1);

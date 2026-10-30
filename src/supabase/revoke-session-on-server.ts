@@ -1,14 +1,19 @@
-import { supabase } from './client';
 import { isNetworkError } from '../auth-errors';
+import { authApiUrl, authUserJwtLogoutHeaders, parseAuthApiErrorFields } from './auth-api-http';
+import { isAuthRateLimitedError, isAuthServerUnreachableError } from './auth-reachability-error';
+import { supabaseAuthHttpConfig } from './client';
+
+export const SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS = 10_000;
 
 export type ServerRevokeResult =
   | 'revoked'
   | 'already_revoked'
   | 'token_expired'
+  | 'rate_limited'
   | 'unreachable'
   | 'failed';
 
-export function isExpiredAccessTokenRevokeError(error: unknown): boolean {
+function isExpiredAccessTokenRevokeError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) {
     return false;
   }
@@ -42,30 +47,11 @@ function isAlreadyRevokedError(error: unknown): boolean {
   return false;
 }
 
-function isUnreachableRevokeError(error: unknown): boolean {
-  if (isNetworkError(error)) {
-    return true;
-  }
-  if (typeof error !== 'object' || error === null) {
-    return false;
-  }
-  const authError = error as { status?: number; name?: string };
-  if (authError.name === 'AuthRetryableFetchError') {
-    return true;
-  }
-  const status = authError.status;
-  return status === 0 || (typeof status === 'number' && status >= 500);
-}
-
-/** Revokes the session on the server using the user's access token (no service role). */
-export async function revokeSessionOnServer(
-  accessToken: string,
-  scope: 'global' | 'local' | 'others' = 'global',
-): Promise<{ result: ServerRevokeResult; error?: unknown }> {
-  const response = await supabase.auth.admin.signOut(accessToken, scope);
-  const error = response?.error ?? null;
-  if (!error) {
-    return { result: 'revoked' };
+function mapRevokeHttpError(status: number, body: unknown): { result: ServerRevokeResult; error?: unknown } {
+  const { code, message } = parseAuthApiErrorFields(body);
+  const error = { status, code, message };
+  if (status === 429 || isAuthRateLimitedError(error)) {
+    return { result: 'rate_limited', error };
   }
   if (isExpiredAccessTokenRevokeError(error)) {
     return { result: 'token_expired', error };
@@ -73,8 +59,66 @@ export async function revokeSessionOnServer(
   if (isAlreadyRevokedError(error)) {
     return { result: 'already_revoked' };
   }
-  if (isUnreachableRevokeError(error)) {
-    return { result: 'unreachable' };
+  if (status === 0 || status >= 500) {
+    return { result: 'unreachable', error };
   }
   return { result: 'failed', error };
+}
+
+function mapRevokeError(error: unknown): { result: ServerRevokeResult; error?: unknown } {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return { result: 'unreachable', error };
+  }
+  if (isNetworkError(error)) {
+    return { result: 'unreachable', error };
+  }
+  if (isAuthServerUnreachableError(error)) {
+    return { result: 'unreachable', error };
+  }
+  if (isAuthRateLimitedError(error)) {
+    return { result: 'rate_limited', error };
+  }
+  if (isExpiredAccessTokenRevokeError(error)) {
+    return { result: 'token_expired', error };
+  }
+  if (isAlreadyRevokedError(error)) {
+    return { result: 'already_revoked' };
+  }
+  return { result: 'failed', error };
+}
+
+/** Revokes the session on the server using the user's access token (no service role). */
+export async function revokeSessionOnServer(
+  accessToken: string,
+  scope: 'global' | 'local' | 'others' = 'global',
+  timeoutMs: number = SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
+): Promise<{ result: ServerRevokeResult; error?: unknown }> {
+  const { url, anonKey } = supabaseAuthHttpConfig;
+  if (!url || !anonKey) {
+    return { result: 'failed', error: new Error('sign_out_not_configured') };
+  }
+
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await fetch(authApiUrl(url, `/logout?scope=${scope}`), {
+        method: 'POST',
+        headers: authUserJwtLogoutHeaders(anonKey, accessToken),
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+
+    if (response.ok) {
+      return { result: 'revoked' };
+    }
+
+    const body = await response.json().catch(() => null);
+    return mapRevokeHttpError(response.status, body);
+  } catch (error) {
+    return mapRevokeError(error);
+  }
 }
