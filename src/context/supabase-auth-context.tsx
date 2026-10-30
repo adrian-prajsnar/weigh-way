@@ -437,6 +437,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
     if (localClearIncomplete || persistWarning) {
+      setSession(null);
       throw new Error(
         formatSignOutPersistWarning({
           localPersistFailed: true,

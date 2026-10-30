@@ -8,6 +8,7 @@ import {
   shouldDeferPrimaryAuthSessionRemoval,
 } from './pending-global-revoke-marker';
 import {
+  getLatestAuthSessionIdFromEvents,
   getLatestAuthUserIdFromEvents,
   parseUserIdFromAuthSessionPayload,
 } from './sign-out-local-user';
@@ -28,7 +29,7 @@ export type ResilientAuthStorage = AuthSessionStorage & {
   forcePersistSignedOutStateForLastKnownSessionKey: () => Promise<void>;
   noteLocalSignOutPersistFailure: () => Promise<void>;
   armSignOutPersistWarning: () => void;
-  beginLocalClearForUser: (userId: string | null) => void;
+  beginLocalClearForUser: (userId: string | null, pendingMarkerSessionId?: string | null) => void;
   peekStoredPrimaryAuthSessionUserId: () => Promise<string | null>;
 };
 
@@ -86,6 +87,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
   const overlay = new Map<string, OverlayEntry>();
   const pendingDiskRemoves = new Set<string>();
   const pendingRemoveCapturedUserId = new Map<string, string>();
+  const pendingRemoveCapturedMarkerSessionId = new Map<string, string>();
   let probeSettled = false;
   let probeWarningLogged = false;
   let signOutPersistWarning = false;
@@ -176,6 +178,19 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     if (eventUserId && eventUserId !== captured) {
       pendingDiskRemoves.delete(key);
       overlay.delete(key);
+      pendingRemoveCapturedMarkerSessionId.delete(key);
+      return false;
+    }
+    const capturedMarkerSessionId = pendingRemoveCapturedMarkerSessionId.get(key);
+    const eventSessionId = getLatestAuthSessionIdFromEvents();
+    if (
+      capturedMarkerSessionId &&
+      eventSessionId &&
+      eventSessionId !== capturedMarkerSessionId
+    ) {
+      pendingDiskRemoves.delete(key);
+      overlay.delete(key);
+      pendingRemoveCapturedMarkerSessionId.delete(key);
       return false;
     }
     const current = await peekUserIdForSessionKey(key);
@@ -204,6 +219,7 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
       }
       pendingDiskRemoves.delete(key);
       pendingRemoveCapturedUserId.delete(key);
+      pendingRemoveCapturedMarkerSessionId.delete(key);
       overlay.delete(key);
       await clearSignedOutMarkerOnDisk(key);
     }
@@ -423,11 +439,17 @@ export function createResilientAuthStorage(): ResilientAuthStorage {
     armSignOutPersistWarning() {
       signOutPersistWarning = true;
     },
-    beginLocalClearForUser(userId: string | null) {
+    beginLocalClearForUser(userId: string | null, pendingMarkerSessionId?: string | null) {
       if (!lastSeenPrimaryAuthSessionKey || !userId) {
         return;
       }
       pendingRemoveCapturedUserId.set(lastSeenPrimaryAuthSessionKey, userId);
+      if (pendingMarkerSessionId) {
+        pendingRemoveCapturedMarkerSessionId.set(
+          lastSeenPrimaryAuthSessionKey,
+          pendingMarkerSessionId,
+        );
+      }
     },
     async peekStoredPrimaryAuthSessionUserId() {
       const key = lastSeenPrimaryAuthSessionKey;

@@ -5,8 +5,6 @@ import {
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
   readPendingGlobalRevokeMarkerSessionId,
 } from './pending-global-revoke-marker';
-import { resetInMemoryPendingGlobalRevokeForTests } from './pending-global-revoke-in-memory';
-import { resetPendingGlobalRevokeStateForTests } from './pending-global-revoke';
 import {
   createGotrueSessionRegistry,
   gotrueLogoutFetchHandler,
@@ -94,9 +92,10 @@ vi.mock('./auth-storage-key', () => ({
 }));
 
 function makeSessionJson(userId: string, sessionId: string, refreshToken: string): string {
-  serverRef.registry?.register(userId, sessionId);
+  const accessToken = makeTestAccessToken(sessionId);
+  serverRef.registry?.register(userId, sessionId, accessToken);
   return JSON.stringify({
-    access_token: makeTestAccessToken(sessionId),
+    access_token: accessToken,
     refresh_token: refreshToken,
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,
@@ -120,7 +119,11 @@ describe('offline sign-out then sign-in keeps the new session', () => {
     serverRef.registry = createGotrueSessionRegistry();
     networkOnline = false;
     logoutCalls = [];
+    const { resetInMemoryPendingGlobalRevokeForTests } = await import(
+      './pending-global-revoke-in-memory'
+    );
     resetInMemoryPendingGlobalRevokeForTests();
+    const { resetPendingGlobalRevokeStateForTests } = await import('./pending-global-revoke');
     resetPendingGlobalRevokeStateForTests();
     const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
       './pending-global-revoke-marker-store'

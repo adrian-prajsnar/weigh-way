@@ -217,7 +217,7 @@ describe('pending global revoke when storage recovers before network', () => {
     });
   }
 
-  it('keeps session on disk through backoff while offline, then revokes globally after reload and going online', async () => {
+  it('keeps session on disk through backoff while offline, then revokes locally after reload and going online', async () => {
     const sessionJson = makeSessionJson(USER_A, SESS_A1);
     diskRef.set(SESSION_KEY, sessionJson);
     const storageA = await initStorage();

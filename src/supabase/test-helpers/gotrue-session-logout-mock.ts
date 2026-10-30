@@ -2,42 +2,63 @@ import { parseSessionIdFromAccessToken } from '../auth-session-id';
 
 /** In-memory GoTrue sessions for tests (session_id per user). */
 export type GotrueSessionRegistry = {
-  register: (userId: string, sessionId: string) => void;
+  register: (userId: string, sessionId: string, accessToken?: string) => void;
   isAlive: (sessionId: string) => boolean;
-  handleLogout: (accessToken: string, scopeFromUrl: string | null) => void;
+  handleLogout: (accessToken: string, scopeFromUrl: string | null) => number;
 };
 
 export function createGotrueSessionRegistry(): GotrueSessionRegistry {
   const alive = new Set<string>();
   const sessionToUser = new Map<string, string>();
+  const accessTokenToUser = new Map<string, string>();
 
   return {
-    register(userId: string, sessionId: string) {
+    register(userId: string, sessionId: string, accessToken?: string) {
       if (!sessionId) {
         return;
       }
       sessionToUser.set(sessionId, userId);
       alive.add(sessionId);
+      if (accessToken) {
+        accessTokenToUser.set(accessToken, userId);
+      }
     },
     isAlive(sessionId: string) {
       return alive.has(sessionId);
     },
-    handleLogout(accessToken: string, scopeFromUrl: string | null) {
+    handleLogout(accessToken: string, scopeFromUrl: string | null): number {
       const sessionId = parseSessionIdFromAccessToken(accessToken);
+      const scope = scopeFromUrl ?? '';
+
       if (!sessionId) {
-        for (const sid of [...alive]) {
-          alive.delete(sid);
+        const userId = accessTokenToUser.get(accessToken);
+        if (!userId) {
+          return 403;
         }
-        return;
+        for (const [sid, uid] of sessionToUser) {
+          if (uid === userId) {
+            alive.delete(sid);
+          }
+        }
+        return 204;
       }
+
       const userId = sessionToUser.get(sessionId);
       if (!userId) {
-        return;
+        return 403;
       }
-      const scope = scopeFromUrl ?? '';
+
       if (scope === 'local') {
         alive.delete(sessionId);
-        return;
+        return 204;
+      }
+      if (scope === 'others') {
+        for (const [sid, uid] of sessionToUser) {
+          if (uid === userId && sid !== sessionId) {
+            alive.delete(sid);
+          }
+        }
+        return 204;
       }
       if (scope === 'global' || scope === '') {
         for (const [sid, uid] of sessionToUser) {
@@ -45,7 +66,9 @@ export function createGotrueSessionRegistry(): GotrueSessionRegistry {
             alive.delete(sid);
           }
         }
+        return 204;
       }
+      return 400;
     },
   };
 }
@@ -71,7 +94,7 @@ export async function gotrueLogoutFetchHandler(
   registry: GotrueSessionRegistry,
   input: RequestInfo | URL,
   init?: RequestInit,
-  options?: { delayMs?: number },
+  options?: { delayMs?: number; forceStatus?: number },
 ): Promise<Response> {
   const url = typeof input === 'string' ? input : input.toString();
   if (!url.includes('/logout')) {
@@ -82,9 +105,16 @@ export async function gotrueLogoutFetchHandler(
       setTimeout(resolve, options.delayMs);
     });
   }
-  const token = parseBearerAccessToken(init);
-  if (token) {
-    registry.handleLogout(token, parseLogoutScopeFromUrl(url));
+  if (options?.forceStatus === 401) {
+    return new Response(JSON.stringify({ msg: 'jwt expired' }), { status: 401 });
   }
-  return new Response(null, { status: 204 });
+  const token = parseBearerAccessToken(init);
+  if (!token) {
+    return new Response(JSON.stringify({ msg: 'missing token' }), { status: 401 });
+  }
+  const status = registry.handleLogout(token, parseLogoutScopeFromUrl(url));
+  if (status === 204) {
+    return new Response(null, { status: 204 });
+  }
+  return new Response(JSON.stringify({ msg: 'session_not_found' }), { status });
 }

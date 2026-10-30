@@ -206,7 +206,7 @@ describe('pending global revoke triple fault (session-scoped marker)', () => {
     });
   }
 
-  it('reload within backoff hides the same session id and retries global revoke once when storage recovers', async () => {
+  it('reload within backoff hides the same session id and retries local revoke once when storage recovers', async () => {
     diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1));
     const storageA = await initStorage();
     await storageA.getItem(SESSION_KEY);

@@ -41,7 +41,7 @@ function parseMarkerPayload(raw: string): PendingGlobalRevokeMarkerPayload | nul
       startupFailCount?: number;
       serverRevokeDone?: boolean;
     };
-    if (parsed.sessionId) {
+    if (typeof parsed.sessionId === 'string' && parsed.sessionId) {
       return {
         sessionId: parsed.sessionId,
         startupFailCount: parsed.startupFailCount,

@@ -96,9 +96,10 @@ vi.mock('./auth-storage-key', () => ({
 }));
 
 function makeSessionJson(userId: string, sessionId: string, refreshToken: string): string {
-  serverRef.registry?.register(userId, sessionId);
+  const accessToken = makeTestAccessToken(sessionId);
+  serverRef.registry?.register(userId, sessionId, accessToken);
   return JSON.stringify({
-    access_token: makeTestAccessToken(sessionId),
+    access_token: accessToken,
     refresh_token: refreshToken,
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,

@@ -167,4 +167,18 @@ describe('pending global revoke startup fail cap', () => {
     await expect(writePromise).resolves.toBe(false);
     vi.useRealTimers();
   });
+
+  it('rejects marker payloads whose sessionId is not a string', async () => {
+    const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
+      './pending-global-revoke-marker-store'
+    );
+    setPendingGlobalRevokeMarkerStoreForTests({
+      read: async () => JSON.stringify({ sessionId: 123 }),
+      write: async () => true,
+      clear: async () => undefined,
+    });
+
+    const marker = await import('./pending-global-revoke-marker');
+    await expect(marker.readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
+  });
 });
