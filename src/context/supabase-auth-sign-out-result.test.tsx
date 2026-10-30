@@ -28,9 +28,6 @@ vi.mock('../supabase/auth-session-storage', () => ({
   getSupabaseAuthStorage: () => ({
     consumeSignOutPersistWarning: () => false,
     resetSignOutPersistWarning: vi.fn(),
-    restoredSessionNeedsServerValidation: vi.fn().mockResolvedValue(false),
-    getLastSeenPrimaryAuthSessionKey: () => null,
-    getItem: vi.fn().mockResolvedValue(null),
   }),
   registerAuthStoragePersistenceRecovery: vi.fn(() => vi.fn()),
 }));
@@ -123,13 +120,10 @@ describe('supabase auth signOut result handling', () => {
     });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
-    expect(result.current.isAuthenticated).toBe(true);
 
     await act(async () => {
       await expect(result.current.signOut()).rejects.toThrow(storagePersistCopy);
     });
-
-    expect(result.current.isAuthenticated).toBe(false);
   });
 
   it('signOut resolves within the cleanup cap when pending-flow writes hang', async () => {

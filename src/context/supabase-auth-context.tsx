@@ -32,12 +32,7 @@ import {
   registerAuthStoragePersistenceRecovery,
 } from '../supabase/auth-session-storage';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
-import { parseSessionIdFromAccessToken } from '../supabase/auth-session-id';
-import {
-  clearPendingGlobalRevokeIfSupersededByAuthEvent,
-  runPendingGlobalRevokeBeforeSessionRestore,
-} from '../supabase/pending-global-revoke';
-import { noteLatestAuthUserIdFromEvent, noteLatestAuthSessionIdFromEvent } from '../supabase/sign-out-local-user';
+import { noteLatestAuthUserIdFromEvent } from '../supabase/sign-out-local-user';
 import { withSignOutDeadline } from '../supabase/sign-out-deadlines';
 import { signOutSession, signOutSessionBestEffort } from '../supabase/sign-out-session';
 import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
@@ -245,14 +240,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
         event === 'INITIAL_SESSION'
       ) {
         noteLatestAuthUserIdFromEvent(activeSession?.user?.id ?? null);
-        noteLatestAuthSessionIdFromEvent(
-          parseSessionIdFromAccessToken(activeSession?.access_token) ?? null,
-        );
-        void clearPendingGlobalRevokeIfSupersededByAuthEvent();
       }
       if (event === 'SIGNED_OUT') {
         noteLatestAuthUserIdFromEvent(null);
-        noteLatestAuthSessionIdFromEvent(null);
       }
       setSession(activeSession);
       if (event === 'PASSWORD_RECOVERY' && activeSession) {
@@ -277,7 +267,6 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     void (async () => {
       try {
-        await runPendingGlobalRevokeBeforeSessionRestore();
         storageFlagged = await getSupabaseAuthStorage().restoredSessionNeedsServerValidation();
         const sessionResult = await supabase.auth.getSession().catch(() => ({
           data: { session: null as Session | null },
@@ -437,7 +426,6 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       persistWarning = getSupabaseAuthStorage().consumeSignOutPersistWarning();
     }
     if (localClearIncomplete || persistWarning) {
-      setSession((cur) => (cur?.access_token === accessToken ? null : cur));
       throw new Error(
         formatSignOutPersistWarning({
           localPersistFailed: true,

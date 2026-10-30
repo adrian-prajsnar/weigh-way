@@ -17,7 +17,6 @@ import {
   isPrimaryAuthSessionStorageKey,
   probePersistentAuthStorage,
 } from './resilient-auth-storage';
-import { noteLatestAuthSessionIdFromEvent } from './sign-out-local-user';
 /* eslint-enable import/first */
 
 const securityError = () => new DOMException('The operation is insecure.', 'SecurityError');
@@ -238,52 +237,6 @@ describe('createResilientAuthStorage', () => {
     expect(onDisk).toBeDefined();
     expect(onDisk).toContain('user-b');
     expect(onDisk).not.toContain('user-a');
-  });
-
-  it('aborts a delayed pending remove when a newer session id is active', async () => {
-    const sessionA = JSON.stringify({
-      access_token: 'token-a',
-      user: { id: 'user-a' },
-    });
-    const sessionB = JSON.stringify({
-      access_token: 'token-b',
-      user: { id: 'user-a' },
-    });
-    const disk = new Map<string, string>([['sb-localhost-auth-token', sessionA]]);
-
-    asyncStorage.getItem.mockImplementation(async (key: string) => {
-      if (key === '@weigh-way/auth-storage-probe') {
-        return '1';
-      }
-      return disk.get(key) ?? null;
-    });
-    asyncStorage.setItem.mockImplementation(async (key: string, value: string) => {
-      if (key === '@weigh-way/auth-storage-probe') {
-        return;
-      }
-      disk.set(key, value);
-    });
-    let releaseFirstRemove!: () => void;
-    const firstRemoveGate = new Promise<void>((resolve) => {
-      releaseFirstRemove = resolve;
-    });
-    asyncStorage.removeItem.mockImplementation(async (key: string) => {
-      if (key === 'sb-localhost-auth-token') {
-        await firstRemoveGate;
-      }
-      disk.delete(key);
-    });
-
-    const storage = createResilientAuthStorage();
-    await storage.getItem('sb-localhost-auth-token');
-    storage.beginLocalClearForUser('user-a', 'sess-a1');
-    const removePromise = storage.removeItem('sb-localhost-auth-token');
-    disk.set('sb-localhost-auth-token', sessionB);
-    noteLatestAuthSessionIdFromEvent('sess-b2');
-    releaseFirstRemove();
-    await removePromise;
-
-    expect(disk.get('sb-localhost-auth-token')).toContain('token-b');
   });
 
   it('clears stale disk session on the next successful write after a failed remove', async () => {

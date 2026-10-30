@@ -19,7 +19,6 @@ const storageState = vi.hoisted(() => ({
   removeItem: vi.fn(),
   getLastSeenPrimaryAuthSessionKey: vi.fn(),
   getItem: vi.fn(),
-  hasPendingDiskPersistence: vi.fn(),
 }));
 
 const refreshState = vi.hoisted(() => ({
@@ -96,11 +95,9 @@ describe('signOutSession', () => {
     storageState.noteLocalSignOutPersistFailure.mockReset();
     storageState.armSignOutPersistWarning.mockReset();
     storageState.getItem.mockReset();
-    storageState.hasPendingDiskPersistence.mockReset();
     authState.signOut.mockResolvedValue({ error: null });
     refreshState.refreshAccessTokenForSignOut.mockRejectedValue(new Error('not used'));
     storageState.consumeSignOutPersistWarning.mockReturnValue(false);
-    storageState.hasPendingDiskPersistence.mockReturnValue(false);
     storageState.getLastSeenPrimaryAuthSessionKey.mockReturnValue('sb-localhost-auth-token');
     storageState.removeItem.mockResolvedValue(undefined);
     storageState.peekStoredPrimaryAuthSessionUserId.mockResolvedValue(userA.id);
@@ -428,29 +425,6 @@ describe('signOutSession', () => {
     await vi.advanceTimersByTimeAsync(600);
     await expect(signOutPromise).resolves.toMatchObject({ localClearIncomplete: true });
     vi.useRealTimers();
-  });
-
-  it('reports localClearIncomplete when removeItem leaves pending disk persistence', async () => {
-    storageState.hasPendingDiskPersistence.mockReturnValue(true);
-
-    await expect(
-      signOutSession({
-        accessToken: 'token-a',
-        userId: userA.id,
-      }),
-    ).resolves.toMatchObject({ localClearIncomplete: true });
-
-    expect(storageState.armSignOutPersistWarning).toHaveBeenCalled();
-    expect(storageState.noteLocalSignOutPersistFailure).toHaveBeenCalled();
-  });
-
-  it('reports localClearIncomplete when removeItem throws a storage error', async () => {
-    storageState.removeItem.mockRejectedValue(new DOMException('blocked', 'SecurityError'));
-
-    await expect(signOutSession({ accessToken: 'token-a', userId: userA.id })).resolves.toMatchObject(
-      { localClearIncomplete: true },
-    );
-    expect(storageState.armSignOutPersistWarning).toHaveBeenCalled();
   });
 
   it('settles within the cap when storage peek hangs and a second sign-out can run', async () => {

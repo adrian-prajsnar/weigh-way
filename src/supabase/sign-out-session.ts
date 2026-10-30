@@ -12,7 +12,6 @@ import {
 } from './sign-out-local-user';
 import {
   isSignOutDeadlineError,
-  PENDING_GLOBAL_REVOKE_MARKER_WRITE_TIMEOUT_MS,
   SIGN_OUT_FLOW_CAP_MS,
   SIGN_OUT_LOCAL_CLEAR_TIMEOUT_MS,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
@@ -20,10 +19,6 @@ import {
   type SignOutDeadlineControl,
   withSignOutDeadline,
 } from './sign-out-deadlines';
-import {
-  armPendingGlobalRevokeFromSignOut,
-  clearRetainedSupersededRevokesAfterSignOut,
-} from './pending-global-revoke';
 import { refreshAccessTokenForSignOut } from './sign-out-token-refresh';
 
 let signOutSessionInFlight = false;
@@ -267,12 +262,6 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
   let localClearIncomplete = false;
   let keepLocalSession = false;
   let serverRevokeSucceeded = false;
-  let capturedAccessToken: string | null = options.accessToken ?? null;
-  let capturedRefreshToken: string | null = options.refreshToken ?? null;
-
-  if (!options.localOnly && capturedUserId && capturedAccessToken) {
-    await clearRetainedSupersededRevokesAfterSignOut(capturedUserId, capturedAccessToken);
-  }
 
   try {
     if (!options.localOnly) {
@@ -281,7 +270,6 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
         accessToken = await resolveAccessTokenSafely(deadlineMs);
       }
       if (accessToken) {
-        capturedAccessToken = accessToken;
         const revokeResult = await revokeOnServerForSignOut(
           accessToken,
           capturedUserId,
@@ -306,7 +294,6 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
       throw error;
     }
   } finally {
-    let clearFailureHandled = false;
     if (!keepLocalSession) {
       try {
         await clearLocalAuthSession(capturedUserId, deadlineMs);
@@ -316,41 +303,15 @@ async function runSignOutSession(options: SignOutSessionOptions): Promise<SignOu
             serverSignOutUnreachable = true;
           }
           localClearIncomplete = true;
-          clearFailureHandled = true;
           getSupabaseAuthStorage().armSignOutPersistWarning();
           void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
           scheduleLocalSignOutPersistFailureNote(deadlineMs);
         } else {
-          localClearIncomplete = true;
-          clearFailureHandled = true;
-          getSupabaseAuthStorage().armSignOutPersistWarning();
-          void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
-          scheduleLocalSignOutPersistFailureNote(deadlineMs);
-        }
-      }
-
-      if (getSupabaseAuthStorage().hasPendingDiskPersistence()) {
-        localClearIncomplete = true;
-        if (!clearFailureHandled) {
-          getSupabaseAuthStorage().armSignOutPersistWarning();
-          void getSupabaseAuthStorage().noteLocalSignOutPersistFailure();
-          scheduleLocalSignOutPersistFailureNote(deadlineMs);
+          throw error;
         }
       }
     }
   }
-
-  await armPendingGlobalRevokeFromSignOut({
-    localClearIncomplete,
-    serverSignOutUnreachable,
-    serverRevokeSucceeded,
-    keepLocalSession,
-    localOnly: Boolean(options.localOnly),
-    userId: capturedUserId,
-    accessToken: capturedAccessToken,
-    refreshToken: capturedRefreshToken,
-    markerWriteTimeoutMs: flowBudgetMs(deadlineMs, PENDING_GLOBAL_REVOKE_MARKER_WRITE_TIMEOUT_MS),
-  });
 
   return { serverSignOutUnreachable, localClearIncomplete };
 }
