@@ -147,4 +147,24 @@ describe('serverRevokeDone marker clears after storage recovers', () => {
     await expect(reloaded.getItem(SESSION_KEY)).resolves.toBeNull();
     expect(parseSessionIdFromAuthSessionPayload(diskRef.get(SESSION_KEY) ?? null)).toBeNull();
   });
+
+  it('clears persisted session and marker at startup when serverRevokeDone is set', async () => {
+    diskRef.set(SESSION_KEY, makeSessionJson());
+    diskRef.set(
+      PENDING_GLOBAL_REVOKE_MARKER_KEY,
+      JSON.stringify({ sessionId: SESS_A1, serverRevokeDone: true }),
+    );
+
+    const { createResilientAuthStorage } = await import('./resilient-auth-storage');
+    const storage = createResilientAuthStorage();
+    resilientStorageRef.current = storage;
+    await storage.getItem(SESSION_KEY);
+
+    const { runPendingGlobalRevokeBeforeSessionRestore } = await import('./pending-global-revoke');
+    await runPendingGlobalRevokeBeforeSessionRestore();
+
+    await expect(readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
+    expect(diskRef.has(SESSION_KEY)).toBe(false);
+    await expect(storage.getItem(SESSION_KEY)).resolves.toBeNull();
+  });
 });

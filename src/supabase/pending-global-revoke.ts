@@ -99,7 +99,15 @@ async function runDedupedGlobalRevokeWork(work: () => Promise<void>): Promise<vo
 }
 
 async function revokeSupersededSessionBestEffort(tokens: PendingGlobalRevokeTokens): Promise<void> {
-  await runPendingRevokeAttempt({ ...tokens, revokeScope: 'global' }).catch(() => undefined);
+  const jwtSessionId = parseSessionIdFromAccessToken(tokens.accessToken);
+  if (!jwtSessionId) {
+    return;
+  }
+  await runPendingRevokeAttempt({
+    ...tokens,
+    sessionId: jwtSessionId,
+    revokeScope: 'local',
+  }).catch(() => undefined);
 }
 
 async function revokeOldSessionIfSameUserResignedIn(): Promise<void> {
@@ -459,6 +467,19 @@ async function runPendingGlobalRevokeBeforeSessionRestoreBody(): Promise<void> {
   const markerPayload = markerState.payload;
 
   if (markerPayload.serverRevokeDone) {
+    const rawAfterServerRevoke = await readPrimarySessionPayloadDirect();
+    if (
+      rawAfterServerRevoke &&
+      !isSignedOutSessionPayload(rawAfterServerRevoke) &&
+      sessionPayloadMatchesPendingRevokeMarker(markerPayload.sessionId, rawAfterServerRevoke)
+    ) {
+      const userId = parseUserIdFromAuthSessionPayload(rawAfterServerRevoke);
+      if (userId) {
+        await clearLocalAuthAfterPendingGlobalRevoke(userId, null);
+      }
+    }
+    await clearPendingGlobalRevokeMarker();
+    setInMemoryPendingGlobalRevoke(null);
     return;
   }
 

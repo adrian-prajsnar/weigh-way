@@ -302,7 +302,7 @@ describe('pending global revoke triple fault (session-scoped marker)', () => {
     await storage.retryPendingDiskPersistence();
 
     expect(logoutCalls).toHaveLength(2);
-    expect(logoutCalls[1]).toContain('scope=global');
+    expect(logoutCalls[1]).toContain('scope=local');
     const markerMod = await import('./pending-global-revoke-marker');
     await expect(markerMod.readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
   });

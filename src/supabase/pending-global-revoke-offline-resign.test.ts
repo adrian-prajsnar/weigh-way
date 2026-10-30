@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { parseSessionIdFromAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
 import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 import {
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
@@ -184,10 +184,22 @@ describe('offline sign-out then sign-in keeps the new session', () => {
     expect(pendingRevoke.getInMemoryPendingGlobalRevoke()?.revokeScope).toBe('local');
 
     diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
+    const globalLogoutCountBeforeA2 = logoutCalls.filter((c) =>
+      c.url.includes('scope=global'),
+    ).length;
+
     networkOnline = true;
     await resetAuthEvents(USER_A, SESS_A2);
     await pendingRevoke.clearPendingGlobalRevokeIfSupersededByAuthEvent();
     expect(pendingRevoke.getInMemoryPendingGlobalRevoke()).toBeNull();
+
+    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(
+      globalLogoutCountBeforeA2,
+    );
+    expect(logoutCalls.filter((c) => c.url.includes('scope=local'))).toHaveLength(1);
+    expect(logoutCalls.find((c) => c.url.includes('scope=local'))?.authorization).toContain(
+      makeTestAccessToken(SESS_A1),
+    );
 
     const raw = await storage.getItem(SESSION_KEY);
     expect(parseSessionIdFromAuthSessionPayload(raw)).toBe(SESS_A2);
@@ -206,12 +218,13 @@ describe('offline sign-out then sign-in keeps the new session', () => {
       SESS_A2,
     );
 
-    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(2);
-    expect(logoutCalls).toHaveLength(2);
-    expect(logoutCalls[1]?.authorization).toContain(makeTestAccessToken(SESS_A1));
+    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(
+      globalLogoutCountBeforeA2,
+    );
+    expect(logoutCalls.filter((c) => c.url.includes('scope=local'))).toHaveLength(1);
   });
 
-  it('revokes the old session globally before dropping pending revoke on same-account re-sign-in', async () => {
+  it('revokes the old session locally before dropping pending revoke on same-account re-sign-in', async () => {
     diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1, 'refresh-a1'));
     const storage = await initStorage();
     await storage.getItem(SESSION_KEY);
@@ -225,15 +238,48 @@ describe('offline sign-out then sign-in keeps the new session', () => {
     });
 
     expect(logoutCalls).toHaveLength(1);
+    expect(logoutCalls[0]?.url).toContain('scope=global');
     const pendingRevoke = await import('./pending-global-revoke');
     expect(pendingRevoke.getInMemoryPendingGlobalRevoke()?.sessionId).toBe(SESS_A1);
+
+    const globalLogoutCountBeforeA2 = logoutCalls.filter((c) =>
+      c.url.includes('scope=global'),
+    ).length;
 
     networkOnline = true;
     await resetAuthEvents(USER_A, SESS_A2);
     await pendingRevoke.clearPendingGlobalRevokeIfSupersededByAuthEvent();
 
-    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(2);
-    expect(logoutCalls[1]?.authorization).toContain(makeTestAccessToken(SESS_A1));
+    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(
+      globalLogoutCountBeforeA2,
+    );
+    expect(logoutCalls.filter((c) => c.url.includes('scope=local'))).toHaveLength(1);
+    expect(logoutCalls.find((c) => c.url.includes('scope=local'))?.authorization).toContain(
+      makeTestAccessToken(SESS_A1),
+    );
+    expect(pendingRevoke.getInMemoryPendingGlobalRevoke()).toBeNull();
+  });
+
+  it('skips superseded revoke when the old access token has no JWT session_id', async () => {
+    const plainAccessToken = makeTestAccessToken('');
+    expect(parseSessionIdFromAccessToken(plainAccessToken)).toBeNull();
+
+    networkOnline = true;
+    await resetAuthEvents(USER_A, SESS_A2);
+
+    const { setInMemoryPendingGlobalRevoke } = await import('./pending-global-revoke-in-memory');
+    setInMemoryPendingGlobalRevoke({
+      sessionId: 'h:deadbeef',
+      userId: USER_A,
+      accessToken: plainAccessToken,
+      refreshToken: 'refresh-a1',
+      revokeScope: 'global',
+    });
+
+    const pendingRevoke = await import('./pending-global-revoke');
+    await pendingRevoke.clearPendingGlobalRevokeIfSupersededByAuthEvent();
+
+    expect(logoutCalls).toHaveLength(0);
     expect(pendingRevoke.getInMemoryPendingGlobalRevoke()).toBeNull();
   });
 });
