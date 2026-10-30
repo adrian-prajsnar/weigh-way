@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeTestAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 import { PENDING_GLOBAL_REVOKE_MARKER_KEY } from './pending-global-revoke-marker';
 import { resetInMemoryPendingGlobalRevokeForTests } from './pending-global-revoke-in-memory';
 import { resetPendingGlobalRevokeStateForTests } from './pending-global-revoke';

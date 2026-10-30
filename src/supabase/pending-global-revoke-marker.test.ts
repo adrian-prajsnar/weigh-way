@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hashAuthCode } from '../storage/auth-code-hash';
-import { makeTestAccessToken } from './auth-session-id';
+import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 import {
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
   sessionPayloadMatchesPendingRevokeMarker,
@@ -33,6 +33,15 @@ describe('pending global revoke marker matching', () => {
       clear: async () => undefined,
     });
 
+    const { setInMemoryPendingGlobalRevoke } = await import('./pending-global-revoke-in-memory');
+    setInMemoryPendingGlobalRevoke({
+      sessionId: 'sess-a',
+      userId: 'u1',
+      accessToken: makeTestAccessToken('sess-a'),
+      refreshToken: null,
+      revokeScope: 'global',
+    });
+
     const marker = await import('./pending-global-revoke-marker');
     const sessionJson = JSON.stringify({
       access_token: makeTestAccessToken('sess-a'),
@@ -41,6 +50,36 @@ describe('pending global revoke marker matching', () => {
     const blockedPromise = marker.pendingGlobalRevokeBlocksSessionRestore(sessionJson);
     await vi.advanceTimersByTimeAsync(50);
     await expect(blockedPromise).resolves.toBe(true);
+    vi.useRealTimers();
+  });
+
+  it('does not hide an unrelated session when marker read times out', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { setPendingGlobalRevokeMarkerStoreForTests } = await import(
+      './pending-global-revoke-marker-store'
+    );
+    setPendingGlobalRevokeMarkerStoreForTests({
+      read: () => new Promise(() => {}),
+      write: async () => true,
+      clear: async () => undefined,
+    });
+    const { setInMemoryPendingGlobalRevoke } = await import('./pending-global-revoke-in-memory');
+    setInMemoryPendingGlobalRevoke({
+      sessionId: 'sess-a',
+      userId: 'u1',
+      accessToken: makeTestAccessToken('sess-a'),
+      refreshToken: null,
+      revokeScope: 'global',
+    });
+
+    const marker = await import('./pending-global-revoke-marker');
+    const sessionB = JSON.stringify({
+      access_token: makeTestAccessToken('sess-b'),
+      user: { id: 'user-b' },
+    });
+    const blockedPromise = marker.pendingGlobalRevokeBlocksSessionRestore(sessionB);
+    await vi.advanceTimersByTimeAsync(50);
+    await expect(blockedPromise).resolves.toBe(false);
     vi.useRealTimers();
   });
 

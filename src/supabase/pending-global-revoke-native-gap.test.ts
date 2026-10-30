@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeTestAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 import { setPendingGlobalRevokeMarkerStoreForTests } from './pending-global-revoke-marker-store';
 
 vi.mock('./sign-out-deadlines', async (importOriginal) => {

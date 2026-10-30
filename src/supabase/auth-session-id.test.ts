@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { makeTestAccessToken, parseSessionIdFromAccessToken } from './auth-session-id';
+import { parseSessionIdFromAccessToken } from './auth-session-id';
+import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 
 describe('auth session id', () => {
   it('reads session_id from a JWT-shaped access token', () => {

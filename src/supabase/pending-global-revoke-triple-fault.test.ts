@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeTestAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 import {
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
 } from './pending-global-revoke-marker';
@@ -292,7 +293,6 @@ describe('pending global revoke triple fault (session-scoped marker)', () => {
     await completeBlockedSignOut();
 
     await resetAuthEvents(USER_A, SESS_B1);
-    resetInMemoryPendingGlobalRevokeForTests();
     const { clearPendingGlobalRevokeIfSupersededByAuthEvent } = await import(
       './pending-global-revoke'
     );
@@ -301,7 +301,8 @@ describe('pending global revoke triple fault (session-scoped marker)', () => {
     storageGate.blockPrimaryAuthWrites = false;
     await storage.retryPendingDiskPersistence();
 
-    expect(logoutCalls).toHaveLength(1);
+    expect(logoutCalls).toHaveLength(2);
+    expect(logoutCalls[1]).toContain('scope=global');
     const markerMod = await import('./pending-global-revoke-marker');
     await expect(markerMod.readPendingGlobalRevokeMarkerSessionId()).resolves.toBeNull();
   });

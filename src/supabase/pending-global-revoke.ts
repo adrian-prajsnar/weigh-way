@@ -19,6 +19,7 @@ import {
 import { revokeSessionOnServer } from './revoke-session-on-server';
 import {
   isSignOutDeadlineError,
+  PENDING_GLOBAL_REVOKE_PRIMARY_SESSION_READ_TIMEOUT_MS,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
   withSignOutDeadline,
 } from './sign-out-deadlines';
@@ -85,6 +86,35 @@ export function resetPendingGlobalRevokeStateForTests(): void {
   resetInMemoryPendingGlobalRevokeForTests();
 }
 
+let dedupedGlobalRevokeWork: Promise<void> | null = null;
+
+async function runDedupedGlobalRevokeWork(work: () => Promise<void>): Promise<void> {
+  if (dedupedGlobalRevokeWork) {
+    return dedupedGlobalRevokeWork;
+  }
+  dedupedGlobalRevokeWork = work().finally(() => {
+    dedupedGlobalRevokeWork = null;
+  });
+  return dedupedGlobalRevokeWork;
+}
+
+async function revokeSupersededSessionBestEffort(tokens: PendingGlobalRevokeTokens): Promise<void> {
+  await runPendingRevokeAttempt({ ...tokens, revokeScope: 'global' }).catch(() => undefined);
+}
+
+async function revokeOldSessionIfSameUserResignedIn(): Promise<void> {
+  const pending = readInMemoryPending();
+  const eventSessionId = getLatestAuthSessionIdFromEvents();
+  const eventUserId = getLatestAuthUserIdFromEvents();
+  if (!pending || !eventSessionId || eventSessionId === pending.sessionId) {
+    return;
+  }
+  if (eventUserId && eventUserId !== pending.userId) {
+    return;
+  }
+  await revokeSupersededSessionBestEffort(pending);
+}
+
 function clearInMemoryPendingIfSupersededByAuthEvent(): void {
   const eventSessionId = getLatestAuthSessionIdFromEvents();
   const eventUserId = getLatestAuthUserIdFromEvents();
@@ -112,6 +142,9 @@ async function clearMarkerIfSupersededByAuthEvent(): Promise<void> {
   const eventSessionId = getLatestAuthSessionIdFromEvents();
   const eventUserId = getLatestAuthUserIdFromEvents();
   if (eventSessionId && eventSessionId !== markerSessionId) {
+    if (pendingBefore && (!eventUserId || eventUserId === pendingBefore.userId)) {
+      await revokeSupersededSessionBestEffort(pendingBefore);
+    }
     await clearPendingGlobalRevokeMarker();
     setInMemoryPendingGlobalRevoke(null);
     return;
@@ -124,6 +157,7 @@ async function clearMarkerIfSupersededByAuthEvent(): Promise<void> {
 
 /** Call after auth SIGNED_IN / TOKEN_REFRESHED so a new session is not hidden or revoked. */
 export async function clearPendingGlobalRevokeIfSupersededByAuthEvent(): Promise<void> {
+  await revokeOldSessionIfSameUserResignedIn();
   clearInMemoryPendingIfSupersededByAuthEvent();
   await clearMarkerIfSupersededByAuthEvent();
 }
@@ -242,9 +276,15 @@ async function hydrateInMemoryPendingFromMarkerAndDisk(
   let raw: string | null = null;
   if (sessionKeyHint) {
     try {
-      raw = await AsyncStorage.getItem(sessionKeyHint);
-    } catch {
-      raw = null;
+      raw = await withSignOutDeadline(PENDING_GLOBAL_REVOKE_PRIMARY_SESSION_READ_TIMEOUT_MS, () =>
+        AsyncStorage.getItem(sessionKeyHint),
+      );
+    } catch (error) {
+      if (isSignOutDeadlineError(error)) {
+        raw = null;
+      } else {
+        throw error;
+      }
     }
   } else {
     raw = await readPrimarySessionPayloadDirect();
@@ -316,6 +356,14 @@ async function runPendingRevokeAttempt(
 export async function retryPendingGlobalRevokeBeforeDiskPersistence(
   sessionKeyHint: string | null = null,
 ): Promise<void> {
+  return runDedupedGlobalRevokeWork(() =>
+    retryPendingGlobalRevokeBeforeDiskPersistenceBody(sessionKeyHint),
+  );
+}
+
+async function retryPendingGlobalRevokeBeforeDiskPersistenceBody(
+  sessionKeyHint: string | null = null,
+): Promise<void> {
   await clearPendingGlobalRevokeIfSupersededByAuthEvent();
 
   const markerSessionId = await readPendingGlobalRevokeMarkerSessionId();
@@ -351,6 +399,9 @@ export async function retryPendingGlobalRevokeBeforeDiskPersistence(
     return;
   }
   if (eventSid && eventSid !== pendingAfterDrop.sessionId) {
+    if (!getLatestAuthUserIdFromEvents() || getLatestAuthUserIdFromEvents() === pendingAfterDrop.userId) {
+      await revokeSupersededSessionBestEffort(pendingAfterDrop);
+    }
     setInMemoryPendingGlobalRevoke(null);
     await clearPendingGlobalRevokeMarker();
     return;
@@ -379,9 +430,14 @@ async function readPrimarySessionPayloadDirect(): Promise<string | null> {
     return null;
   }
   try {
-    return await AsyncStorage.getItem(sessionKey);
-  } catch {
-    return null;
+    return await withSignOutDeadline(PENDING_GLOBAL_REVOKE_PRIMARY_SESSION_READ_TIMEOUT_MS, () =>
+      AsyncStorage.getItem(sessionKey),
+    );
+  } catch (error) {
+    if (isSignOutDeadlineError(error)) {
+      return null;
+    }
+    throw error;
   }
 }
 
@@ -390,6 +446,10 @@ async function readPrimarySessionPayloadDirect(): Promise<string | null> {
  * the same session id on disk, then clear local auth storage.
  */
 export async function runPendingGlobalRevokeBeforeSessionRestore(): Promise<void> {
+  return runDedupedGlobalRevokeWork(() => runPendingGlobalRevokeBeforeSessionRestoreBody());
+}
+
+async function runPendingGlobalRevokeBeforeSessionRestoreBody(): Promise<void> {
   await clearPendingGlobalRevokeIfSupersededByAuthEvent();
 
   const markerState = await readPendingGlobalRevokeMarkerState();

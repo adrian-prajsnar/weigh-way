@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeTestAccessToken, parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { parseSessionIdFromAuthSessionPayload } from './auth-session-id';
+import { makeTestAccessToken } from './test-helpers/make-test-access-token';
 import {
   PENDING_GLOBAL_REVOKE_MARKER_KEY,
   readPendingGlobalRevokeMarkerSessionId,
@@ -101,11 +102,13 @@ function mockProbe() {
 
 describe('offline sign-out then sign-in keeps the new session', () => {
   let logoutCalls: { url: string; authorization: string | null }[];
+  let networkOnline: boolean;
 
   beforeEach(async () => {
     vi.resetModules();
     diskRef.clear();
     markerDiskRef.clear();
+    networkOnline = false;
     logoutCalls = [];
     resetInMemoryPendingGlobalRevokeForTests();
     resetPendingGlobalRevokeStateForTests();
@@ -135,7 +138,10 @@ describe('offline sign-out then sign-in keeps the new session', () => {
             url,
             authorization: headers.get('Authorization'),
           });
-          return new Response(JSON.stringify({ msg: 'offline' }), { status: 503 });
+          if (!networkOnline) {
+            return new Response(JSON.stringify({ msg: 'offline' }), { status: 503 });
+          }
+          return new Response(null, { status: 204 });
         }
         return new Response(JSON.stringify({}), { status: 404 });
       }),
@@ -178,6 +184,7 @@ describe('offline sign-out then sign-in keeps the new session', () => {
     expect(pendingRevoke.getInMemoryPendingGlobalRevoke()?.revokeScope).toBe('local');
 
     diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A2, 'refresh-a2'));
+    networkOnline = true;
     await resetAuthEvents(USER_A, SESS_A2);
     await pendingRevoke.clearPendingGlobalRevokeIfSupersededByAuthEvent();
     expect(pendingRevoke.getInMemoryPendingGlobalRevoke()).toBeNull();
@@ -199,7 +206,34 @@ describe('offline sign-out then sign-in keeps the new session', () => {
       SESS_A2,
     );
 
-    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(1);
+    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(2);
+    expect(logoutCalls).toHaveLength(2);
+    expect(logoutCalls[1]?.authorization).toContain(makeTestAccessToken(SESS_A1));
+  });
+
+  it('revokes the old session globally before dropping pending revoke on same-account re-sign-in', async () => {
+    diskRef.set(SESSION_KEY, makeSessionJson(USER_A, SESS_A1, 'refresh-a1'));
+    const storage = await initStorage();
+    await storage.getItem(SESSION_KEY);
+    await resetAuthEvents(USER_A, SESS_A1);
+
+    const { signOutSession } = await import('./sign-out-session');
+    await signOutSession({
+      accessToken: makeTestAccessToken(SESS_A1),
+      refreshToken: 'refresh-a1',
+      userId: USER_A,
+    });
+
     expect(logoutCalls).toHaveLength(1);
+    const pendingRevoke = await import('./pending-global-revoke');
+    expect(pendingRevoke.getInMemoryPendingGlobalRevoke()?.sessionId).toBe(SESS_A1);
+
+    networkOnline = true;
+    await resetAuthEvents(USER_A, SESS_A2);
+    await pendingRevoke.clearPendingGlobalRevokeIfSupersededByAuthEvent();
+
+    expect(logoutCalls.filter((c) => c.url.includes('scope=global'))).toHaveLength(2);
+    expect(logoutCalls[1]?.authorization).toContain(makeTestAccessToken(SESS_A1));
+    expect(pendingRevoke.getInMemoryPendingGlobalRevoke()).toBeNull();
   });
 });
