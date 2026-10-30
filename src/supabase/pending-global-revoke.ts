@@ -20,6 +20,7 @@ import { revokeSessionOnServer } from './revoke-session-on-server';
 import {
   isSignOutDeadlineError,
   PENDING_GLOBAL_REVOKE_PRIMARY_SESSION_READ_TIMEOUT_MS,
+  PENDING_GLOBAL_REVOKE_STARTUP_REVOKE_TIMEOUT_MS,
   SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
   withSignOutDeadline,
 } from './sign-out-deadlines';
@@ -84,9 +85,16 @@ export { getInMemoryPendingGlobalRevoke } from './pending-global-revoke-in-memor
 
 export function resetPendingGlobalRevokeStateForTests(): void {
   resetInMemoryPendingGlobalRevokeForTests();
+  abortInFlightStartupGlobalRevoke();
 }
 
 let dedupedGlobalRevokeWork: Promise<void> | null = null;
+let inFlightStartupGlobalRevokeAbort: AbortController | null = null;
+
+function abortInFlightStartupGlobalRevoke(): void {
+  inFlightStartupGlobalRevokeAbort?.abort();
+  inFlightStartupGlobalRevokeAbort = null;
+}
 
 async function runDedupedGlobalRevokeWork(work: () => Promise<void>): Promise<void> {
   if (dedupedGlobalRevokeWork) {
@@ -120,6 +128,7 @@ async function revokeOldSessionIfSameUserResignedIn(): Promise<void> {
   if (eventUserId && eventUserId !== pending.userId) {
     return;
   }
+  abortInFlightStartupGlobalRevoke();
   await revokeSupersededSessionBestEffort(pending);
 }
 
@@ -150,6 +159,7 @@ async function clearMarkerIfSupersededByAuthEvent(): Promise<void> {
   const eventSessionId = getLatestAuthSessionIdFromEvents();
   const eventUserId = getLatestAuthUserIdFromEvents();
   if (eventSessionId && eventSessionId !== markerSessionId) {
+    abortInFlightStartupGlobalRevoke();
     if (pendingBefore && (!eventUserId || eventUserId === pendingBefore.userId)) {
       await revokeSupersededSessionBestEffort(pendingBefore);
     }
@@ -208,9 +218,10 @@ export function armInMemoryPendingRevokeOnly(
 async function attemptRevoke(
   tokens: PendingGlobalRevokeTokens,
   timeoutMs: number = SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
+  signal?: AbortSignal,
 ): Promise<RevokeAttemptOutcome> {
   let accessToken = tokens.accessToken;
-  let revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs);
+  let revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs, signal);
 
   if (revoke.result === 'rate_limited') {
     return 'rate_limited';
@@ -229,7 +240,7 @@ async function attemptRevoke(
         return 'succeeded';
       }
       accessToken = refreshed.accessToken;
-      revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs);
+      revoke = await revokeSessionOnServer(accessToken, tokens.revokeScope, timeoutMs, signal);
       if (revoke.result === 'rate_limited') {
         return 'rate_limited';
       }
@@ -348,10 +359,67 @@ async function clearLocalAuthAfterPendingGlobalRevoke(
   await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
 }
 
+function authEventsAllowPendingRevokeLocalClear(
+  markerSessionId: string,
+  expectedUserId: string,
+): boolean {
+  const eventSessionId = getLatestAuthSessionIdFromEvents();
+  if (eventSessionId && eventSessionId !== markerSessionId) {
+    return false;
+  }
+  const eventUserId = getLatestAuthUserIdFromEvents();
+  if (eventUserId && eventUserId !== expectedUserId) {
+    return false;
+  }
+  return true;
+}
+
+async function sessionStillMatchesPendingGlobalRevokeMarker(
+  markerSessionId: string,
+  expectedUserId: string,
+): Promise<boolean> {
+  if (!authEventsAllowPendingRevokeLocalClear(markerSessionId, expectedUserId)) {
+    return false;
+  }
+  const eventSessionId = getLatestAuthSessionIdFromEvents();
+  if (eventSessionId && eventSessionId === markerSessionId) {
+    return true;
+  }
+  const raw = await readPrimarySessionPayloadDirect();
+  if (!raw || isSignedOutSessionPayload(raw)) {
+    return false;
+  }
+  if (!sessionPayloadMatchesPendingRevokeMarker(markerSessionId, raw)) {
+    return false;
+  }
+  const diskUserId = parseUserIdFromAuthSessionPayload(raw);
+  return !diskUserId || diskUserId === expectedUserId;
+}
+
+async function clearLocalAuthAfterPendingGlobalRevokeIfStillPending(
+  markerSessionId: string,
+  userId: string,
+  sessionKeyHint: string | null,
+): Promise<void> {
+  if (!(await sessionStillMatchesPendingGlobalRevokeMarker(markerSessionId, userId))) {
+    return;
+  }
+  await clearLocalAuthAfterPendingGlobalRevoke(userId, sessionKeyHint);
+}
+
+type PendingRevokeAttemptOptions = {
+  timeoutMs?: number;
+  signal?: AbortSignal;
+};
+
 async function runPendingRevokeAttempt(
   tokens: PendingGlobalRevokeTokens,
+  options?: PendingRevokeAttemptOptions,
 ): Promise<RevokeAttemptOutcome> {
-  return withSignOutDeadline(SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS, () => attemptRevoke(tokens)).catch(
+  const timeoutMs = options?.timeoutMs ?? SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS;
+  return withSignOutDeadline(timeoutMs, () =>
+    attemptRevoke(tokens, timeoutMs, options?.signal),
+  ).catch(
     (error) => {
       if (isSignOutDeadlineError(error)) {
         return 'unreachable' as RevokeAttemptOutcome;
@@ -475,7 +543,11 @@ async function runPendingGlobalRevokeBeforeSessionRestoreBody(): Promise<void> {
     ) {
       const userId = parseUserIdFromAuthSessionPayload(rawAfterServerRevoke);
       if (userId) {
-        await clearLocalAuthAfterPendingGlobalRevoke(userId, null);
+        await clearLocalAuthAfterPendingGlobalRevokeIfStillPending(
+          markerPayload.sessionId,
+          userId,
+          null,
+        );
       }
     }
     await clearPendingGlobalRevokeMarker();
@@ -511,7 +583,19 @@ async function runPendingGlobalRevokeBeforeSessionRestoreBody(): Promise<void> {
   };
   setInMemoryPendingGlobalRevoke(tokens);
 
-  const outcome = await runPendingRevokeAttempt(tokens);
+  const startupAbort = new AbortController();
+  inFlightStartupGlobalRevokeAbort = startupAbort;
+  let outcome: RevokeAttemptOutcome;
+  try {
+    outcome = await runPendingRevokeAttempt(tokens, {
+      timeoutMs: PENDING_GLOBAL_REVOKE_STARTUP_REVOKE_TIMEOUT_MS,
+      signal: startupAbort.signal,
+    });
+  } finally {
+    if (inFlightStartupGlobalRevokeAbort === startupAbort) {
+      inFlightStartupGlobalRevokeAbort = null;
+    }
+  }
 
   if (outcome === 'failed_non_retryable') {
     await incrementPendingGlobalRevokeStartupFailCount(markerPayload);
@@ -523,9 +607,19 @@ async function runPendingGlobalRevokeBeforeSessionRestoreBody(): Promise<void> {
     return;
   }
 
+  if (!(await sessionStillMatchesPendingGlobalRevokeMarker(markerPayload.sessionId, userId))) {
+    setInMemoryPendingGlobalRevoke(null);
+    await clearPendingGlobalRevokeMarker();
+    return;
+  }
+
   setInMemoryPendingGlobalRevoke(null);
   await clearPendingGlobalRevokeMarker();
-  await clearLocalAuthAfterPendingGlobalRevoke(userId, null);
+  await clearLocalAuthAfterPendingGlobalRevokeIfStillPending(
+    markerPayload.sessionId,
+    userId,
+    null,
+  );
 }
 
 export async function armPendingGlobalRevokeFromSignOut(options: {

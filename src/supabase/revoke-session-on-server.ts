@@ -93,6 +93,7 @@ export async function revokeSessionOnServer(
   accessToken: string,
   scope: 'global' | 'local' | 'others' = 'global',
   timeoutMs: number = SIGN_OUT_SERVER_REVOKE_TIMEOUT_MS,
+  externalSignal?: AbortSignal,
 ): Promise<{ result: ServerRevokeResult; error?: unknown }> {
   const { url, anonKey } = supabaseAuthHttpConfig;
   if (!url || !anonKey) {
@@ -103,6 +104,12 @@ export async function revokeSessionOnServer(
     const response = await withSignOutDeadline(timeoutMs, async () => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const onExternalAbort = () => controller.abort();
+      if (externalSignal?.aborted) {
+        controller.abort();
+      } else {
+        externalSignal?.addEventListener('abort', onExternalAbort, { once: true });
+      }
       try {
         return await fetch(authApiUrl(url, `/logout?scope=${scope}`), {
           method: 'POST',
@@ -111,6 +118,7 @@ export async function revokeSessionOnServer(
         });
       } finally {
         clearTimeout(timer);
+        externalSignal?.removeEventListener('abort', onExternalAbort);
       }
     });
 
