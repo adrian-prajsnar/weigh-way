@@ -9,11 +9,6 @@ export function isSupabaseConfigured(): boolean {
   return Boolean(supabaseUrl && supabaseAnonKey);
 }
 
-export const supabaseAuthHttpConfig = {
-  url: supabaseUrl,
-  anonKey: supabaseAnonKey,
-};
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: AsyncStorage,

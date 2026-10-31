@@ -1,5 +1,4 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Session } from '@supabase/supabase-js';
 import { resolveDevSupabaseUrl } from './resolve-dev-supabase-url';
 
 function getSupabaseAuthStorageKey(): string {
@@ -12,21 +11,7 @@ export function getSupabaseLegacyPkceVerifierKey(): string {
   return `${getSupabaseAuthStorageKey()}-code-verifier`;
 }
 
-/** Reads the persisted Supabase session JSON from AsyncStorage (bootstrap fallback). */
-export async function readPersistedAuthSession(): Promise<Session | null> {
-  const raw = await AsyncStorage.getItem(getSupabaseAuthStorageKey());
-  if (!raw) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(raw) as Session;
-    return parsed.access_token ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Removes persisted Supabase auth keys so auth-js local sign-out skips /logout. */
+/** Removes persisted Supabase auth keys (offline sign-out local clear). */
 export async function clearPersistedAuthSession(): Promise<void> {
   const key = getSupabaseAuthStorageKey();
   await AsyncStorage.multiRemove([key, `${key}-user`, getSupabaseLegacyPkceVerifierKey()]);

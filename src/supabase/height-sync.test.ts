@@ -14,10 +14,6 @@ vi.mock('./auth-user', () => ({
   getUserId,
 }));
 
-vi.mock('./with-auth-retry', () => ({
-  withAuthRetry: (operation: () => Promise<unknown>) => operation(),
-}));
-
 // eslint-disable-next-line import/first -- load after vi.mock
 import { getHeightEntries } from './height-sync';
 

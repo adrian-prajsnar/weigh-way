@@ -11,6 +11,7 @@ import {
   formatSignOutError,
   formatSignUpError,
   formatUpdatePasswordError,
+  isNetworkError,
 } from '../auth-errors';
 import { isOAuthCallbackUrl } from '../auth-oauth-callback';
 import {
@@ -26,15 +27,16 @@ import {
 import { getAuthLinkErrorContext } from '../storage/auth-pending-flow';
 import { clearPkceVerifierBackups } from '../storage/pkce-verifier-backup';
 import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
-import { readPersistedAuthSession } from '../supabase/auth-storage-key';
+import { clearPersistedAuthSession } from '../supabase/auth-storage-key';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
-import { signOutSession } from '../supabase/sign-out-session';
-import { validateRestoredSessionInBackground } from '../supabase/validate-restored-session';
 import { createDemoSession } from '../demo/demo-session';
 import { isDemoMode } from '../demo/is-demo-mode';
 import { demoReadOnlyError } from '../demo/read-only';
 
-export const BOOTSTRAP_SESSION_DEADLINE_MS = 6000;
+const SESSION_BOOTSTRAP_TIMEOUT_MS = 4000;
+const SIGN_OUT_TIMEOUT_MS = 10_000;
+
+export const BOOTSTRAP_SESSION_DEADLINE_MS = SESSION_BOOTSTRAP_TIMEOUT_MS;
 
 type SignUpResult = {
   needsEmailConfirmation: boolean;
@@ -61,6 +63,37 @@ type SupabaseAuthContextValue = {
 
 const SupabaseAuthContext = createContext<SupabaseAuthContextValue | null>(null);
 
+async function signOutWithOfflineSupport(): Promise<{ offlineNotice: boolean }> {
+  let offlineNotice = false;
+
+  try {
+    const { error } = await Promise.race([
+      supabase.auth.signOut(),
+      new Promise<{ error: Error }>((_, reject) => {
+        setTimeout(() => reject(new Error('sign_out_timeout')), SIGN_OUT_TIMEOUT_MS);
+      }),
+    ]);
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    if (isNetworkError(error) || message.includes('sign_out_timeout')) {
+      offlineNotice = true;
+    } else {
+      throw new Error(formatSignOutError(error));
+    }
+  }
+
+  if (offlineNotice) {
+    await clearPersistedAuthSession().catch(() => undefined);
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  }
+
+  return { offlineNotice };
+}
+
 export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -68,7 +101,6 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const [authLinkError, setAuthLinkError] = useState<string | null>(null);
   const completingSignUpRef = useRef(false);
-  const authEventGenerationRef = useRef(0);
 
   const isAuthenticated = Boolean(session) && !completingSignUpRef.current && !isPasswordRecovery;
 
@@ -106,39 +138,28 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     registerSupabaseAppLifecycle();
 
-    const bootstrapGeneration = authEventGenerationRef.current;
-    let bootstrapFinished = false;
-    let sessionApplied = false;
-    let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const clearBootstrapDeadline = () => {
-      if (deadlineTimer) {
-        clearTimeout(deadlineTimer);
-        deadlineTimer = null;
-      }
-    };
-
-    deadlineTimer = setTimeout(() => {
-      if (!bootstrapFinished) {
+    let isBootstrapSettled = false;
+    const bootstrapTimeout = setTimeout(() => {
+      if (!isBootstrapSettled) {
         setIsLoading(false);
-        if (!sessionApplied && authEventGenerationRef.current === bootstrapGeneration) {
-          void readPersistedAuthSession().then((restored) => {
-            if (
-              restored &&
-              authEventGenerationRef.current === bootstrapGeneration
-            ) {
-              setSession(restored);
-              void validateRestoredSessionInBackground();
-            }
-          });
-        }
       }
-    }, BOOTSTRAP_SESSION_DEADLINE_MS);
+    }, SESSION_BOOTSTRAP_TIMEOUT_MS);
+
+    void supabase.auth
+      .getSession()
+      .then(({ data: { session: activeSession } }) => {
+        if (activeSession) {
+          setSession(activeSession);
+        }
+      })
+      .finally(() => {
+        isBootstrapSettled = true;
+        clearTimeout(bootstrapTimeout);
+        setIsLoading(false);
+        void refreshSessionOnForeground();
+      });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
-      if (event !== 'INITIAL_SESSION') {
-        authEventGenerationRef.current += 1;
-      }
       setSession(activeSession);
       if (event === 'PASSWORD_RECOVERY' && activeSession) {
         setIsPasswordRecovery(true);
@@ -150,31 +171,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && activeSession) {
         setIsLoading(false);
-        clearBootstrapDeadline();
         void clearAuthPendingFlows();
       }
     });
-
-    void (async () => {
-      try {
-        const { data } = await supabase.auth.getSession().catch(() => ({
-          data: { session: null as Session | null },
-        }));
-        if (
-          data.session &&
-          authEventGenerationRef.current === bootstrapGeneration
-        ) {
-          setSession(data.session);
-          void validateRestoredSessionInBackground();
-        }
-        sessionApplied = true;
-      } finally {
-        bootstrapFinished = true;
-        clearBootstrapDeadline();
-        setIsLoading(false);
-        void refreshSessionOnForeground();
-      }
-    })();
 
     void Linking.getInitialURL().then((url) => {
       if (url) {
@@ -187,7 +186,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      clearBootstrapDeadline();
+      clearTimeout(bootstrapTimeout);
       subscription.subscription.unsubscribe();
       linkSubscription.remove();
     };
@@ -247,11 +246,7 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.session) {
-        await signOutSession({
-          accessToken: data.session.access_token,
-          refreshToken: data.session.refresh_token ?? null,
-          userId: data.session.user?.id ?? null,
-        });
+        await supabase.auth.signOut();
       }
 
       return { needsEmailConfirmation };
@@ -265,24 +260,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw demoReadOnlyError();
     }
 
-    const accessToken = session?.access_token ?? null;
-    let offlineNotice = false;
     try {
-      const result = await signOutSession({
-        accessToken,
-        refreshToken: session?.refresh_token ?? null,
-        userId: session?.user?.id ?? null,
-      });
-      offlineNotice = result.serverSignOutUnreachable;
-    } catch (error) {
-      throw new Error(formatSignOutError(error));
+      const result = await signOutWithOfflineSupport();
+      return result;
     } finally {
       resetOAuthRedirectState();
       await clearAuthPendingFlows();
       await clearPkceVerifierBackups();
     }
-    return { offlineNotice };
-  }, [session]);
+  }, []);
 
   const deleteAccount = useCallback(async () => {
     if (isDemoMode()) {
@@ -295,17 +281,13 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      await signOutSession({
-        accessToken: session?.access_token ?? null,
-        refreshToken: session?.refresh_token ?? null,
-        userId: session?.user?.id ?? null,
-      });
+      await signOutWithOfflineSupport();
     } finally {
       resetOAuthRedirectState();
       await clearAuthPendingFlows();
       await clearPkceVerifierBackups();
     }
-  }, [session]);
+  }, []);
 
   const resendConfirmationEmail = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resend({

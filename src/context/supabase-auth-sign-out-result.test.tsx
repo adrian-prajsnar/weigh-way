@@ -50,10 +50,6 @@ vi.mock('../demo/is-demo-mode', () => ({
 
 vi.mock('../supabase/client', () => ({
   isSupabaseConfigured: () => true,
-  supabaseAuthHttpConfig: {
-    url: 'https://example.supabase.co',
-    anonKey: 'public-anon-key',
-  },
   supabase: {
     auth: {
       getSession: authState.getSession,
@@ -63,20 +59,7 @@ vi.mock('../supabase/client', () => ({
   },
 }));
 
-vi.mock('../supabase/sign-out-session', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../supabase/sign-out-session')>();
-  return {
-    ...actual,
-    signOutSession: vi.fn(),
-  };
-});
-
-vi.mock('../supabase/validate-restored-session', () => ({
-  validateRestoredSessionInBackground: vi.fn(),
-}));
-
 vi.mock('../supabase/auth-storage-key', () => ({
-  readPersistedAuthSession: vi.fn().mockResolvedValue(null),
   clearPersistedAuthSession: storageClearState.clearPersistedAuthSession,
 }));
 
@@ -95,11 +78,8 @@ vi.mock('expo-linking', () => ({
 }));
 
 /* eslint-disable import/first -- after vi.mock */
-import { signOutSession } from '../supabase/sign-out-session';
 import { SupabaseAuthProvider, useSupabaseAuth } from './supabase-auth-context';
 /* eslint-enable import/first */
-
-const signOutSessionMock = vi.mocked(signOutSession);
 
 const sampleSession = {
   access_token: 'token-a',
@@ -111,19 +91,23 @@ const sampleSession = {
 
 describe('supabase auth signOut result handling', () => {
   beforeEach(() => {
-    signOutSessionMock.mockReset();
+    authState.signOut.mockReset();
+    storageClearState.clearPersistedAuthSession.mockReset();
     redirectState.clearAuthPendingFlows.mockReset();
     pkceState.clearPkceVerifierBackups.mockReset();
     redirectState.clearAuthPendingFlows.mockResolvedValue(undefined);
     pkceState.clearPkceVerifierBackups.mockResolvedValue(undefined);
+    storageClearState.clearPersistedAuthSession.mockResolvedValue(undefined);
     authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
     authState.onAuthStateChange.mockImplementation(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
     }));
   });
 
-  it('returns offlineNotice when the server revoke is unreachable', async () => {
-    signOutSessionMock.mockResolvedValue({ serverSignOutUnreachable: true });
+  it('returns offlineNotice when sign-out cannot reach the server', async () => {
+    authState.signOut
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ error: null });
 
     const { result } = renderHook(() => useSupabaseAuth(), {
       wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
@@ -137,6 +121,8 @@ describe('supabase auth signOut result handling', () => {
     });
 
     expect(offlineNotice).toBe(true);
+    expect(storageClearState.clearPersistedAuthSession).toHaveBeenCalled();
+    expect(authState.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(redirectState.clearAuthPendingFlows).toHaveBeenCalled();
     expect(pkceState.clearPkceVerifierBackups).toHaveBeenCalled();
   });
