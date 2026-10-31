@@ -366,8 +366,6 @@ export default {
     databasePermission: 'Could not load data. Please try again later.',
     databasePermissionDev:
       'Database permission error. In Supabase SQL Editor, run supabase/grants.sql from this project.',
-    jwtClockSkew:
-      'Your device clock may be out of sync. Turn on automatic date and time, then try again.',
   },
   toasts: {
     success: 'Success',

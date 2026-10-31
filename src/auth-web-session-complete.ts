@@ -1,6 +1,5 @@
 import * as WebBrowser from 'expo-web-browser';
 import { isSecurityError } from './security-error';
-import { isDevWarningsEnabled } from './storage/preference-storage-fallback';
 
 /** Completes an in-progress OAuth redirect without crashing when web storage is blocked. */
 export function safeMaybeCompleteAuthSession(): void {
@@ -10,7 +9,7 @@ export function safeMaybeCompleteAuthSession(): void {
     if (isSecurityError(error)) {
       return;
     }
-    if (isDevWarningsEnabled()) {
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       console.warn('[weigh-way] maybeCompleteAuthSession failed:', error);
     }
     throw error;

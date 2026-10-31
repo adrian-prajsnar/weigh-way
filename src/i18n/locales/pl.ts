@@ -378,8 +378,6 @@ const pl = {
     databasePermission: 'Nie udało się wczytać danych. Spróbuj ponownie później.',
     databasePermissionDev:
       'Błąd uprawnień bazy danych. W Supabase SQL Editor uruchom supabase/grants.sql z tego projektu.',
-    jwtClockSkew:
-      'Zegar urządzenia może być źle ustawiony. Włącz automatyczną datę i godzinę, a następnie spróbuj ponownie.',
   },
   toasts: {
     success: 'Sukces',

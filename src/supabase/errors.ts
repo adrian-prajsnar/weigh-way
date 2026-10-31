@@ -8,20 +8,6 @@ type SupabaseRequestError = {
   code?: string;
 };
 
-export function isJwtClockSkewError(error: unknown): boolean {
-  if (!error || typeof error !== 'object') {
-    return false;
-  }
-
-  const candidate = error as SupabaseRequestError;
-
-  if (candidate.code === 'PGRST303') {
-    return true;
-  }
-
-  return candidate.message?.toLowerCase().includes('jwt issued at future') ?? false;
-}
-
 function isSessionExpiredError(error: SupabaseRequestError): boolean {
   return error.code === 'PGRST301' || error.message.toLowerCase().includes('jwt expired');
 }
@@ -47,10 +33,7 @@ function reportMappedFailure(error: SupabaseRequestError): void {
   }
 
   const code =
-    error.code ??
-    (isJwtClockSkewError(error) ? 'jwt_clock_skew' : undefined) ??
-    (isSessionExpiredError(error) ? 'session_expired' : undefined) ??
-    'unknown';
+    error.code ?? (isSessionExpiredError(error) ? 'session_expired' : undefined) ?? 'unknown';
 
   reportSupabaseFailure(code);
 }
@@ -74,10 +57,6 @@ export function toSupabaseError(error: SupabaseRequestError | unknown): Error {
     );
   }
 
-  if (isJwtClockSkewError(requestError)) {
-    return new Error(t('errors.jwtClockSkew'));
-  }
-
   if (isSessionExpiredError(requestError)) {
     return new Error(t('errors.sessionExpired'));
   }
@@ -94,10 +73,6 @@ export function toSupabaseErrorFromUnknown(error: unknown): Error {
     if (isNetworkError(error)) {
       return new Error(t('errors.noConnection'));
     }
-
-    if (!isJwtClockSkewError(error)) {
-      return new Error(t('errors.couldNotLoadData'));
-    }
   }
 
   if (error && typeof error === 'object' && 'message' in error) {
@@ -106,4 +81,3 @@ export function toSupabaseErrorFromUnknown(error: unknown): Error {
 
   return new Error(t('errors.couldNotLoadData'));
 }
-

@@ -1,6 +1,5 @@
 import { getUserId } from './auth-user';
 import { supabase } from './client';
-import { withAuthRetry } from './with-auth-retry';
 import { BiologicalSex } from '../types';
 
 type UserProfileRow = {
@@ -21,41 +20,37 @@ export type UserProfileFields = {
 };
 
 export async function getUserProfile(): Promise<UserProfileFields> {
-  return withAuthRetry(async () => {
-    const userId = await getUserId();
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .select('birth_date, sex')
-      .eq('user_id', userId)
-      .maybeSingle();
+  const userId = await getUserId();
+  const { data, error } = await supabase
+    .from('user_profiles')
+    .select('birth_date, sex')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-    if (error) {
-      throw error;
-    }
+  if (error) {
+    throw error;
+  }
 
-    const row = data as UserProfileRow | null;
-    return {
-      birthDate: row?.birth_date ?? null,
-      sex: parseSex(row?.sex),
-    };
-  });
+  const row = data as UserProfileRow | null;
+  return {
+    birthDate: row?.birth_date ?? null,
+    sex: parseSex(row?.sex),
+  };
 }
 
 export async function saveUserProfile(profile: UserProfileFields): Promise<void> {
-  return withAuthRetry(async () => {
-    const userId = await getUserId();
-    const { error } = await supabase.from('user_profiles').upsert(
-      {
-        user_id: userId,
-        birth_date: profile.birthDate,
-        sex: profile.sex,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'user_id' },
-    );
+  const userId = await getUserId();
+  const { error } = await supabase.from('user_profiles').upsert(
+    {
+      user_id: userId,
+      birth_date: profile.birthDate,
+      sex: profile.sex,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'user_id' },
+  );
 
-    if (error) {
-      throw error;
-    }
-  });
+  if (error) {
+    throw error;
+  }
 }
