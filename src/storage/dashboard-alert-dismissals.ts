@@ -64,7 +64,3 @@ export async function dismissDashboardAlerts(ids: DashboardAlertId[]): Promise<v
     // Best-effort when storage is blocked.
   }
 }
-
-export async function dismissDashboardAlert(id: DashboardAlertId): Promise<void> {
-  await dismissDashboardAlerts([id]);
-}

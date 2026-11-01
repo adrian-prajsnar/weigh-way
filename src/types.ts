@@ -78,12 +78,6 @@ export type PeriodComparison = {
 
 export type BiologicalSex = 'female' | 'male';
 
-export type UserProfile = {
-  heightEntries: HeightEntry[];
-  birthDate: string | null;
-  sex: BiologicalSex | null;
-};
-
 export type HeightEntry = {
   effectiveDate: string;
   heightCm: number;
