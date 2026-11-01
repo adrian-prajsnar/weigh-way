@@ -23,7 +23,7 @@ export function isDemoWebEmbeddedInteractiveTarget(target: EventTarget | null): 
   );
 }
 
-export function getScrollAxes(node: HTMLElement, getStyle: (element: HTMLElement) => CSSStyleDeclaration): ScrollAxes {
+function getScrollAxes(node: HTMLElement, getStyle: (element: HTMLElement) => CSSStyleDeclaration): ScrollAxes {
   const style = getStyle(node);
   const canOverflowX = style.overflowX === 'auto' || style.overflowX === 'scroll' || style.overflowX === 'overlay';
   const canOverflowY = style.overflowY === 'auto' || style.overflowY === 'scroll' || style.overflowY === 'overlay';

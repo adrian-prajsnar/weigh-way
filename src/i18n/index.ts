@@ -4,7 +4,6 @@ import pl from './locales/pl';
 import { AppLocale } from './resolve-locale';
 import { TranslateOptions, TranslationKey } from './translation-keys';
 
-export type TranslationTree = typeof en;
 export type { TranslationKey, TranslateOptions } from './translation-keys';
 
 function polishPluralKeys(_i18n: I18n, count: number): string[] {
@@ -55,5 +54,3 @@ export function translateForLocale(
   const { locale: _locale, ...rest } = options ?? {};
   return i18n.t(scope, { ...rest, locale });
 }
-
-export { i18n };
