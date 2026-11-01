@@ -1,7 +1,7 @@
 import { spacing } from '../theme/tokens';
 
 /** Icon, label, and padding; keep in sync with tab-bar styles. */
-export const TAB_BAR_HEIGHT = 72;
+const TAB_BAR_HEIGHT = 72;
 
 export function getTabBarBottomOffset(bottomInset: number): number {
   return bottomInset + spacing.sm;
@@ -13,7 +13,7 @@ export function getTabBarViewportInset(bottomInset: number): number {
 }
 
 /** Bottom padding inside tab scroll content (xxl+lg breathing room). */
-export function getScrollContentBottomPadding(): number {
+function getScrollContentBottomPadding(): number {
   return spacing.xxl + spacing.lg;
 }
 

@@ -1,8 +1,6 @@
 import { getAuthCallbackErrorMessage, getAuthQueryParams } from './auth-query-params';
 import { isAuthCallbackUrl } from './auth-callback-url';
 
-export { isAuthCallbackUrl } from './auth-callback-url';
-
 export function isOAuthCallbackUrl(url: string): boolean {
   if (!isAuthCallbackUrl(url)) {
     return false;

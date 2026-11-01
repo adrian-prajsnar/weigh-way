@@ -1,5 +1,5 @@
 /** Assumes a 16px root font size (browser default / `html { font-size: 100% }`). */
-export const CSS_REM_ROOT_PX = 16;
+const CSS_REM_ROOT_PX = 16;
 
 export function pxToRem(px: number): string {
   if (px === 0) {

@@ -4,13 +4,13 @@ const EXPECTED_SCHEME = 'weigh-way';
 const EXPECTED_HOST = 'auth';
 const EXPECTED_PATH = '/callback';
 
-export type ParsedAuthCallbackUrl = {
+type ParsedAuthCallbackUrl = {
   scheme: string;
   hostname: string | null;
   path: string | null;
 };
 
-export function parseAuthCallbackUrl(url: string): ParsedAuthCallbackUrl | null {
+function parseAuthCallbackUrl(url: string): ParsedAuthCallbackUrl | null {
   try {
     const parsed = Linking.parse(url);
     if (!parsed.scheme) {

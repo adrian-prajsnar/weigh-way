@@ -5,7 +5,7 @@ import { registerErrorReporter } from './report-error';
 
 const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
 
-export function isErrorReportingEnabled(): boolean {
+function isErrorReportingEnabled(): boolean {
   return Boolean(dsn) && !__DEV__ && !isDemoMode();
 }
 

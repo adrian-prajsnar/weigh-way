@@ -1,6 +1,6 @@
 /** Web-only helpers for keeping confirm-dialog focus inside interactive controls. */
 
-export const CONFIRM_DIALOG_SELECTOR = '[data-ww-confirm-dialog="true"]';
+const CONFIRM_DIALOG_SELECTOR = '[data-ww-confirm-dialog="true"]';
 
 const FOCUSABLE_SELECTOR =
   `${CONFIRM_DIALOG_SELECTOR} button, ` +

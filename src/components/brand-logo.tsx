@@ -4,9 +4,9 @@ import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 
 /** Rising geometric W — left arm shorter, right arm taller. Keep in sync with scripts/generate-brand-assets.mjs and website/src/components/brand-logo.astro. */
-export const BRAND_MARK_VIEWBOX = '0 0 32 32';
-export const BRAND_MARK_POINTS = '5,7.5 11,19 16,12.5 22.5,24.8 27,7.5';
-export const BRAND_MARK_STROKE_WIDTH = 3.6;
+const BRAND_MARK_VIEWBOX = '0 0 32 32';
+const BRAND_MARK_POINTS = '5,7.5 11,19 16,12.5 22.5,24.8 27,7.5';
+const BRAND_MARK_STROKE_WIDTH = 3.6;
 
 type BrandLogoProps = {
   size?: number;
