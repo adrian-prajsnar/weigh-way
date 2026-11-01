@@ -192,14 +192,6 @@ export async function performOAuthSignIn(provider: 'google'): Promise<OAuthSignI
   }
 }
 
-export function isPasswordRecoveryUrl(url: string): boolean {
-  if (!isAuthCallbackUrl(url)) {
-    return false;
-  }
-  const { params } = getAuthQueryParams(url);
-  return params.type === 'recovery';
-}
-
 const PKCE_VERIFIER_MISMATCH_MESSAGE =
   'code challenge does not match previously saved code verifier';
 

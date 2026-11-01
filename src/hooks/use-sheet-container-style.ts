@@ -10,8 +10,3 @@ export function useSheetContainerStyle(extra?: StyleProp<ViewStyle>): StyleProp<
 
   return [styles.datePickerSheet, isFloating && styles.datePickerSheetFloating, extra];
 }
-
-export function useFloatingSheet(): boolean {
-  const { width } = useAppWindowDimensions();
-  return width > layoutWidth.sheet;
-}
