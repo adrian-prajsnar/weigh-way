@@ -161,7 +161,7 @@ This app is used on a live Supabase project with real user data. Follow this bef
 - [ ] **Do not** re-run [`supabase/schema.sql`](supabase/schema.sql) on production — it is for **new projects** and local CLI bootstrap only.
 - [ ] Copy [`supabase/migration-template.sql`](supabase/migration-template.sql) to `supabase/migrations/YYYYMMDDHHmmss_short-description.sql` (or run `npx supabase migration new short-description`).
 - [ ] Keep the migration **additive** (`ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, copy-then-alter). No `DROP TABLE`, `TRUNCATE`, or unscoped `DELETE` on data tables.
-- [ ] Apply on **local** first: `npm run db:reset` (or run the SQL against the local DB), verify the app, then run the same migration in Supabase **SQL Editor** on production **before** (or with) the app update that needs it.
+- [ ] Apply on **local** first: `npm run db:reset` (or run the SQL against the local DB), verify the app, then deploy through the [migration release safeguard](#migration-release-safeguard). If SQL is applied manually, reconcile its migration-history entry before enabling automation.
 - [ ] Verify row counts unchanged (unless the migration intentionally adds rows).
 - [ ] Update [`supabase/schema.sql`](supabase/schema.sql) so new projects match production.
 - [ ] Commit the migration file to git.
@@ -188,6 +188,64 @@ Full migration rules: [`AGENTS.md`](AGENTS.md) → Database migrations.
 - [`supabase/grants.sql`](supabase/grants.sql) — fixes permission errors, does not delete data.
 - `DROP POLICY IF EXISTS` + `CREATE POLICY` in a migration — changes permissions only, not rows.
 
+## Migration release safeguard
+
+On a push to `main`, release automation now waits for app checks and disposable-database tests, deploys pending production migrations, verifies their history, and only then runs semantic-release and builds the APK/IPA. A failed or unconfigured database gate blocks release. CI on pull requests and `develop` only uses a local disposable database and receives no production credentials.
+
+Manual **Rebuild mobile artifacts** and **Build iOS IPA** workflows run a read-only migration preflight before building. Run these workflows from `main`. Rebuilds resolve the source SHA once so the preflight and both builds use the same checkout. Newer additive migrations in production are allowed for older builds; gaps or unknown versions inside the required history are rejected.
+
+### One-time production setup
+
+1. Confirm the live project used by the currently installed app and by EAS production. Record row counts for `weight_entries`, `height_entries`, and `user_profiles` using the production safety checklist above.
+2. Inspect production's schema and `supabase_migrations.schema_migrations` history. If the history table is absent or empty, or SQL was previously pasted into SQL Editor, reconcile it first. Verify each migration's tables, columns, policies, functions, and triggers before recording it as applied with Supabase's `migration repair` command. Recording history does not execute SQL. Never mark an unapplied migration as applied or replay the bootstrap migration blindly on existing data.
+3. In GitHub **Settings → Environments**, create `production-database` and restrict its deployment branches to `main`. No manual approval is required by the workflow; adding required reviewers is optional.
+4. Configure these environment variables and secrets:
+
+   | Setting | Kind | Value |
+   | --- | --- | --- |
+   | `SUPABASE_PRODUCTION_PROJECT_REF` | Variable | Confirmed 20-letter production project reference |
+   | `SUPABASE_MIGRATIONS_BASELINED` | Variable | Leave unset until the baseline is verified, then set to `true` |
+   | `SUPABASE_ACCESS_TOKEN` | Secret | Supabase access token authorized for this project |
+   | `SUPABASE_DB_PASSWORD` | Secret | Production database password; passed only to deployment |
+   | `EXPO_PUBLIC_SUPABASE_URL` | Secret | `https://<production-project-ref>.supabase.co` |
+
+   Read-only preflight needs the token's `database_migrations_read` permission. Deployment also needs the permissions listed by `supabase db push --help` for the pinned CLI (project/pooling/branch reads and database access). Keep the token project-scoped where available. Do not use the app's anon key as a Management API token. Production credentials never belong in the app, EAS build variables, or git. Keep the existing public app URL/anon key in EAS production as before, and confirm its URL agrees with this gate.
+
+5. Export `SUPABASE_PRODUCTION_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, and `EXPO_PUBLIC_SUPABASE_URL` in a trusted local terminal, then run `npm run db:plan`. This reads history through the Supabase Management API and lists pending versions; it does not execute SQL. The script deliberately does not load `.env`, which normally targets local development.
+6. Review the pending versions, verify the baseline, then set `SUPABASE_MIGRATIONS_BASELINED=true` in the GitHub environment. Before changing the production project later, unset this flag and repeat baseline verification. Deployment remains disabled until this step is completed.
+
+The CLI is pinned to **3.0.0** in the verification and deployment workflows and checked by the deployment script. Production deployment uses an explicit `--remote=<project-ref>`, a dry run, then `db push --yes --skip-vault`, followed by another history read. It never includes seeds/custom roles, pushes auth configuration, resets production, or automatically repairs history. A local terminal cannot invoke the script's `apply` mode; production writes are reserved for the `main` push workflow.
+
+### Preflight for direct terminal builds
+
+With the three read-only preflight variables exported, run:
+
+```bash
+npm run db:plan       # read-only: list pending migrations
+npm run db:preflight  # read-only: exit nonzero if required migrations are missing
+```
+
+Run preflight against the exact checkout you will build, and stop if it fails. Direct `eas build` commands can bypass GitHub workflow gates; prefer the guarded GitHub workflows for production releases. No database password is needed for these read-only commands.
+
+### Failures and recovery
+
+- Missing credentials, a project/URL mismatch, an unverified baseline, unexpected history, network errors, and SQL failures block release.
+- The gate prints project reference and migration versions, never tokens, passwords, or raw SQL/connection errors. GitHub's job summary records successful checks/deployments.
+- If migration deployment fails partway, previously completed migrations may already be applied. Check production history and schema before retrying. Successful versions are not replayed on a retry. Repair the cause with a reviewed corrective migration; do not reset production or automatically roll back successful migrations.
+- If a migration succeeds but an app build fails, leave the additive database change in place and rerun the failed build. Installed app versions must remain compatible with every production migration.
+- History verification confirms required versions are recorded; it does not detect arbitrary manual schema drift. Keep applied SQL files immutable and capture future changes in new migrations. A migration-history flag is not a substitute for checking existing production structures during initial setup.
+
+Local database regression checks run with Docker using the pinned CLI:
+
+```bash
+npx --yes supabase@3.0.0 db start
+npx --yes supabase@3.0.0 db reset --no-seed
+npx --yes supabase@3.0.0 test db
+npx --yes supabase@3.0.0 stop --no-backup
+```
+
+These commands target the disposable **local** database. Do not add a remote target to reset or test commands on production.
+
 ## Build APK
 
 Cloud build (download link on your phone):
@@ -196,6 +254,7 @@ Cloud build (download link on your phone):
 npx eas-cli login
 # Ensure .env contains PRODUCTION Supabase URL/anon key before this step — not the local CLI URL.
 npx eas-cli env:push --environment production --path .env
+npm run db:preflight
 npx eas-cli build -p android --profile production
 ```
 
@@ -204,6 +263,7 @@ npx eas-cli build -p android --profile production
 Local build on your PC (copy the APK to your phone):
 
 ```bash
+npm run db:preflight
 npx eas-cli build -p android --profile production --local
 ```
 

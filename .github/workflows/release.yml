@@ -17,8 +17,20 @@ permissions:
   id-token: write
 
 jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+
+  database:
+    needs: verify
+    uses: ./.github/workflows/database-migrations.yml
+    with:
+      mode: apply
+      source_sha: ${{ github.sha }}
+    secrets: inherit
+
   release:
     name: Release
+    needs: database
     runs-on: ubuntu-latest
     outputs:
       new_release: ${{ steps.meta.outputs.new_release }}

@@ -4,12 +4,22 @@ on:
   workflow_dispatch:
 
 jobs:
+  database:
+    uses: ./.github/workflows/database-migrations.yml
+    with:
+      mode: check
+      source_sha: ${{ github.sha }}
+    secrets: inherit
+
   build-ipa:
+    needs: database
     runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4

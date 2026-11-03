@@ -1,0 +1,49 @@
+name: Verify
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Lint, typecheck, and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            website/package-lock.json
+      - run: npm ci
+      - run: npm ci
+        working-directory: website
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run typecheck
+        working-directory: website
+      - run: npm test
+      - run: npx expo config --json
+
+  database:
+    name: Replay migrations and test database
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 3.0.0
+      - name: Start disposable local database
+        run: supabase db start
+      - name: Replay migration chain without seeds
+        run: supabase db reset --no-seed
+      - name: Database regression checks
+        run: supabase test db
+      - name: Stop local database
+        if: always()
+        run: supabase stop --no-backup

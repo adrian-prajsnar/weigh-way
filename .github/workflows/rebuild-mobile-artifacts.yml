@@ -28,6 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
+      source_sha: ${{ steps.resolve.outputs.source_sha }}
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
@@ -38,15 +39,16 @@ jobs:
         id: resolve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          INPUT_VERSION="${{ inputs.version }}"
           if [ -n "$INPUT_VERSION" ]; then
             VERSION="${INPUT_VERSION#v}"
           else
             TAG=$(gh release view --json tagName -q '.tagName')
             VERSION="${TAG#v}"
           fi
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
           if ! gh release view "v${VERSION}" >/dev/null 2>&1; then
             echo "No GitHub release found for v${VERSION}." >&2
             exit 1
@@ -58,18 +60,27 @@ jobs:
             exit 1
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           echo "Building from main for GitHub release v${VERSION} (app version ${APP_VERSION})."
+
+  database:
+    needs: meta
+    uses: ./.github/workflows/database-migrations.yml
+    with:
+      mode: check
+      source_sha: ${{ needs.meta.outputs.source_sha }}
+    secrets: inherit
 
   apk:
     name: Build Android APK
-    needs: meta
+    needs: [meta, database]
     runs-on: ubuntu-latest
     timeout-minutes: 150
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ needs.meta.outputs.source_sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -95,14 +106,14 @@ jobs:
 
   ipa:
     name: Build iOS IPA
-    needs: meta
+    needs: [meta, database]
     runs-on: macos-latest
     timeout-minutes: 90
     steps:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ needs.meta.outputs.source_sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -137,7 +148,7 @@ jobs:
       - name: Checkout main
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ needs.meta.outputs.source_sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4

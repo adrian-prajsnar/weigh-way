@@ -69,7 +69,9 @@
     "test": "vitest run",
     "export-web-demo": "node scripts/export-web-demo.cjs",
     "db:start": "npx supabase start",
-    "db:reset": "npx supabase db reset"
+    "db:reset": "npx supabase db reset",
+    "db:preflight": "node scripts/db-migrations.cjs check",
+    "db:plan": "node scripts/db-migrations.cjs plan"
   },
   "private": true
 }
