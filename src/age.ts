@@ -1,4 +1,4 @@
-import { fromDateKey, getTodayDate, toDateKey } from './format';
+import { addMonths, fromDateKey, getTodayDate, toDateKey } from './format';
 import { t } from './i18n';
 import { DateRange } from './types';
 
@@ -31,27 +31,23 @@ export function getAgeOnDate(birthDateKey: string, onDateKey: string): AgeParts 
   const birth = fromDateKey(birthDateKey);
   const onDate = fromDateKey(onDateKey);
 
-  let years = onDate.getFullYear() - birth.getFullYear();
-  let monthDiff = onDate.getMonth() - birth.getMonth();
-  let dayDiff = onDate.getDate() - birth.getDate();
-
-  if (dayDiff < 0) {
-    monthDiff -= 1;
-    const previousMonth = new Date(onDate.getFullYear(), onDate.getMonth(), 0);
-    dayDiff += previousMonth.getDate();
+  let wholeMonths =
+    (onDate.getFullYear() - birth.getFullYear()) * 12 + onDate.getMonth() - birth.getMonth();
+  if (addMonths(birth, wholeMonths) > onDate) {
+    wholeMonths -= 1;
   }
-
-  if (monthDiff < 0) {
-    years -= 1;
-    monthDiff += 12;
-  }
-
-  const daysInCurrentMonth = new Date(onDate.getFullYear(), onDate.getMonth() + 1, 0).getDate();
-  const ageMonths = years * 12 + monthDiff + dayDiff / daysInCurrentMonth;
+  const anniversary = addMonths(birth, wholeMonths);
+  const nextAnniversary = addMonths(birth, wholeMonths + 1);
+  // Calendar days must not shrink or grow across daylight-saving transitions.
+  const dayNumber = (date: Date) =>
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+  const dayDiff = dayNumber(onDate) - dayNumber(anniversary);
+  const monthDays = dayNumber(nextAnniversary) - dayNumber(anniversary);
+  const ageMonths = wholeMonths + dayDiff / monthDays;
 
   return {
-    years,
-    months: monthDiff,
+    years: Math.floor(wholeMonths / 12),
+    months: wholeMonths % 12,
     days: dayDiff,
     ageMonths,
   };

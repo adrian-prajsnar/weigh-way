@@ -1,3 +1,8 @@
+const parserOpts = {
+  headerPattern: /^(\w*)(?:\((.*)\))?!?: (.*)$/,
+  breakingHeaderPattern: /^(\w*)(?:\((.*)\))?!: (.*)$/,
+};
+
 /** @type {import('semantic-release').GlobalConfig} */
 module.exports = {
   branches: ['main'],
@@ -5,14 +10,8 @@ module.exports = {
     [
       '@semantic-release/commit-analyzer',
       {
+        parserOpts,
         releaseRules: [
-          { type: 'docs', release: false },
-          { type: 'chore', release: false },
-          { type: 'style', release: false },
-          { type: 'refactor', release: false },
-          { type: 'test', release: false },
-          { type: 'build', release: false },
-          { type: 'ci', release: false },
           { scope: 'ci', release: false },
           { scope: 'dev', release: false },
           { scope: 'deps', release: false },
@@ -27,20 +26,10 @@ module.exports = {
           { scope: 'github', release: false },
           { scope: 'website', release: false },
           { scope: 'expo', release: false },
-          { type: 'fix', release: false },
-          { scope: 'auth', release: 'patch' },
-          { scope: 'app', release: 'patch' },
-          { scope: 'dashboard', release: 'patch' },
-          { scope: 'comparison', release: 'patch' },
-          { scope: 'history', release: 'patch' },
-          { scope: 'profile', release: 'patch' },
-          { scope: 'layout', release: 'patch' },
-          { scope: 'brand', release: 'patch' },
-          { scope: 'connectivity', release: 'patch' },
         ],
       },
     ],
-    '@semantic-release/release-notes-generator',
+    ['@semantic-release/release-notes-generator', { parserOpts }],
     [
       '@semantic-release/exec',
       {

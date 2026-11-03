@@ -1,15 +1,13 @@
 import { Platform } from 'react-native';
-import { ANDROID_APK_DOWNLOAD_URL, IOS_IPA_DOWNLOAD_URL } from './github-repo';
 
-export function getAppUpdateDownloadUrl(
-  platform: typeof Platform.OS,
-): string | null {
+export function getAppUpdateDownloadUrl(platform: typeof Platform.OS, tag: string): string | null {
+  const releaseUrl = `https://github.com/adrian-prajsnar/weigh-way/releases/download/${encodeURIComponent(tag)}`;
   if (platform === 'android') {
-    return ANDROID_APK_DOWNLOAD_URL;
+    return `${releaseUrl}/weigh-way.apk`;
   }
 
   if (platform === 'ios') {
-    return IOS_IPA_DOWNLOAD_URL;
+    return `${releaseUrl}/weigh-way.ipa`;
   }
 
   return null;

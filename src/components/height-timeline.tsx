@@ -7,9 +7,7 @@ import {
   formatDateLabel,
   formatHeight,
   fromDateKey,
-  getTodayDate,
   heightToInputParts,
-  parseHeightInput,
   toDateKey,
 } from '../format';
 import { useTranslation } from '../i18n/language-context';
@@ -18,6 +16,9 @@ import { UnitSystem } from '../units';
 import { useAppStyles } from '../theme/styles';
 import { webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
+import { useConfirm } from '../context/confirm-context';
+import { useTodayKey } from '../hooks/use-today-key';
+import { hasHeightDateCollision, resolveHeightCmForSave } from './height-entry-input';
 import { DateField } from './date-field';
 
 const PREVIEW_LIMIT = 1;
@@ -62,7 +63,11 @@ type HeightTimelineEditorProps = {
   isSaving: boolean;
   deletingEffectiveDate: string | null;
   onSave: (effectiveDate: string, heightCm: number) => Promise<void>;
-  onUpdate: (previousEffectiveDate: string, effectiveDate: string, heightCm: number) => Promise<void>;
+  onUpdate: (
+    previousEffectiveDate: string,
+    effectiveDate: string,
+    heightCm: number,
+  ) => Promise<void>;
   onDelete?: (effectiveDate: string) => void;
   onInvalidHeight: () => void;
 };
@@ -80,7 +85,11 @@ export function HeightTimelineEditor({
   const colors = useColors();
   const { t } = useTranslation();
   const { units } = useUnits();
-  const today = getTodayDate();
+  const todayKey = useTodayKey();
+  const today = useMemo(() => fromDateKey(todayKey), [todayKey]);
+  const { confirm } = useConfirm();
+  const savingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formMode, setFormMode] = useState<'add' | 'edit' | null>(null);
   const [editingEffectiveDate, setEditingEffectiveDate] = useState<string | null>(null);
@@ -118,7 +127,17 @@ export function HeightTimelineEditor({
   };
 
   const handleSave = async () => {
-    const heightCm = parseHeightInput(units, heightPrimaryInput, heightSecondaryInput);
+    if (savingRef.current || isSaving) return;
+    const storedHeightCm =
+      formMode === 'edit'
+        ? heightEntries.find((entry) => entry.effectiveDate === editingEffectiveDate)?.heightCm
+        : undefined;
+    const heightCm = resolveHeightCmForSave(
+      units,
+      heightPrimaryInput,
+      heightSecondaryInput,
+      storedHeightCm,
+    );
     if (heightCm === null) {
       onInvalidHeight();
       return;
@@ -126,13 +145,36 @@ export function HeightTimelineEditor({
 
     const effectiveDateKey = toDateKey(effectiveDate);
 
-    if (formMode === 'edit' && editingEffectiveDate) {
-      await onUpdate(editingEffectiveDate, effectiveDateKey, heightCm);
-    } else {
-      await onSave(effectiveDateKey, heightCm);
+    savingRef.current = true;
+    setIsSubmitting(true);
+    try {
+      const collision = hasHeightDateCollision(
+        heightEntries,
+        effectiveDateKey,
+        editingEffectiveDate,
+      );
+      if (
+        collision &&
+        !(await confirm({
+          title: t('profile.replaceHeightTitle'),
+          message: t('profile.replaceHeightMessage', { date: formatDateLabel(effectiveDateKey) }),
+          confirmLabel: t('entryForm.replaceExistingConfirm'),
+          destructive: true,
+        }))
+      )
+        return;
+      if (formMode === 'edit' && editingEffectiveDate) {
+        await onUpdate(editingEffectiveDate, effectiveDateKey, heightCm);
+      } else {
+        await onSave(effectiveDateKey, heightCm);
+      }
+      resetForm();
+    } catch {
+      // The screen reports the error; preserve the user's inputs for retry.
+    } finally {
+      savingRef.current = false;
+      setIsSubmitting(false);
     }
-
-    resetForm();
   };
 
   useEffect(() => {
@@ -147,7 +189,16 @@ export function HeightTimelineEditor({
     }
     prevUnitsRef.current = units;
 
-    const parsed = parseHeightInput(prevUnits, heightPrimaryInput, heightSecondaryInput);
+    const storedHeightCm =
+      formMode === 'edit'
+        ? heightEntries.find((entry) => entry.effectiveDate === editingEffectiveDate)?.heightCm
+        : undefined;
+    const parsed = resolveHeightCmForSave(
+      prevUnits,
+      heightPrimaryInput,
+      heightSecondaryInput,
+      storedHeightCm,
+    );
     if (parsed === null) {
       return;
     }
@@ -181,7 +232,10 @@ export function HeightTimelineEditor({
                 <Pressable
                   onPress={() => startEditing(entry)}
                   disabled={isSaving || deletingEffectiveDate !== null || isFormOpen}
-                  style={({ pressed }) => [styles.historyDeleteButton, pressed && styles.buttonPressed]}
+                  style={({ pressed }) => [
+                    styles.historyDeleteButton,
+                    pressed && styles.buttonPressed,
+                  ]}
                   hitSlop={6}
                   accessibilityRole="button"
                   accessibilityLabel={t('profile.editHeightA11y', {
@@ -222,7 +276,7 @@ export function HeightTimelineEditor({
           <Pressable
             onPress={startAdding}
             hitSlop={8}
-            disabled={isSaving}
+            disabled={isSaving || isSubmitting}
             {...webFocusTarget('text-button')}
           >
             <Text style={styles.linkText}>
@@ -233,7 +287,7 @@ export function HeightTimelineEditor({
           <Pressable
             onPress={resetForm}
             hitSlop={8}
-            disabled={isSaving}
+            disabled={isSaving || isSubmitting}
             {...webFocusTarget('text-button')}
           >
             <Text style={styles.linkText}>{t('common.cancel')}</Text>
@@ -267,7 +321,7 @@ export function HeightTimelineEditor({
                 placeholder={units === 'imperial' ? '5' : '1'}
                 placeholderTextColor={colors.textSubtle}
                 maxLength={2}
-                editable={!isSaving}
+                editable={!isSaving && !isSubmitting}
               />
             </View>
             <View style={styles.heightInputGroup}>
@@ -282,7 +336,7 @@ export function HeightTimelineEditor({
                 placeholder={units === 'imperial' ? '10' : '75'}
                 placeholderTextColor={colors.textSubtle}
                 maxLength={2}
-                editable={!isSaving}
+                editable={!isSaving && !isSubmitting}
               />
             </View>
           </View>
@@ -290,11 +344,11 @@ export function HeightTimelineEditor({
           <Pressable
             style={({ pressed }) => [
               styles.primaryButton,
-              isSaving && styles.buttonDisabled,
+              (isSaving || isSubmitting) && styles.buttonDisabled,
               pressed && styles.buttonPressed,
             ]}
             onPress={() => void handleSave()}
-            disabled={isSaving}
+            disabled={isSaving || isSubmitting}
           >
             {isSaving ? (
               <ActivityIndicator color={colors.onAccent} />

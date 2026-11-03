@@ -32,6 +32,8 @@ import {
   AUTH_PENDING_FLOW_TTL_MS,
   clearAuthPendingFlows,
   isEmailConfirmationPending,
+  getPasswordRecoveryUserId,
+  setPasswordRecoveryUserId,
   markEmailConfirmationPending,
   markPasswordResetPending,
   resolveEmailCallbackFlowKind,
@@ -40,7 +42,9 @@ import {
 describe('auth pending flow storage', () => {
   beforeEach(() => {
     storage.clear();
-    asyncStorage.getItem.mockImplementation((key: string) => Promise.resolve(storage.get(key) ?? null));
+    asyncStorage.getItem.mockImplementation((key: string) =>
+      Promise.resolve(storage.get(key) ?? null),
+    );
     asyncStorage.setItem.mockImplementation((key: string, value: string) => {
       storage.set(key, value);
       return Promise.resolve();
@@ -55,6 +59,14 @@ describe('auth pending flow storage', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('persists an active recovery separately from pending email flows', async () => {
+    await setPasswordRecoveryUserId('user-a');
+    await clearAuthPendingFlows();
+    expect(await getPasswordRecoveryUserId()).toBe('user-a');
+    await setPasswordRecoveryUserId(null);
+    expect(await getPasswordRecoveryUserId()).toBeNull();
   });
 
   it('marks email confirmation as pending within the TTL', async () => {

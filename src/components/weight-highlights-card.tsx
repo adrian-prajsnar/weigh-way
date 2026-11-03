@@ -5,9 +5,17 @@ import { useBmiDetails } from '../context/bmi-details-context';
 import { useSharedBmiDisplay } from '../context/bmi-display-context';
 import { useUnits } from '../context/unit-context';
 import { useSharedUserProfile } from '../context/user-profile-context';
-import { formatDateLabel, formatWeightDifference, formatWeightValue, getWeightUnitLabel } from '../format';
+import {
+  formatDateLabel,
+  formatWeightDifference,
+  formatWeightValue,
+  fromDateKey,
+  getDisplayedWeightDifference,
+  getWeightUnitLabel,
+} from '../format';
 import { getHeightAtDate } from '../height';
 import { useTranslation } from '../i18n/language-context';
+import { useTodayKey } from '../hooks/use-today-key';
 import { useAppStyles } from '../theme/styles';
 import { Palette } from '../theme/tokens';
 import { useColors } from '../theme/theme-context';
@@ -72,11 +80,12 @@ export function WeightHighlightsCard({
   const { showBmi } = useSharedBmiDisplay();
   const { openWeighIn } = useBmiDetails();
   const weightUnit = getWeightUnitLabel(units);
+  const todayKey = useTodayKey();
 
   const extremes = useMemo(() => getWeightExtremes(entries, birthDate), [entries, birthDate]);
   const sinceBirthday = useMemo(
-    () => getChangeSinceLastBirthday(entries, birthDate),
-    [entries, birthDate],
+    () => getChangeSinceLastBirthday(entries, birthDate, fromDateKey(todayKey)),
+    [entries, birthDate, todayKey],
   );
 
   if (!extremes) {
@@ -142,7 +151,10 @@ export function WeightHighlightsCard({
           <InsightRow
             label={t('dashboard.sinceBirthday')}
             value={formatWeightDifference(sinceBirthday.changeKg, units, locale)}
-            valueTextStyle={getWeightChangeTextStyle(sinceBirthday.changeKg, colors)}
+            valueTextStyle={getWeightChangeTextStyle(
+              getDisplayedWeightDifference(sinceBirthday.changeKg, units),
+              colors,
+            )}
             meta={formatMeta(sinceBirthday.birthday.entry.date, sinceBirthday.birthday.ageLabel)}
           />
         ) : null}

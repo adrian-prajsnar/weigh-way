@@ -1,6 +1,13 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { getI18nLocale, setI18nLocale } from './i18n';
 import {
+  addMonths,
+  addYears,
+  formatWeightDifference,
+  getDisplayedWeightDifference,
+  getWeightRangeMessage,
+  getHeightRangeMessage,
+  parseHeightInput,
   formatDecimal,
   formatWeightValue,
   fromDateKey,
@@ -87,12 +94,7 @@ describe('validateTrendDateRange', () => {
 
   it('rejects day ranges longer than one year', () => {
     expect(
-      validateTrendDateRange(
-        fromDateKey('2023-01-01'),
-        fromDateKey('2024-09-14'),
-        'day',
-        today,
-      ),
+      validateTrendDateRange(fromDateKey('2023-01-01'), fromDateKey('2024-09-14'), 'day', today),
     ).toBe('maxSpanExceeded');
   });
 });
@@ -201,11 +203,7 @@ describe('getChangeSinceLastBirthday', () => {
       },
     ];
 
-    const change = getChangeSinceLastBirthday(
-      entries,
-      '1990-09-01',
-      fromDateKey('2024-09-14'),
-    );
+    const change = getChangeSinceLastBirthday(entries, '1990-09-01', fromDateKey('2024-09-14'));
 
     expect(change?.changeKg).toBe(-1.5);
     expect(change?.latest.entry.date).toBe('2024-09-14');
@@ -215,5 +213,36 @@ describe('getChangeSinceLastBirthday', () => {
 describe('toDateKey', () => {
   it('formats dates as ISO date keys', () => {
     expect(toDateKey(new Date(2024, 8, 5))).toBe('2024-09-05');
+  });
+});
+
+describe('calendar arithmetic', () => {
+  it('caps days at the end of the target month', () => {
+    expect(toDateKey(addMonths(new Date(2023, 2, 31), -1))).toBe('2023-02-28');
+    expect(toDateKey(addMonths(new Date(2024, 0, 31), 1))).toBe('2024-02-29');
+    expect(toDateKey(addYears(new Date(2024, 1, 29), 1))).toBe('2025-02-28');
+  });
+});
+
+describe('displayed weight changes', () => {
+  it('uses the precision of the displayed unit for signs and flat changes', () => {
+    expect(getDisplayedWeightDifference(0.01, 'imperial')).toBe(0);
+    expect(getDisplayedWeightDifference(-0.01, 'imperial')).toBe(0);
+    expect(getDisplayedWeightDifference(0.03, 'imperial')).toBe(0.1);
+    expect(getDisplayedWeightDifference(-0.03, 'imperial')).toBe(-0.1);
+    expect(formatWeightDifference(0.01, 'imperial', 'en')).toBe('0.0 lb');
+    expect(formatWeightDifference(-0.01, 'imperial', 'en')).toBe('0.0 lb');
+    expect(formatWeightDifference(0.03, 'imperial', 'en')).toBe('+0.1 lb');
+  });
+});
+
+describe('imperial validation messages', () => {
+  it('advertises values that pass validation', () => {
+    expect(parseWeightInput('44.1', 'imperial')).not.toBeNull();
+    expect(parseWeightInput('661.3', 'imperial')).not.toBeNull();
+    expect(getWeightRangeMessage('imperial', 'en')).toContain('661.3');
+    expect(parseHeightInput('imperial', '3', '4')).not.toBeNull();
+    expect(parseHeightInput('imperial', '8', '2')).not.toBeNull();
+    expect(getHeightRangeMessage('imperial')).toContain('4');
   });
 });

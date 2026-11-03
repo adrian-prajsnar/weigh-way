@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { AuthLayout } from '../components/auth-layout';
 import { AuthOrDivider } from '../components/auth-or-divider';
@@ -28,6 +28,7 @@ export function SignUpScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const submittingRef = useRef(false);
   const [isGoogleBusy, setIsGoogleBusy] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
 
@@ -45,6 +46,7 @@ export function SignUpScreen({ navigation }: Props) {
   };
 
   const handleSignUp = async () => {
+    if (submittingRef.current || isGoogleBusy) return;
     if (!validateEmailField(email) || !password) {
       if (!password) {
         showError(t('auth.enterEmailPassword'));
@@ -62,6 +64,7 @@ export function SignUpScreen({ navigation }: Props) {
       return;
     }
 
+    submittingRef.current = true;
     setIsBusy(true);
     const trimmedEmail = email.trim();
     try {
@@ -76,6 +79,7 @@ export function SignUpScreen({ navigation }: Props) {
       const message = error instanceof Error ? error.message : t('auth.signUpFailed');
       showError(message);
     } finally {
+      submittingRef.current = false;
       setIsBusy(false);
     }
   };

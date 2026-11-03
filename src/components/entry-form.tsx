@@ -6,21 +6,16 @@ import { WeightEntry } from '../types';
 
 type EntryFormProps = {
   entries: WeightEntry[];
-  onSaved: () => Promise<void>;
   isDataLoading?: boolean;
 };
 
-export function EntryForm({ entries, onSaved, isDataLoading = false }: EntryFormProps) {
+export function EntryForm({ entries, isDataLoading = false }: EntryFormProps) {
   const { t } = useTranslation();
   const { isLoading: isProfileLoading } = useSharedUserProfile();
 
   return (
     <AppCard title={t('entryForm.title')} isBusy={isDataLoading || isProfileLoading} delay={60}>
-      <WeightEntryFormBody
-        entries={entries}
-        onSaved={onSaved}
-        isDataLoading={isDataLoading}
-      />
+      <WeightEntryFormBody entries={entries} isDataLoading={isDataLoading} />
     </AppCard>
   );
 }

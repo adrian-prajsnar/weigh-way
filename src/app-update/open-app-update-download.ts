@@ -1,16 +1,17 @@
 import * as WebBrowser from 'expo-web-browser';
-import { Platform } from 'react-native';
 import { isAppUpdateMockEnabled } from './app-update-mock';
-import { getAppUpdateDownloadUrl } from './get-app-update-download-url';
+import type { AvailableAppUpdate } from './get-available-app-update';
 
 export type OpenAppUpdateDownloadResult = 'opened' | 'mocked' | 'unsupported';
 
-export async function openAppUpdateDownload(): Promise<OpenAppUpdateDownloadResult> {
+export async function openAppUpdateDownload(
+  update: AvailableAppUpdate,
+): Promise<OpenAppUpdateDownloadResult> {
   if (isAppUpdateMockEnabled()) {
     return 'mocked';
   }
 
-  const downloadUrl = getAppUpdateDownloadUrl(Platform.OS);
+  const downloadUrl = update.downloadUrl;
   if (!downloadUrl) {
     return 'unsupported';
   }

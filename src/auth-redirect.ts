@@ -52,11 +52,7 @@ export function isOAuthFlowActive(): boolean {
   return oauthFlowActive;
 }
 
-export {
-  markEmailConfirmationPending,
-  markPasswordResetPending,
-  clearAuthPendingFlows,
-};
+export { markEmailConfirmationPending, markPasswordResetPending, clearAuthPendingFlows };
 
 export function beginOAuthFlowExpectation(flowId: string | null | undefined): void {
   oauthFlowExpectedUntil = Date.now() + OAUTH_FLOW_EXPECTATION_TTL_MS;
@@ -107,7 +103,9 @@ export function resetOAuthRedirectState(): void {
   void clearRememberedAuthCode().catch(() => {});
 }
 
-async function buildExchangeCandidates(params: Record<string, string>): Promise<CallbackFlowKind[]> {
+async function buildExchangeCandidates(
+  params: Record<string, string>,
+): Promise<CallbackFlowKind[]> {
   if (params[PKCE_FLOW_ID_PARAM]) {
     return ['oauth'];
   }
@@ -148,7 +146,10 @@ export async function shouldHandleAuthDeepLink(url: string): Promise<boolean> {
 
 export type OAuthSignInResult = 'success' | 'cancelled';
 
-export async function performOAuthSignIn(provider: 'google'): Promise<OAuthSignInResult> {
+export async function performOAuthSignIn(
+  provider: 'google',
+  onBrowserSuccess?: () => void,
+): Promise<OAuthSignInResult> {
   const redirectTo = getAuthRedirectUrl();
   oauthFlowActive = true;
 
@@ -185,6 +186,7 @@ export async function performOAuthSignIn(provider: 'google'): Promise<OAuthSignI
       return 'cancelled';
     }
 
+    onBrowserSuccess?.();
     await createSessionFromUrl(result.url);
     return 'success';
   } finally {
@@ -316,9 +318,7 @@ async function exchangeForFlowKind(
   }
 
   const flowId =
-    kind === 'oauth'
-      ? params[PKCE_FLOW_ID_PARAM] ?? expectedOAuthFlowId ?? undefined
-      : undefined;
+    kind === 'oauth' ? (params[PKCE_FLOW_ID_PARAM] ?? expectedOAuthFlowId ?? undefined) : undefined;
 
   const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
     authCode,
@@ -397,8 +397,7 @@ async function handleAuthCallbackUrl(url: string): Promise<void> {
       }
       lastError = error;
 
-      const canTryNextCandidate =
-        index < candidates.length - 1 && isVerifierExchangeError(error);
+      const canTryNextCandidate = index < candidates.length - 1 && isVerifierExchangeError(error);
       if (canTryNextCandidate) {
         continue;
       }

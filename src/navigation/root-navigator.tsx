@@ -10,8 +10,14 @@ import { useAppStyles } from '../theme/styles';
 export function RootNavigator() {
   const styles = useAppStyles();
   const { t } = useTranslation();
-  const { isAuthenticated, isPasswordRecovery, isLoading, isCompletingOAuth, isConfigured } =
-    useSupabaseAuth();
+  const {
+    session,
+    isAuthenticated,
+    isPasswordRecovery,
+    isLoading,
+    isCompletingOAuth,
+    isConfigured,
+  } = useSupabaseAuth();
 
   if (isLoading || isCompletingOAuth) {
     return null;
@@ -28,7 +34,7 @@ export function RootNavigator() {
     );
   }
 
-  return isPasswordRecovery ? (
+  return isPasswordRecovery && session ? (
     <AuthShell>
       <NewPasswordScreen />
     </AuthShell>

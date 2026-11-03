@@ -29,6 +29,7 @@ export type ConfirmOptions = {
 };
 
 type ConfirmContextValue = {
+  isConfirming: boolean;
   confirm: (options: ConfirmOptions) => Promise<boolean>;
 };
 
@@ -92,20 +93,28 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
+      resolverRef.current?.(false);
       idRef.current += 1;
       resolverRef.current = resolve;
       setPending({ ...options, id: idRef.current });
     });
   }, []);
 
+  useEffect(
+    () => () => {
+      resolverRef.current?.(false);
+      resolverRef.current = null;
+    },
+    [],
+  );
+
   const cancelLabel = pending?.cancelLabel ?? t('common.cancel');
   const confirmLabel = pending?.confirmLabel ?? t('common.confirm');
   const phraseRequired = Boolean(pending?.confirmationPhrase);
-  const phraseMatches =
-    !phraseRequired || phraseInput === pending?.confirmationPhrase;
+  const phraseMatches = !phraseRequired || phraseInput === pending?.confirmationPhrase;
 
   return (
-    <ConfirmContext.Provider value={{ confirm }}>
+    <ConfirmContext.Provider value={{ confirm, isConfirming: pending !== null }}>
       <View style={styles.overlayRoot}>
         {children}
         {pending ? (
@@ -141,74 +150,74 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                 {...(Platform.OS === 'web' ? { dataSet: { wwConfirmDialog: 'true' } } : {})}
               >
                 <View style={styles.confirmDialogCard}>
-                    <Text style={styles.confirmDialogTitle}>{pending.title}</Text>
-                    <Text style={styles.confirmDialogMessage}>{pending.message}</Text>
-                    {pending.confirmationPhrase ? (
-                      <View style={styles.passwordFieldGroup}>
-                        {pending.confirmationPhraseHint ? (
-                          <Text style={styles.fieldLabel}>{pending.confirmationPhraseHint}</Text>
-                        ) : null}
-                        <TextInput
-                          style={styles.input}
-                          value={phraseInput}
-                          onChangeText={setPhraseInput}
-                          autoCapitalize="characters"
-                          autoCorrect={false}
-                          placeholder={pending.confirmationPhrase}
-                          placeholderTextColor={colors.textSubtle}
-                        />
-                      </View>
-                    ) : null}
-                    <View style={styles.confirmDialogActions}>
-                      <Pressable
-                        {...getConfirmDialogPressableA11y(cancelLabel)}
-                        style={({ pressed }) => [
-                          styles.confirmDialogButton,
-                          styles.secondaryButton,
-                          pressed && styles.buttonPressed,
-                        ]}
-                        onPress={() => close(false)}
-                      >
-                        <Text
-                          style={styles.secondaryButtonText}
-                          importantForAccessibility="no-hide-descendants"
-                          accessibilityElementsHidden
-                        >
-                          {cancelLabel}
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        {...getConfirmDialogPressableA11y(confirmLabel)}
-                        disabled={!phraseMatches}
-                        accessibilityState={{ disabled: !phraseMatches }}
-                        style={({ pressed }) => [
-                          styles.confirmDialogButton,
-                          pending.destructive
-                            ? styles.confirmDialogDestructiveButton
-                            : styles.primaryButton,
-                          !phraseMatches && styles.buttonDisabled,
-                          pressed && phraseMatches && styles.buttonPressed,
-                        ]}
-                        onPress={() => {
-                          if (!secondaryActionsEnabled) {
-                            return;
-                          }
-                          close(true);
-                        }}
-                      >
-                        <Text
-                          style={
-                            pending.destructive
-                              ? styles.confirmDialogDestructiveButtonText
-                              : styles.primaryButtonText
-                          }
-                          importantForAccessibility="no-hide-descendants"
-                          accessibilityElementsHidden
-                        >
-                          {confirmLabel}
-                        </Text>
-                      </Pressable>
+                  <Text style={styles.confirmDialogTitle}>{pending.title}</Text>
+                  <Text style={styles.confirmDialogMessage}>{pending.message}</Text>
+                  {pending.confirmationPhrase ? (
+                    <View style={styles.passwordFieldGroup}>
+                      {pending.confirmationPhraseHint ? (
+                        <Text style={styles.fieldLabel}>{pending.confirmationPhraseHint}</Text>
+                      ) : null}
+                      <TextInput
+                        style={styles.input}
+                        value={phraseInput}
+                        onChangeText={setPhraseInput}
+                        autoCapitalize="characters"
+                        autoCorrect={false}
+                        placeholder={pending.confirmationPhrase}
+                        placeholderTextColor={colors.textSubtle}
+                      />
                     </View>
+                  ) : null}
+                  <View style={styles.confirmDialogActions}>
+                    <Pressable
+                      {...getConfirmDialogPressableA11y(cancelLabel)}
+                      style={({ pressed }) => [
+                        styles.confirmDialogButton,
+                        styles.secondaryButton,
+                        pressed && styles.buttonPressed,
+                      ]}
+                      onPress={() => close(false)}
+                    >
+                      <Text
+                        style={styles.secondaryButtonText}
+                        importantForAccessibility="no-hide-descendants"
+                        accessibilityElementsHidden
+                      >
+                        {cancelLabel}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      {...getConfirmDialogPressableA11y(confirmLabel)}
+                      disabled={!phraseMatches}
+                      accessibilityState={{ disabled: !phraseMatches }}
+                      style={({ pressed }) => [
+                        styles.confirmDialogButton,
+                        pending.destructive
+                          ? styles.confirmDialogDestructiveButton
+                          : styles.primaryButton,
+                        !phraseMatches && styles.buttonDisabled,
+                        pressed && phraseMatches && styles.buttonPressed,
+                      ]}
+                      onPress={() => {
+                        if (!secondaryActionsEnabled) {
+                          return;
+                        }
+                        close(true);
+                      }}
+                    >
+                      <Text
+                        style={
+                          pending.destructive
+                            ? styles.confirmDialogDestructiveButtonText
+                            : styles.primaryButtonText
+                        }
+                        importantForAccessibility="no-hide-descendants"
+                        accessibilityElementsHidden
+                      >
+                        {confirmLabel}
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             </View>

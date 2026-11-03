@@ -7,6 +7,7 @@ import { calculateBmi, BmiInfo, classifyBmiValue, formatBmiValue } from '../bmi'
 import { useUnits } from '../context/unit-context';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import {
+  formatDecimal,
   formatDateLabel,
   formatDateRange,
   formatDateTime,
@@ -99,7 +100,7 @@ function unclassifiedNote(bmi: BmiInfo): string | null {
 
 function BmiClassificationRows({ bmi }: { bmi: BmiInfo | null }) {
   const styles = useAppStyles();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
 
   if (!bmi) {
     return <CategoryRow bmi={null} />;
@@ -112,28 +113,23 @@ function BmiClassificationRows({ bmi }: { bmi: BmiInfo | null }) {
       <CategoryRow bmi={bmi} />
       <DetailRow label={t('bmi.method')} value={classificationLabel(bmi)} />
       {bmi.percentile !== null ? (
-        <DetailRow label={t('bmi.percentile')} value={String(bmi.percentile)} />
+        <DetailRow
+          label={t('bmi.percentile')}
+          value={formatDecimal(bmi.percentile, 0, 1, locale)}
+        />
       ) : null}
       {note ? <Text style={styles.bmiDetailsNote}>{note}</Text> : null}
     </>
   );
 }
 
-function WeighInDetails({
-  date,
-  weightKg,
-  createdAt,
-  updatedAt,
-}: Omit<WeighInBmiDetails, 'type'>) {
+function WeighInDetails({ date, weightKg, createdAt, updatedAt }: Omit<WeighInBmiDetails, 'type'>) {
   const styles = useAppStyles();
   const { t, locale } = useTranslation();
   const { units } = useUnits();
   const { heightEntries, birthDate, sex } = useSharedUserProfile();
   const heightCm = getHeightAtDate(heightEntries, date);
-  const bmi =
-    heightCm === null
-      ? null
-      : calculateBmi(weightKg, heightCm, { date, birthDate, sex });
+  const bmi = heightCm === null ? null : calculateBmi(weightKg, heightCm, { date, birthDate, sex });
   const unavailable = t('common.emDash');
   const age = birthDate ? getAgeOnDate(birthDate, date) : null;
 
@@ -180,8 +176,7 @@ function PeriodDetails({ metric, range, entries }: Omit<PeriodBmiDetails, 'type'
   const stats = getBmiStatsForRange(entries, heightEntries, range);
   const missing = stats.totalCount - stats.count;
   const unavailable = t('common.emDash');
-  const aggregate =
-    metric === 'average' ? stats.average : metric === 'min' ? stats.min : stats.max;
+  const aggregate = metric === 'average' ? stats.average : metric === 'min' ? stats.min : stats.max;
   const sourceDate =
     metric === 'min' ? stats.minDate : metric === 'max' ? stats.maxDate : range.end;
   const aggregateBmi =
@@ -210,7 +205,11 @@ function PeriodDetails({ metric, range, entries }: Omit<PeriodBmiDetails, 'type'
       ) : (
         <>
           <Text style={styles.bmiDetailsNote}>
-            {t('bmi.coverage', { withBmi: stats.count, total: stats.totalCount })}
+            {t('bmi.coverage', {
+              count: stats.totalCount,
+              withBmi: stats.count,
+              total: stats.totalCount,
+            })}
           </Text>
           {missing > 0 ? (
             <Text style={styles.bmiDetailsNote}>{t('bmi.missingHeight', { count: missing })}</Text>
@@ -236,14 +235,17 @@ export function BmiDetailsModal({ details, onClose }: BmiDetailsModalProps) {
   const styles = useAppStyles();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const sheetContainerStyle = useSheetContainerStyle({ paddingBottom: Math.max(insets.bottom, 16) });
+  const sheetContainerStyle = useSheetContainerStyle({
+    paddingBottom: Math.max(insets.bottom, 16),
+  });
   const { t } = useTranslation();
 
   if (!details) {
     return null;
   }
 
-  const title = details.type === 'period' ? t(periodTitleKey(details.metric)) : t('bmi.detailsTitle');
+  const title =
+    details.type === 'period' ? t(periodTitleKey(details.metric)) : t('bmi.detailsTitle');
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
@@ -269,7 +271,11 @@ export function BmiDetailsModal({ details, onClose }: BmiDetailsModalProps) {
               updatedAt={details.updatedAt}
             />
           ) : (
-            <PeriodDetails metric={details.metric} range={details.range} entries={details.entries} />
+            <PeriodDetails
+              metric={details.metric}
+              range={details.range}
+              entries={details.entries}
+            />
           )}
         </View>
       </View>

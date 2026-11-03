@@ -3,7 +3,6 @@ import {
   fromDateKey,
   getDefaultTrendDateRange,
   getTrendDateRangeValidationMessageKey,
-  getTodayDate,
   toDateKey,
   getTrendDateRangeFieldHighlight,
   validateTrendDateRange,
@@ -11,6 +10,7 @@ import {
 import { getComparison, getEarliestEntryDate, getTrendRows } from '../stats';
 import { ComparisonMode, CustomCompareKind, TrendGranularity, WeightEntry } from '../types';
 import { runWhenIdle } from '../run-when-idle';
+import { useTodayKey } from './use-today-key';
 import { TranslationKey } from '../i18n/translation-keys';
 
 function isTrendMode(mode: ComparisonMode): mode is TrendGranularity {
@@ -26,7 +26,8 @@ type UseComparisonOptions = {
 
 export function useComparison({ entries, isLoading, birthDate, t }: UseComparisonOptions) {
   const listReadyTaskRef = useRef<ReturnType<typeof runWhenIdle> | null>(null);
-  const today = getTodayDate();
+  const todayKey = useTodayKey();
+  const today = useMemo(() => fromDateKey(todayKey), [todayKey]);
   const [isListReady, setIsListReady] = useState(false);
   const [mode, setMode] = useState<ComparisonMode>('day');
 
@@ -37,6 +38,22 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
   );
   const [fromDate, setFromDate] = useState(defaultTrendRange.from);
   const [toDate, setToDate] = useState(defaultTrendRange.to);
+
+  const previousTodayRef = useRef(today);
+  useEffect(() => {
+    const previousToday = previousTodayRef.current;
+    previousTodayRef.current = today;
+    if (!isTrendMode(mode) || toDateKey(previousToday) === todayKey) return;
+    const previous = getDefaultTrendDateRange(mode, previousToday, birthDate, earliestWeighInDate);
+    if (
+      toDateKey(fromDate) === toDateKey(previous.from) &&
+      toDateKey(toDate) === toDateKey(previous.to)
+    ) {
+      const next = getDefaultTrendDateRange(mode, today, birthDate, earliestWeighInDate);
+      setFromDate(next.from);
+      setToDate(next.to);
+    }
+  }, [birthDate, earliestWeighInDate, fromDate, mode, toDate, today, todayKey]);
 
   const [customKind, setCustomKind] = useState<CustomCompareKind>('period');
 
@@ -128,9 +145,7 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
       return true;
     }
     const defaultRange = getDefaultTrendDateRange(mode, today, birthDate, earliestWeighInDate);
-    return (
-      fromKey === toDateKey(defaultRange.from) && toKey === toDateKey(defaultRange.to)
-    );
+    return fromKey === toDateKey(defaultRange.from) && toKey === toDateKey(defaultRange.to);
   }, [birthDate, earliestWeighInDate, fromKey, mode, today, toKey]);
 
   const appliedEarliestWeighInRef = useRef<string | null | undefined>(undefined);
@@ -143,12 +158,7 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
       return;
     }
 
-    const entryAwareDefault = getDefaultTrendDateRange(
-      mode,
-      today,
-      birthDate,
-      earliestWeighInDate,
-    );
+    const entryAwareDefault = getDefaultTrendDateRange(mode, today, birthDate, earliestWeighInDate);
     if (
       fromKey === toDateKey(entryAwareDefault.from) &&
       toKey === toDateKey(entryAwareDefault.to)
@@ -158,31 +168,16 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     }
 
     const preDataDefault = getDefaultTrendDateRange(mode, today, birthDate);
-    if (
-      fromKey !== toDateKey(preDataDefault.from) ||
-      toKey !== toDateKey(preDataDefault.to)
-    ) {
+    if (fromKey !== toDateKey(preDataDefault.from) || toKey !== toDateKey(preDataDefault.to)) {
       appliedEarliestWeighInRef.current = earliestWeighInDate;
       return;
     }
 
     appliedEarliestWeighInRef.current = earliestWeighInDate;
     applyDefaultRange(mode);
-  }, [
-    applyDefaultRange,
-    birthDate,
-    earliestWeighInDate,
-    fromKey,
-    isLoading,
-    mode,
-    today,
-    toKey,
-  ]);
+  }, [applyDefaultRange, birthDate, earliestWeighInDate, fromKey, isLoading, mode, today, toKey]);
 
-  const filterRange = useMemo(
-    () => ({ start: fromKey, end: toKey }),
-    [fromKey, toKey],
-  );
+  const filterRange = useMemo(() => ({ start: fromKey, end: toKey }), [fromKey, toKey]);
 
   const trendRows = useMemo(() => {
     if (!isListReady || !isTrendMode(mode) || isInvalidRange) {
@@ -244,10 +239,12 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     (customRanges.rangeA.start > customRanges.rangeA.end ||
       customRanges.rangeB.start > customRanges.rangeB.end);
 
-  const rangeAInvalid =
-    Boolean(rangeAStart && rangeAEnd && toDateKey(rangeAStart) > toDateKey(rangeAEnd));
-  const rangeBInvalid =
-    Boolean(rangeBStart && rangeBEnd && toDateKey(rangeBStart) > toDateKey(rangeBEnd));
+  const rangeAInvalid = Boolean(
+    rangeAStart && rangeAEnd && toDateKey(rangeAStart) > toDateKey(rangeAEnd),
+  );
+  const rangeBInvalid = Boolean(
+    rangeBStart && rangeBEnd && toDateKey(rangeBStart) > toDateKey(rangeBEnd),
+  );
 
   const handleModeChange = (nextMode: ComparisonMode) => {
     if (nextMode === 'custom' && mode !== 'custom') {

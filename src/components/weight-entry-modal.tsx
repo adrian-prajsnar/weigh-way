@@ -17,7 +17,6 @@ type WeightEntryModalProps = {
   date: string | null;
   entries: WeightEntry[];
   onClose: () => void;
-  onSaved: () => Promise<void>;
   isDataLoading?: boolean;
 };
 
@@ -26,7 +25,6 @@ export function WeightEntryModal({
   date,
   entries,
   onClose,
-  onSaved,
   isDataLoading = false,
 }: WeightEntryModalProps) {
   const styles = useAppStyles();
@@ -77,7 +75,6 @@ export function WeightEntryModal({
             <WeightEntryFormBody
               key={date}
               entries={entries}
-              onSaved={onSaved}
               isDataLoading={isDataLoading}
               initialDate={fromDateKey(date)}
               onSaveSuccess={onClose}

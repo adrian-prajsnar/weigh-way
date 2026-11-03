@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveAppUpdateCheck } from './resolve-app-update-check';
 
+vi.mock('react-native', () => ({ Platform: { OS: 'android' } }));
+
 describe('resolveAppUpdateCheck', () => {
   beforeEach(() => {
     vi.stubGlobal('__DEV__', true);
@@ -19,6 +21,7 @@ describe('resolveAppUpdateCheck', () => {
     await expect(resolveAppUpdateCheck()).resolves.toEqual({
       mode: 'mock',
       latestVersion: '99.0.0',
+      downloadUrl: null,
     });
   });
 
@@ -29,6 +32,7 @@ describe('resolveAppUpdateCheck', () => {
     await expect(resolveAppUpdateCheck()).resolves.toEqual({
       mode: 'mock',
       latestVersion: '12.1.0',
+      downloadUrl: null,
     });
   });
 
@@ -42,13 +46,18 @@ describe('resolveAppUpdateCheck', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ tag_name: 'v2.0.0' }),
+        json: async () => ({
+          tag_name: 'v2.0.0',
+          assets: [{ name: 'weigh-way.apk', state: 'uploaded' }],
+        }),
       }),
     );
 
     await expect(resolveAppUpdateCheck()).resolves.toEqual({
       mode: 'github',
       latestVersion: '2.0.0',
+      downloadUrl:
+        'https://github.com/adrian-prajsnar/weigh-way/releases/download/v2.0.0/weigh-way.apk',
     });
   });
 
@@ -59,13 +68,18 @@ describe('resolveAppUpdateCheck', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ tag_name: 'v2.0.0' }),
+        json: async () => ({
+          tag_name: 'v2.0.0',
+          assets: [{ name: 'weigh-way.apk', state: 'uploaded' }],
+        }),
       }),
     );
 
     await expect(resolveAppUpdateCheck()).resolves.toEqual({
       mode: 'github',
       latestVersion: '2.0.0',
+      downloadUrl:
+        'https://github.com/adrian-prajsnar/weigh-way/releases/download/v2.0.0/weigh-way.apk',
     });
   });
 });

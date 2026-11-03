@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const browserState = vi.hoisted(() => ({ openAuthSessionAsync: vi.fn() }));
+
 const authState = vi.hoisted(() => ({
   exchangeCodeForSession: vi.fn(),
   signInWithOAuth: vi.fn(),
@@ -61,6 +63,7 @@ vi.mock('./storage/oauth-flow-expectation', () => ({
 
 vi.mock('expo-web-browser', () => ({
   maybeCompleteAuthSession: vi.fn(),
+  openAuthSessionAsync: browserState.openAuthSessionAsync,
 }));
 
 const exchangedCodeState = vi.hoisted(() => ({
@@ -68,7 +71,9 @@ const exchangedCodeState = vi.hoisted(() => ({
 }));
 
 vi.mock('./storage/auth-last-exchanged-code', () => ({
-  isAuthCodeAlreadyExchanged: vi.fn(async (code: string) => exchangedCodeState.remembered.has(code)),
+  isAuthCodeAlreadyExchanged: vi.fn(async (code: string) =>
+    exchangedCodeState.remembered.has(code),
+  ),
   rememberExchangedAuthCode: vi.fn(async (code: string) => {
     exchangedCodeState.remembered.add(code);
   }),
@@ -82,6 +87,7 @@ import { formatAuthLinkError } from './auth-errors';
 import { rememberExchangedAuthCode } from './storage/auth-last-exchanged-code';
 import {
   beginOAuthFlowExpectation,
+  performOAuthSignIn,
   createSessionFromUrl,
   resetOAuthRedirectState,
 } from './auth-redirect';
@@ -111,6 +117,35 @@ describe('auth deep link handling', () => {
   afterEach(() => {
     vi.clearAllMocks();
     resetOAuthRedirectState();
+  });
+
+  it('does not begin completing OAuth when the browser is cancelled', async () => {
+    authState.signInWithOAuth.mockResolvedValue({
+      data: { url: 'https://accounts.google.com', flowId: 'flow-a' },
+      error: null,
+    });
+    browserState.openAuthSessionAsync.mockResolvedValue({ type: 'cancel' });
+    const onBrowserSuccess = vi.fn();
+    await expect(performOAuthSignIn('google', onBrowserSuccess)).resolves.toBe('cancelled');
+    expect(onBrowserSuccess).not.toHaveBeenCalled();
+    expect(authState.exchangeCodeForSession).not.toHaveBeenCalled();
+  });
+
+  it('begins completing OAuth after browser success and before exchanging the code', async () => {
+    authState.signInWithOAuth.mockResolvedValue({
+      data: { url: 'https://accounts.google.com', flowId: 'flow-a' },
+      error: null,
+    });
+    browserState.openAuthSessionAsync.mockResolvedValue({
+      type: 'success',
+      url: 'weighway://auth/callback?code=oauth-a&sb_flow_id=flow-a',
+    });
+    const onBrowserSuccess = vi.fn();
+    authState.exchangeCodeForSession.mockImplementation(async () => {
+      expect(onBrowserSuccess).toHaveBeenCalledOnce();
+      return { data: { session: {} }, error: null };
+    });
+    await expect(performOAuthSignIn('google', onBrowserSuccess)).resolves.toBe('success');
   });
 
   it('dedupes in-flight exchange for the same code across callback URLs', async () => {

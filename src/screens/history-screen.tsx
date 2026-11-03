@@ -15,6 +15,7 @@ import { useToast } from '../context/toast-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
+import { useTodayKey } from '../hooks/use-today-key';
 import { useWideLayout } from '../hooks/use-wide-layout';
 import { useTranslation } from '../i18n/language-context';
 import {
@@ -22,7 +23,7 @@ import {
   getDefaultHistoryDateRange,
   getHistoryDateRangeFieldHighlight,
   getHistoryDateRangeValidationMessageKey,
-  getTodayDate,
+  fromDateKey,
   toDateKey,
   validateHistoryDateRange,
 } from '../format';
@@ -45,10 +46,20 @@ export function HistoryScreen() {
   const { scrollY, onScroll } = useScrollHeader();
   const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
   const isWideLayout = useWideLayout();
-  const today = getTodayDate();
+  const todayKey = useTodayKey();
+  const today = useMemo(() => fromDateKey(todayKey), [todayKey]);
   const defaultRange = useMemo(() => getDefaultHistoryDateRange(today), [today]);
   const [fromDate, setFromDate] = useState(() => defaultRange.from);
   const [toDate, setToDate] = useState(() => defaultRange.to);
+  const previousDefaultRange = useRef(defaultRange);
+  useEffect(() => {
+    const previous = previousDefaultRange.current;
+    setFromDate((date) =>
+      toDateKey(date) === toDateKey(previous.from) ? defaultRange.from : date,
+    );
+    setToDate((date) => (toDateKey(date) === toDateKey(previous.to) ? defaultRange.to : date));
+    previousDefaultRange.current = defaultRange;
+  }, [defaultRange]);
   const [isListReady, setIsListReady] = useState(false);
   const hasActivatedListRef = useRef(false);
   const [isClearingFilter, setIsClearingFilter] = useState(false);
@@ -132,7 +143,8 @@ export function HistoryScreen() {
             await removeEntry(date);
             showSuccess(t('history.deleted', { date: dateLabel }));
           } catch (deleteError) {
-            const message = deleteError instanceof Error ? deleteError.message : t('history.deleteFailed');
+            const message =
+              deleteError instanceof Error ? deleteError.message : t('history.deleteFailed');
             showError(message);
           }
         })();
@@ -187,73 +199,73 @@ export function HistoryScreen() {
             />
           }
         >
-        {error && !isLoading ? (
-          <ErrorCard message={error} onRetry={() => void refreshEntries().catch(() => undefined)} />
-        ) : null}
-
-        <AppCard delay={0}>
-          <View
-            style={[
-              styles.historyDateFilters,
-              isWideLayout && styles.historyDateFiltersWide,
-            ]}
-          >
-            <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
-              <DateField
-                label={t('history.from')}
-                value={fromDate}
-                onChange={handleFromChange}
-                maximumDate={toDate}
-                invalid={rangeFieldHighlight.from}
-              />
-            </View>
-            <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
-              <DateField
-                label={t('history.to')}
-                value={toDate}
-                onChange={handleToChange}
-                maximumDate={today}
-                invalid={rangeFieldHighlight.to}
-              />
-            </View>
-          </View>
-          {isFilterCustom || isClearingFilter ? (
-            <View style={styles.filterActionsRow}>
-              <Pressable
-                onPress={clearFilter}
-                disabled={isClearingFilter}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityState={{ busy: isClearingFilter }}
-                {...webFocusTarget('text-button')}
-              >
-                {isClearingFilter ? (
-                  <ActivityIndicator size="small" color={colors.accent} />
-                ) : (
-                  <Text style={styles.linkText}>{t('history.clearAll')}</Text>
-                )}
-              </Pressable>
-            </View>
-          ) : null}
-          {rangeValidationMessage ? (
-            <Text style={styles.warningText}>{rangeValidationMessage}</Text>
-          ) : null}
-        </AppCard>
-
-        <AppCard isBusy={isRefreshing && showListContent} delay={60}>
-          {showListContent ? (
-            <HistoryList
-              entries={filteredEntries}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              deletingDate={deletingDate}
-              emptyMessage={emptyMessage}
-              grouped
+          {error && !isLoading ? (
+            <ErrorCard
+              message={error}
+              onRetry={() => void refreshEntries().catch(() => undefined)}
             />
-          ) : (
-            <HistoryListSkeleton rows={6} />
-          )}
-        </AppCard>
+          ) : null}
+
+          <AppCard delay={0}>
+            <View
+              style={[styles.historyDateFilters, isWideLayout && styles.historyDateFiltersWide]}
+            >
+              <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
+                <DateField
+                  label={t('history.from')}
+                  value={fromDate}
+                  onChange={handleFromChange}
+                  maximumDate={toDate}
+                  invalid={rangeFieldHighlight.from}
+                />
+              </View>
+              <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
+                <DateField
+                  label={t('history.to')}
+                  value={toDate}
+                  onChange={handleToChange}
+                  maximumDate={today}
+                  invalid={rangeFieldHighlight.to}
+                />
+              </View>
+            </View>
+            {isFilterCustom || isClearingFilter ? (
+              <View style={styles.filterActionsRow}>
+                <Pressable
+                  onPress={clearFilter}
+                  disabled={isClearingFilter}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityState={{ busy: isClearingFilter }}
+                  {...webFocusTarget('text-button')}
+                >
+                  {isClearingFilter ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Text style={styles.linkText}>{t('history.clearAll')}</Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : null}
+            {rangeValidationMessage ? (
+              <Text style={styles.warningText}>{rangeValidationMessage}</Text>
+            ) : null}
+          </AppCard>
+
+          <AppCard isBusy={isRefreshing && showListContent} delay={60}>
+            {showListContent ? (
+              <HistoryList
+                entries={filteredEntries}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                deletingDate={deletingDate}
+                emptyMessage={emptyMessage}
+                grouped
+              />
+            ) : (
+              <HistoryListSkeleton rows={6} />
+            )}
+          </AppCard>
         </Animated.ScrollView>
       </ContentFrame>
 
@@ -262,10 +274,9 @@ export function HistoryScreen() {
         date={editingDate}
         entries={entries}
         onClose={() => setEditingDate(null)}
-        onSaved={refreshEntries}
+
         isDataLoading={isLoading}
       />
     </View>
   );
 }
-

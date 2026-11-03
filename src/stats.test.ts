@@ -67,11 +67,7 @@ describe('filterEntriesByRange', () => {
       start: '2024-01-01',
       end: '2024-12-31',
     });
-    expect(filtered.map((entry) => entry.date)).toEqual([
-      '2024-01-15',
-      '2024-06-01',
-      '2024-06-02',
-    ]);
+    expect(filtered.map((entry) => entry.date)).toEqual(['2024-01-15', '2024-06-01', '2024-06-02']);
   });
 });
 
@@ -107,11 +103,7 @@ describe('getLast7WeighIns', () => {
 
 describe('getTrendRows', () => {
   it('builds daily rows with per-day weights and deltas', () => {
-    const rows = getTrendRows(
-      entries,
-      'day',
-      { start: '2024-06-01', end: '2024-06-02' },
-    );
+    const rows = getTrendRows(entries, 'day', { start: '2024-06-01', end: '2024-06-02' });
 
     expect(rows).toHaveLength(2);
     expect(rows[0].stats.average).toBe(76.5);
@@ -119,11 +111,7 @@ describe('getTrendRows', () => {
   });
 
   it('omits days without a weigh-in from daily trend rows', () => {
-    const rows = getTrendRows(
-      entries,
-      'day',
-      { start: '2024-06-01', end: '2024-06-03' },
-    );
+    const rows = getTrendRows(entries, 'day', { start: '2024-06-01', end: '2024-06-03' });
 
     expect(rows.map((row) => row.range.start)).toEqual(['2024-06-02', '2024-06-01']);
     expect(rows).toHaveLength(2);
@@ -131,11 +119,7 @@ describe('getTrendRows', () => {
   });
 
   it('omits weeks without weigh-ins from weekly trend rows', () => {
-    const rows = getTrendRows(
-      entries,
-      'week',
-      { start: '2024-06-01', end: '2024-06-16' },
-    );
+    const rows = getTrendRows(entries, 'week', { start: '2024-06-01', end: '2024-06-16' });
 
     expect(rows.every((row) => row.stats.count > 0)).toBe(true);
     expect(rows).toHaveLength(1);
@@ -144,15 +128,18 @@ describe('getTrendRows', () => {
 });
 
 describe('getComparison', () => {
+  it('uses newer minus older even when the older custom range is selected first', () => {
+    const result = getComparison(entries, 'custom', {
+      rangeA: { start: '2024-01-15', end: '2024-01-15' },
+      rangeB: { start: '2024-06-01', end: '2024-06-02' },
+    });
+    expect(result?.difference).toBe(-1.25);
+  });
   it('compares custom period averages', () => {
-    const result = getComparison(
-      entries,
-      'custom',
-      {
-        rangeA: { start: '2024-06-01', end: '2024-06-02' },
-        rangeB: { start: '2024-01-15', end: '2024-01-15' },
-      },
-    );
+    const result = getComparison(entries, 'custom', {
+      rangeA: { start: '2024-06-01', end: '2024-06-02' },
+      rangeB: { start: '2024-01-15', end: '2024-01-15' },
+    });
 
     expect(result?.statsA.average).toBe(76.75);
     expect(result?.statsB.average).toBe(78);

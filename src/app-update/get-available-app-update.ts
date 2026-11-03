@@ -7,6 +7,7 @@ export type AvailableAppUpdate = {
   mode: 'mock' | 'github';
   currentVersion: string;
   latestVersion: string;
+  downloadUrl: string | null;
 };
 
 export async function getAvailableAppUpdate(): Promise<AvailableAppUpdate | null> {
@@ -28,5 +29,6 @@ export async function getAvailableAppUpdate(): Promise<AvailableAppUpdate | null
     mode: check.mode,
     currentVersion,
     latestVersion: check.latestVersion,
+    downloadUrl: check.downloadUrl,
   };
 }

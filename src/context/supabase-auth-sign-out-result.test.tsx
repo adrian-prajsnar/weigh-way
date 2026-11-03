@@ -42,6 +42,8 @@ vi.mock('../storage/pkce-verifier-backup', () => ({
 
 vi.mock('../storage/auth-pending-flow', () => ({
   getAuthLinkErrorContext: vi.fn().mockResolvedValue({}),
+  getPasswordRecoveryUserId: vi.fn().mockResolvedValue(null),
+  setPasswordRecoveryUserId: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../demo/is-demo-mode', () => ({
@@ -102,6 +104,33 @@ describe('supabase auth signOut result handling', () => {
     authState.onAuthStateChange.mockImplementation(() => ({
       data: { subscription: { unsubscribe: vi.fn() } },
     }));
+  });
+
+  it.each([429, 500])(
+    'succeeds after a %s error when the library already cleared the session',
+    async (status) => {
+      const { result } = renderHook(() => useSupabaseAuth(), {
+        wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+      });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      authState.signOut.mockResolvedValue({ error: { status, message: 'Server logout failed' } });
+      authState.getSession.mockResolvedValue({ data: { session: null }, error: null });
+
+      await act(async () => {
+        await expect(result.current.signOut()).resolves.toEqual({ offlineNotice: false });
+      });
+      expect(result.current.session).toBeNull();
+    },
+  );
+
+  it('reports a server failure when the session is still active', async () => {
+    const { result } = renderHook(() => useSupabaseAuth(), {
+      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    authState.signOut.mockResolvedValue({ error: { status: 403, message: 'Forbidden' } });
+    await expect(result.current.signOut()).rejects.toThrow('profile.signOutFailed');
+    expect(result.current.session).toEqual(sampleSession);
   });
 
   it('returns offlineNotice when sign-out cannot reach the server', async () => {

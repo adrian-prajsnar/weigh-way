@@ -1,6 +1,14 @@
 import { Session } from '@supabase/supabase-js';
 import * as Linking from 'expo-linking';
-import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   formatAuthLinkError,
   formatDeleteAccountError,
@@ -24,9 +32,16 @@ import {
   performOAuthSignIn,
   resetOAuthRedirectState,
 } from '../auth-redirect';
-import { getAuthLinkErrorContext } from '../storage/auth-pending-flow';
+import {
+  getAuthLinkErrorContext,
+  getPasswordRecoveryUserId,
+  setPasswordRecoveryUserId,
+} from '../storage/auth-pending-flow';
 import { clearPkceVerifierBackups } from '../storage/pkce-verifier-backup';
-import { registerSupabaseAppLifecycle, refreshSessionOnForeground } from '../supabase/app-lifecycle';
+import {
+  registerSupabaseAppLifecycle,
+  refreshSessionOnForeground,
+} from '../supabase/app-lifecycle';
 import { clearPersistedAuthSession } from '../supabase/auth-storage-key';
 import { isSupabaseConfigured, supabase } from '../supabase/client';
 import { createDemoSession } from '../demo/demo-session';
@@ -65,12 +80,13 @@ const SupabaseAuthContext = createContext<SupabaseAuthContextValue | null>(null)
 
 async function signOutWithOfflineSupport(): Promise<{ offlineNotice: boolean }> {
   let offlineNotice = false;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
 
   try {
     const { error } = await Promise.race([
       supabase.auth.signOut(),
       new Promise<{ error: Error }>((_, reject) => {
-        setTimeout(() => reject(new Error('sign_out_timeout')), SIGN_OUT_TIMEOUT_MS);
+        timeout = setTimeout(() => reject(new Error('sign_out_timeout')), SIGN_OUT_TIMEOUT_MS);
       }),
     ]);
     if (error) {
@@ -82,8 +98,13 @@ async function signOutWithOfflineSupport(): Promise<{ offlineNotice: boolean }> 
     if (isNetworkError(error) || message.includes('sign_out_timeout')) {
       offlineNotice = true;
     } else {
-      throw new Error(formatSignOutError(error));
+      const sessionResult = await supabase.auth.getSession().catch(() => null);
+      if (!sessionResult || sessionResult.error || sessionResult.data.session) {
+        throw new Error(formatSignOutError(error));
+      }
     }
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (offlineNotice) {
@@ -98,10 +119,13 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCompletingOAuth, setIsCompletingOAuth] = useState(false);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+  const [recoveryUserId, setRecoveryUserId] = useState<string | null>(null);
+  const authEventRevision = useRef(0);
+  const recoveryRevision = useRef(0);
   const [authLinkError, setAuthLinkError] = useState<string | null>(null);
   const completingSignUpRef = useRef(false);
 
+  const isPasswordRecovery = Boolean(session && recoveryUserId === session.user.id);
   const isAuthenticated = Boolean(session) && !completingSignUpRef.current && !isPasswordRecovery;
 
   const clearAuthLinkError = useCallback(() => {
@@ -116,9 +140,6 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
     const linkContext = await getAuthLinkErrorContext();
     try {
       await createSessionFromUrl(url);
-      if (linkContext.isPasswordRecovery) {
-        setIsPasswordRecovery(true);
-      }
     } catch (error) {
       setAuthLinkError(formatAuthLinkError(error, linkContext));
     }
@@ -145,12 +166,28 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       }
     }, SESSION_BOOTSTRAP_TIMEOUT_MS);
 
-    void supabase.auth
-      .getSession()
-      .then(({ data: { session: activeSession } }) => {
-        if (activeSession) {
-          setSession(activeSession);
-        }
+    const bootstrapAuthRevision = authEventRevision.current;
+    const bootstrapRecoveryRevision = recoveryRevision.current;
+    void Promise.all([supabase.auth.getSession(), getPasswordRecoveryUserId()])
+      .then(
+        ([
+          {
+            data: { session: activeSession },
+          },
+          storedRecoveryUserId,
+        ]) => {
+          if (authEventRevision.current === bootstrapAuthRevision && activeSession) {
+            setSession(activeSession);
+          }
+          if (recoveryRevision.current === bootstrapRecoveryRevision) {
+            setRecoveryUserId(
+              activeSession?.user.id === storedRecoveryUserId ? storedRecoveryUserId : null,
+            );
+          }
+        },
+      )
+      .catch(() => {
+        // The auth listener can still recover the session after a failed bootstrap.
       })
       .finally(() => {
         isBootstrapSettled = true;
@@ -160,12 +197,17 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, activeSession) => {
+      if (event !== 'INITIAL_SESSION') authEventRevision.current += 1;
       setSession(activeSession);
       if (event === 'PASSWORD_RECOVERY' && activeSession) {
-        setIsPasswordRecovery(true);
+        recoveryRevision.current += 1;
+        setRecoveryUserId(activeSession.user.id);
+        void setPasswordRecoveryUserId(activeSession.user.id);
       }
       if (event === 'SIGNED_OUT') {
-        setIsPasswordRecovery(false);
+        recoveryRevision.current += 1;
+        setRecoveryUserId(null);
+        void setPasswordRecoveryUserId(null);
         void clearAuthPendingFlows();
         resetOAuthRedirectState();
       }
@@ -198,13 +240,15 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatSignInError(error));
     }
     await clearAuthPendingFlows();
+    await setPasswordRecoveryUserId(null);
+    recoveryRevision.current += 1;
+    setRecoveryUserId(null);
     resetOAuthRedirectState();
   }, []);
 
   const signInWithGoogle = useCallback(async (): Promise<boolean> => {
-    setIsCompletingOAuth(true);
     try {
-      const result = await performOAuthSignIn('google');
+      const result = await performOAuthSignIn('google', () => setIsCompletingOAuth(true));
       if (result === 'cancelled') {
         return false;
       }
@@ -262,6 +306,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const result = await signOutWithOfflineSupport();
+      setSession(null);
+      recoveryRevision.current += 1;
+      setRecoveryUserId(null);
+      await setPasswordRecoveryUserId(null);
       return result;
     } finally {
       resetOAuthRedirectState();
@@ -323,7 +371,9 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       throw new Error(formatUpdatePasswordError(error));
     }
 
-    setIsPasswordRecovery(false);
+    recoveryRevision.current += 1;
+    setRecoveryUserId(null);
+    await setPasswordRecoveryUserId(null);
   }, []);
 
   return (

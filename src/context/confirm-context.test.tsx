@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -25,6 +25,15 @@ import { ThemeProvider } from '../theme/theme-context';
 import { listConfirmDialogFocusables } from './confirm-dialog-focus-web';
 import { ConfirmProvider, useConfirm } from './confirm-context';
 /* eslint-enable import/first */
+
+let requestConfirm: ReturnType<typeof useConfirm>['confirm'];
+function CaptureConfirm() {
+  const { confirm } = useConfirm();
+  useEffect(() => {
+    requestConfirm = confirm;
+  }, [confirm]);
+  return null;
+}
 
 function OpenReplaceConfirmOnMount() {
   const { confirm } = useConfirm();
@@ -72,6 +81,29 @@ function TestShell() {
 describe('ConfirmProvider', () => {
   afterEach(() => {
     cleanup();
+  });
+
+  it('cancels a replaced request and settles the remaining request on unmount', async () => {
+    const { unmount } = render(
+      <ThemeProvider>
+        <LanguageProvider>
+          <ConfirmProvider>
+            <CaptureConfirm />
+          </ConfirmProvider>
+        </LanguageProvider>
+      </ThemeProvider>,
+    );
+    await waitFor(() => expect(requestConfirm).toBeTypeOf('function'));
+    let first!: Promise<boolean>;
+    let second!: Promise<boolean>;
+    act(() => {
+      first = requestConfirm({ title: 'First', message: 'First request' });
+      second = requestConfirm({ title: 'Second', message: 'Second request' });
+    });
+    await expect(first).resolves.toBe(false);
+    expect(screen.getByText('Second')).toBeTruthy();
+    unmount();
+    await expect(second).resolves.toBe(false);
   });
 
   it('exposes labeled action buttons and keeps the backdrop out of the button list', async () => {

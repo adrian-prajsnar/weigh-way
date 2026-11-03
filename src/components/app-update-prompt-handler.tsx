@@ -20,7 +20,7 @@ function getUpdateMessageKey(): TranslationKey {
 }
 
 export function AppUpdatePromptHandler() {
-  const { confirm } = useConfirm();
+  const { confirm, isConfirming } = useConfirm();
   const { showInfo } = useToast();
   const { isAuthenticated } = useSupabaseAuth();
   const { t } = useTranslation();
@@ -29,8 +29,8 @@ export function AppUpdatePromptHandler() {
 
   // Read callbacks from a ref so the prompt is scheduled once per sign-in
   // instead of being reset when translation or dialog identity changes.
-  const handlersRef = useRef({ confirm, showInfo, t });
-  handlersRef.current = { confirm, showInfo, t };
+  const handlersRef = useRef({ confirm, showInfo, t, isConfirming, isAuthenticated });
+  handlersRef.current = { confirm, showInfo, t, isConfirming, isAuthenticated };
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -38,7 +38,7 @@ export function AppUpdatePromptHandler() {
       return;
     }
 
-    if (isLoading || !update || hasRunRef.current) {
+    if (isLoading || !update || hasRunRef.current || isConfirming) {
       return;
     }
 
@@ -47,7 +47,6 @@ export function AppUpdatePromptHandler() {
     // Mark as run only once the dialog is actually shown. Cleanup can cancel
     // the timer (sign-out, React remounting the effect) and a later run retries.
     const timer = setTimeout(() => {
-      hasRunRef.current = true;
       void showPrompt(pendingUpdate);
     }, APP_UPDATE_PROMPT_DELAY_MS);
 
@@ -60,9 +59,15 @@ export function AppUpdatePromptHandler() {
       if (available.mode !== 'mock') {
         const dismissed = await getDismissedAppUpdateVersion();
         if (dismissed === available.latestVersion) {
+          hasRunRef.current = true;
           return;
         }
       }
+
+      if (handlersRef.current.isConfirming || !handlersRef.current.isAuthenticated) {
+        return;
+      }
+      hasRunRef.current = true;
 
       const confirmed = await confirmDialog({
         title: translate('update.title'),
@@ -81,12 +86,12 @@ export function AppUpdatePromptHandler() {
         return;
       }
 
-      const result = await openAppUpdateDownload();
+      const result = await openAppUpdateDownload(available);
       if (result === 'mocked') {
         showToast(translate('update.mockDownload'));
       }
     }
-  }, [isAuthenticated, isLoading, update]);
+  }, [isAuthenticated, isLoading, update, isConfirming]);
 
   return null;
 }

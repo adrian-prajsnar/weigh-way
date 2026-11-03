@@ -36,6 +36,8 @@ export function ComparisonResult({
     [entries],
   );
 
+  const aIsNewer =
+    rangeA.start > rangeB.start || (rangeA.start === rangeB.start && rangeA.end >= rangeB.end);
   const rows: TrendRow[] = [
     {
       key: 'range-a',
@@ -44,7 +46,7 @@ export function ComparisonResult({
       range: rangeA,
       stats: statsA,
       entry: isDayMode ? (entryByDate.get(rangeA.start) ?? null) : undefined,
-      deltaToOlder: difference,
+      deltaToOlder: aIsNewer ? difference : null,
     },
     {
       key: 'range-b',
@@ -53,9 +55,13 @@ export function ComparisonResult({
       range: rangeB,
       stats: statsB,
       entry: isDayMode ? (entryByDate.get(rangeB.start) ?? null) : undefined,
-      deltaToOlder: null,
+      deltaToOlder: aIsNewer ? null : difference,
     },
   ];
+
+  rows.sort(
+    (a, b) => b.range.start.localeCompare(a.range.start) || b.range.end.localeCompare(a.range.end),
+  );
 
   const body = <ComparisonTrendRows rows={rows} entries={entries} isDayMode={isDayMode} />;
 
@@ -63,9 +69,5 @@ export function ComparisonResult({
     return body;
   }
 
-  return (
-    <AppCard isBusy={isBusy}>
-      {body}
-    </AppCard>
-  );
+  return <AppCard isBusy={isBusy}>{body}</AppCard>;
 }

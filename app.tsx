@@ -1,9 +1,4 @@
-import {
-  DarkTheme,
-  DefaultTheme,
-  NavigationContainer,
-  Theme,
-} from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, Theme } from '@react-navigation/native';
 import { Inter_400Regular } from '@expo-google-fonts/inter/400Regular';
 import { Inter_500Medium } from '@expo-google-fonts/inter/500Medium';
 import { Inter_600SemiBold } from '@expo-google-fonts/inter/600SemiBold';
@@ -82,6 +77,23 @@ function AuthLinkErrorHandler() {
   return null;
 }
 
+function UserDataProviders({ fontsLoaded }: { fontsLoaded: boolean }) {
+  const { session } = useSupabaseAuth();
+  const userKey = session?.user.id ?? 'anon';
+  return (
+    <UserProfileProvider key={userKey}>
+      <BmiDisplayProvider>
+        <WeightEntriesProvider key={userKey}>
+          <ReconnectDataSync />
+          <BmiDetailsProvider>
+            <AppNavigation fontsLoaded={fontsLoaded} />
+          </BmiDetailsProvider>
+        </WeightEntriesProvider>
+      </BmiDisplayProvider>
+    </UserProfileProvider>
+  );
+}
+
 function ThemedApp({ fontsLoaded }: { fontsLoaded: boolean }) {
   const { colors } = useTheme();
 
@@ -92,16 +104,7 @@ function ThemedApp({ fontsLoaded }: { fontsLoaded: boolean }) {
           <AuthLinkErrorHandler />
           <ConfirmProvider>
             <AppUpdateProvider>
-              <UserProfileProvider>
-                <BmiDisplayProvider>
-                  <WeightEntriesProvider>
-                    <ReconnectDataSync />
-                    <BmiDetailsProvider>
-                      <AppNavigation fontsLoaded={fontsLoaded} />
-                    </BmiDetailsProvider>
-                  </WeightEntriesProvider>
-                </BmiDisplayProvider>
-              </UserProfileProvider>
+              <UserDataProviders fontsLoaded={fontsLoaded} />
             </AppUpdateProvider>
           </ConfirmProvider>
         </ToastProvider>
@@ -116,10 +119,7 @@ function ConnectivityShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {isOffline ? (
-        <OfflineConnectivityBanner
-          isRefreshing={isRefreshing}
-          onRefresh={() => void refresh()}
-        />
+        <OfflineConnectivityBanner isRefreshing={isRefreshing} onRefresh={() => void refresh()} />
       ) : null}
       {children}
     </>

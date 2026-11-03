@@ -7,6 +7,7 @@ import {
 
 const EMAIL_CONFIRMATION_PENDING_KEY = '@weigh-way/auth-email-confirmation-pending';
 const PASSWORD_RESET_PENDING_KEY = '@weigh-way/auth-password-reset-pending';
+const PASSWORD_RECOVERY_USER_KEY = '@weigh-way/auth-password-recovery-user';
 
 /** Matches typical Supabase email link lifetime (1 hour). */
 export const AUTH_PENDING_FLOW_TTL_MS = 60 * 60 * 1000;
@@ -159,4 +160,17 @@ export async function clearPasswordResetPending(): Promise<void> {
 export async function clearAuthPendingFlows(): Promise<void> {
   await clearEmailConfirmationPending();
   await clearPasswordResetPending();
+}
+
+/** Persist only a recovery confirmed by the auth library, bound to its session user. */
+export async function setPasswordRecoveryUserId(userId: string | null): Promise<void> {
+  if (userId) {
+    await setItemBestEffort(PASSWORD_RECOVERY_USER_KEY, userId);
+  } else {
+    await removeItemBestEffort(PASSWORD_RECOVERY_USER_KEY);
+  }
+}
+
+export async function getPasswordRecoveryUserId(): Promise<string | null> {
+  return getItemBestEffort(PASSWORD_RECOVERY_USER_KEY);
 }

@@ -22,6 +22,36 @@ describe('getAgeOnDate', () => {
     const age = getAgeOnDate('2000-02-29', '2023-03-01');
     expect(age?.years).toBe(23);
   });
+
+  it('caps month anniversaries and never returns negative days', () => {
+    const age = getAgeOnDate('2000-01-31', '2023-03-01');
+    expect(age).toMatchObject({ years: 23, months: 1, days: 1 });
+    expect(age?.ageMonths).toBeCloseTo(277 + 1 / 31);
+  });
+
+  it('counts February 28 as the non-leap birthday consistently', () => {
+    expect(getAgeOnDate('2000-02-29', '2027-02-28')).toEqual({
+      years: 27,
+      months: 0,
+      days: 0,
+      ageMonths: 324,
+    });
+    expect(getLastBirthdayKey('2000-02-29', new Date(2027, 1, 28))).toBe('2027-02-28');
+  });
+
+  it('has monotonic fractional months over short months and leap days', () => {
+    for (const birth of ['2000-01-31', '2000-02-29', '2000-08-31']) {
+      let previous = 0;
+      for (let day = 1; day <= 365; day += 1) {
+        const date = new Date(2027, 0, day);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const age = getAgeOnDate(birth, key)!;
+        expect(age.days).toBeGreaterThanOrEqual(0);
+        expect(age.ageMonths).toBeGreaterThan(previous);
+        previous = age.ageMonths;
+      }
+    }
+  });
 });
 
 describe('formatAgeDetailed', () => {

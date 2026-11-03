@@ -65,19 +65,17 @@ const pl = {
     enterEmailPassword: 'Wpisz e-mail i hasło.',
     enterEmail: 'Wpisz adres e-mail.',
     enterEmailFirst: 'Najpierw wpisz adres e-mail.',
-    passwordRequirements:
-      'Użyj co najmniej 8 znaków z wielką i małą literą, cyfrą oraz symbolem.',
+    passwordMustDiffer: 'Wybierz hasło inne niż obecne.',
+    passwordRequirements: 'Użyj co najmniej 8 znaków z wielką i małą literą, cyfrą oraz symbolem.',
     passwordsMismatch: 'Hasła nie są takie same.',
     enterNewPassword: 'Wpisz nowe hasło.',
     signedIn: 'Zalogowano.',
     confirmationSent: 'Wysłaliśmy e-mail potwierdzający. Sprawdź skrzynkę.',
     couldNotResend: 'Nie udało się wysłać e-maila.',
-    accountCreatedConfirm:
-      'Konto utworzone. Potwierdź e-mail, a potem zaloguj się.',
+    accountCreatedConfirm: 'Konto utworzone. Potwierdź e-mail, a potem zaloguj się.',
     accountCreated: 'Konto utworzone. Zaloguj się, aby kontynuować.',
     signUpFailed: 'Nie udało się założyć konta.',
-    resetSent:
-      'Jeśli konto istnieje, wysłaliśmy link resetujący. Otwórz go na tym urządzeniu.',
+    resetSent: 'Jeśli konto istnieje, wysłaliśmy link resetujący. Otwórz go na tym urządzeniu.',
     couldNotSendReset: 'Nie udało się wysłać e-maila resetującego.',
     passwordUpdated: 'Hasło zaktualizowane. Zalogowano.',
     couldNotUpdatePassword: 'Nie udało się zaktualizować hasła.',
@@ -137,8 +135,7 @@ const pl = {
     saveFailed: 'Nie udało się zapisać wagi.',
     invalidWeight: 'Wpisz wagę w dozwolonym zakresie.',
     replaceExistingTitle: 'Zastąpić istniejący wpis?',
-    replaceExistingMessage:
-      'Masz już pomiar z dnia %{date}. Zapisanie zastąpi ten wpis.',
+    replaceExistingMessage: 'Masz już pomiar z dnia %{date}. Zapisanie zastąpi ten wpis.',
     replaceExistingConfirm: 'Zastąp wpis',
     offlineSaveBlocked: 'Jesteś offline. Połącz się z internetem, aby zapisać wagę.',
   },
@@ -274,11 +271,11 @@ const pl = {
     heightSaved: 'Wzrost zapisany.',
     heightUpdated: 'Wzrost zaktualizowany.',
     heightHistoryTitle: 'Historia wzrostu',
-    heightHistorySubtitle:
-      'Dodawaj wpisy i zarządzaj historią wzrostu.',
+    heightHistorySubtitle: 'Dodawaj wpisy i zarządzaj historią wzrostu.',
     manageHeightRecords: 'Zarządzaj wpisami wzrostu',
-    heightTimelineEmptyHint:
-      'Brak danych. Dodaj swój wzrost i datę, od której obowiązuje.',
+    heightTimelineEmptyHint: 'Brak danych. Dodaj swój wzrost i datę, od której obowiązuje.',
+    replaceHeightTitle: 'Zastąpić pomiar wzrostu?',
+    replaceHeightMessage: 'Pomiar wzrostu z dnia %{date} już istnieje. Zastąpić go?',
     deleteHeight: 'Usuń wpis wzrostu',
     deleteHeightConfirm:
       'Usunąć wzrost od %{date}?\n\nMoże to wpłynąć negatywnie na wyniki BMI przy pomiarach z tego okresu.',
@@ -312,8 +309,7 @@ const pl = {
     signedOut: 'Wylogowano.',
     signOutFailed: 'Nie udało się wylogować.',
     signOutRateLimited: 'Zbyt wiele prób. Spróbuj ponownie za chwilę.',
-    signOutPersistFailedOffline:
-      'Wylogowano na tym urządzeniu. Nie udało się połączyć z serwerem.',
+    signOutPersistFailedOffline: 'Wylogowano na tym urządzeniu. Nie udało się połączyć z serwerem.',
     deleteAccount: 'Usuń konto',
     deleteAccountConfirm:
       'Czy na pewno chcesz usunąć swoje konto? Wszystkie pomiary wagi zostaną usunięte. Tej operacji nie można cofnąć.',
@@ -401,9 +397,13 @@ const pl = {
     created: 'Utworzono',
     updated: 'Zaktualizowano',
     notSavedYet: 'Ten pomiar wagi nie jest jeszcze zapisany.',
-    coverage: 'BMI z %{withBmi} z %{total} pomiarów.',
-    coverageNone:
-      'Żaden pomiar w tym okresie nie ma wzrostu na tę datę, więc BMI to „-”.',
+    coverage: {
+      one: 'BMI z %{withBmi} z %{total} pomiaru.',
+      few: 'BMI z %{withBmi} z %{total} pomiarów.',
+      many: 'BMI z %{withBmi} z %{total} pomiarów.',
+      other: 'BMI z %{withBmi} z %{total} pomiarów.',
+    },
+    coverageNone: 'Żaden pomiar w tym okresie nie ma wzrostu na tę datę, więc BMI to „-”.',
     missingHeight: {
       one: '1 pomiar nie ma wzrostu na tę datę.',
       few: '%{count} pomiary nie mają wzrostu na tę datę.',
@@ -436,14 +436,10 @@ const pl = {
     yearsMonthsDays: '%{years}, %{months}, %{days}',
   },
   validation: {
-    weightRangeMetric:
-      'Wpisz wagę od %{min} do %{max} kg z maksymalnie 2 miejscami po przecinku.',
-    weightRangeImperial:
-      'Wpisz wagę od %{min} do %{max} lb z maksymalnie 1 miejscem po przecinku.',
-    heightRangeMetric:
-      'Wpisz wzrost od 1 m 00 cm do 2 m 50 cm (łącznie %{min}–%{max} cm).',
-    heightRangeImperial:
-      'Wpisz wzrost od %{minFt} ft %{minIn} cal do %{maxFt} ft %{maxIn} cal.',
+    weightRangeMetric: 'Wpisz wagę od %{min} do %{max} kg z maksymalnie 2 miejscami po przecinku.',
+    weightRangeImperial: 'Wpisz wagę od %{min} do %{max} lb z maksymalnie 1 miejscem po przecinku.',
+    heightRangeMetric: 'Wpisz wzrost od 1 m 00 cm do 2 m 50 cm (łącznie %{min}–%{max} cm).',
+    heightRangeImperial: 'Wpisz wzrost od %{minFt} ft %{minIn} cal do %{maxFt} ft %{maxIn} cal.',
   },
 };
 

@@ -19,7 +19,7 @@ export function AppUpdateBar() {
   }
 
   const handleDownload = () => {
-    void openAppUpdateDownload().then((result) => {
+    void openAppUpdateDownload(update).then((result) => {
       if (result === 'mocked') {
         showInfo(t('update.mockDownload'));
       }

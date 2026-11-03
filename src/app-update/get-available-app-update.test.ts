@@ -23,6 +23,8 @@ describe('getAvailableAppUpdate', () => {
     vi.mocked(resolveAppUpdateCheck).mockResolvedValue({
       mode: 'github',
       latestVersion: '1.4.0',
+      downloadUrl:
+        'https://github.com/adrian-prajsnar/weigh-way/releases/download/v1.4.0/weigh-way.apk',
     });
 
     await expect(getAvailableAppUpdate()).resolves.toBeNull();
@@ -32,12 +34,14 @@ describe('getAvailableAppUpdate', () => {
     vi.mocked(resolveAppUpdateCheck).mockResolvedValue({
       mode: 'mock',
       latestVersion: '99.0.0',
+      downloadUrl: null,
     });
 
     await expect(getAvailableAppUpdate()).resolves.toEqual({
       mode: 'mock',
       currentVersion: '1.4.0',
       latestVersion: '99.0.0',
+      downloadUrl: null,
     });
   });
 

@@ -107,8 +107,12 @@ export function ProfileScreen({
 }: NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>) {
   const styles = useAppStyles();
   const colors = useColors();
-  const { t, locale, preference: languagePreference, setPreference: setLanguagePreference } =
-    useTranslation();
+  const {
+    t,
+    locale,
+    preference: languagePreference,
+    setPreference: setLanguagePreference,
+  } = useTranslation();
   const { preference, setPreference } = useTheme();
   const { preference: unitPreference, setPreference: setUnitPreference } = useUnits();
   const { session, signOut, deleteAccount } = useSupabaseAuth();
@@ -190,9 +194,7 @@ export function ProfileScreen({
         try {
           const { offlineNotice } = await signOut();
           showInfo(
-            offlineNotice
-              ? t('profile.signOutPersistFailedOffline')
-              : t('profile.signedOut'),
+            offlineNotice ? t('profile.signOutPersistFailedOffline') : t('profile.signedOut'),
           );
         } catch (signOutError) {
           const message =
@@ -381,147 +383,151 @@ export function ProfileScreen({
               <RefreshControl refreshing={isRefreshing} onRefresh={() => void refreshProfile()} />
             }
           >
-        {error && !isLoading ? (
-          <ErrorCard message={error} onRetry={() => void refreshProfile()} />
-        ) : null}
+            {error && !isLoading ? (
+              <ErrorCard message={error} onRetry={() => void refreshProfile()} />
+            ) : null}
 
-        <AppCard title={t('profile.account')} isBusy={isRefreshing}>
-          {isLoading ? (
-            <ProfileAccountSkeleton />
-          ) : (
-            <>
-              <ProfileRow icon="mail-outline" label={t('auth.email')} value={user?.email ?? emDash} />
-              <ProfileRow
-                icon="calendar-outline"
-                label={t('profile.memberSince')}
-                value={formatMemberSince(user?.created_at, dateLocale, emDash)}
+            <AppCard title={t('profile.account')} isBusy={isRefreshing}>
+              {isLoading ? (
+                <ProfileAccountSkeleton />
+              ) : (
+                <>
+                  <ProfileRow
+                    icon="mail-outline"
+                    label={t('auth.email')}
+                    value={user?.email ?? emDash}
+                  />
+                  <ProfileRow
+                    icon="calendar-outline"
+                    label={t('profile.memberSince')}
+                    value={formatMemberSince(user?.created_at, dateLocale, emDash)}
+                  />
+                  <ProfileRow
+                    icon="list-outline"
+                    label={t('profile.weightEntries')}
+                    value={entryCountLabel}
+                  />
+                </>
+              )}
+            </AppCard>
+
+            <AppCard title={t('profile.aboutYou')} isBusy={isRefreshing || isSaving} delay={60}>
+              {isLoading || !profileLoaded ? (
+                <AboutYouSkeleton />
+              ) : (
+                <AboutYouSection
+                  birthDate={birthDate}
+                  onBirthDateChange={handleBirthDateChange}
+                  onBirthDateDelete={handleBirthDateDelete}
+                  birthDateAutoOpen={shouldOpenBirthDatePicker}
+                  minimumBirthDate={minimumBirthDate}
+                  maximumBirthDate={getTodayDate()}
+                  sex={sex}
+                  onSexChange={handleSexChange}
+                  heightEntries={heightEntries}
+                  onOpenHeightHistory={() => navigation.navigate('HeightHistory')}
+                />
+              )}
+            </AppCard>
+
+            <AppCard title={t('profile.appearance')} delay={120}>
+              <Text style={styles.settingHint}>{t('profile.languageHint')}</Text>
+              <SegmentedControl
+                options={languageOptions}
+                value={languagePreference}
+                onChange={(next) => void setLanguagePreference(next)}
               />
-              <ProfileRow
-                icon="list-outline"
-                label={t('profile.weightEntries')}
-                value={entryCountLabel}
+
+              <View style={styles.divider} />
+
+              <Text style={styles.settingHint}>{t('profile.themeHint')}</Text>
+              <SegmentedControl
+                options={themeOptions}
+                value={preference}
+                onChange={(next) => void setPreference(next)}
               />
-            </>
-          )}
-        </AppCard>
 
-        <AppCard title={t('profile.aboutYou')} isBusy={isRefreshing || isSaving} delay={60}>
-          {isLoading ? (
-            <AboutYouSkeleton />
-          ) : (
-            <AboutYouSection
-              birthDate={birthDate}
-              onBirthDateChange={handleBirthDateChange}
-              onBirthDateDelete={handleBirthDateDelete}
-              birthDateAutoOpen={shouldOpenBirthDatePicker}
-              minimumBirthDate={minimumBirthDate}
-              maximumBirthDate={getTodayDate()}
-              sex={sex}
-              onSexChange={handleSexChange}
-              heightEntries={heightEntries}
-              onOpenHeightHistory={() => navigation.navigate('HeightHistory')}
-            />
-          )}
-        </AppCard>
+              <View style={styles.divider} />
 
-        <AppCard title={t('profile.appearance')} delay={120}>
-          <Text style={styles.settingHint}>{t('profile.languageHint')}</Text>
-          <SegmentedControl
-            options={languageOptions}
-            value={languagePreference}
-            onChange={(next) => void setLanguagePreference(next)}
-          />
+              <Text style={styles.settingHint}>{t('profile.unitsHint')}</Text>
+              <SegmentedControl
+                options={unitOptions}
+                value={unitPreference}
+                onChange={(next) => void setUnitPreference(next)}
+              />
 
-          <View style={styles.divider} />
+              <View style={styles.divider} />
 
-          <Text style={styles.settingHint}>{t('profile.themeHint')}</Text>
-          <SegmentedControl
-            options={themeOptions}
-            value={preference}
-            onChange={(next) => void setPreference(next)}
-          />
+              <View style={styles.settingRow}>
+                <View style={styles.settingText}>
+                  <Text style={styles.settingLabel}>{t('profile.showBmi')}</Text>
+                  <Text style={styles.settingHint}>{t('profile.showBmiHint')}</Text>
+                  {!hasAnyHeight(heightEntries) ? (
+                    <Text style={styles.settingHintWarning}>
+                      {t('profile.showBmiNoHeightHint')}
+                    </Text>
+                  ) : null}
+                </View>
+                <SettingSwitch
+                  value={showBmi}
+                  onValueChange={(value) => {
+                    void setShowBmi(value);
+                  }}
+                  trackColor={{ false: colors.borderStrong, true: colors.accentBorder }}
+                  thumbColor={showBmi ? colors.accent : colors.surfaceMuted}
+                />
+              </View>
+            </AppCard>
 
-          <View style={styles.divider} />
+            <AppCard title={t('profile.session')} delay={180}>
+              {demoMode ? <Text style={styles.settingHint}>{t('demo.sessionHint')}</Text> : null}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  demoMode && styles.buttonDisabled,
+                  pressed && !demoMode && styles.buttonPressed,
+                ]}
+                onPress={handleSignOut}
+                disabled={demoMode}
+              >
+                <Text style={styles.secondaryButtonText}>{t('profile.signOut')}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  exportDisabled && styles.buttonDisabled,
+                  pressed && !exportDisabled && styles.buttonPressed,
+                ]}
+                onPress={handleExportJournal}
+                disabled={exportDisabled}
+              >
+                {isExporting ? (
+                  <ActivityIndicator color={colors.accent} />
+                ) : (
+                  <Text style={styles.secondaryButtonText}>{t('profile.exportJournal')}</Text>
+                )}
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.dangerButton,
+                  demoMode && styles.buttonDisabled,
+                  pressed && !demoMode && styles.buttonPressed,
+                ]}
+                onPress={handleDeleteAccount}
+                disabled={demoMode}
+              >
+                <Text style={styles.dangerButtonText}>{t('profile.deleteAccount')}</Text>
+              </Pressable>
+            </AppCard>
 
-          <Text style={styles.settingHint}>{t('profile.unitsHint')}</Text>
-          <SegmentedControl
-            options={unitOptions}
-            value={unitPreference}
-            onChange={(next) => void setUnitPreference(next)}
-          />
-
-          <View style={styles.divider} />
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingText}>
-              <Text style={styles.settingLabel}>{t('profile.showBmi')}</Text>
-              <Text style={styles.settingHint}>{t('profile.showBmiHint')}</Text>
-              {!hasAnyHeight(heightEntries) ? (
-                <Text style={styles.settingHintWarning}>{t('profile.showBmiNoHeightHint')}</Text>
-              ) : null}
+            <View style={styles.versionFooterContainer}>
+              <Text style={styles.versionFooter}>
+                {t('profile.appVersion', { version: appVersion })}
+              </Text>
+              <Text style={styles.versionFooter}>
+                {t('profile.copyright', { year: new Date().getFullYear() })}
+              </Text>
             </View>
-            <SettingSwitch
-              value={showBmi}
-              onValueChange={(value) => {
-                void setShowBmi(value);
-              }}
-              trackColor={{ false: colors.borderStrong, true: colors.accentBorder }}
-              thumbColor={showBmi ? colors.accent : colors.surfaceMuted}
-            />
-          </View>
-        </AppCard>
-
-        <AppCard title={t('profile.session')} delay={180}>
-          {demoMode ? (
-            <Text style={styles.settingHint}>{t('demo.sessionHint')}</Text>
-          ) : null}
-          <Pressable
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              demoMode && styles.buttonDisabled,
-              pressed && !demoMode && styles.buttonPressed,
-            ]}
-            onPress={handleSignOut}
-            disabled={demoMode}
-          >
-            <Text style={styles.secondaryButtonText}>{t('profile.signOut')}</Text>
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.secondaryButton,
-              exportDisabled && styles.buttonDisabled,
-              pressed && !exportDisabled && styles.buttonPressed,
-            ]}
-            onPress={handleExportJournal}
-            disabled={exportDisabled}
-          >
-            {isExporting ? (
-              <ActivityIndicator color={colors.accent} />
-            ) : (
-              <Text style={styles.secondaryButtonText}>{t('profile.exportJournal')}</Text>
-            )}
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => [
-              styles.dangerButton,
-              demoMode && styles.buttonDisabled,
-              pressed && !demoMode && styles.buttonPressed,
-            ]}
-            onPress={handleDeleteAccount}
-            disabled={demoMode}
-          >
-            <Text style={styles.dangerButtonText}>{t('profile.deleteAccount')}</Text>
-          </Pressable>
-        </AppCard>
-
-        <View style={styles.versionFooterContainer}>
-          <Text style={styles.versionFooter}>
-            {t('profile.appVersion', { version: appVersion })}
-          </Text>
-          <Text style={styles.versionFooter}>
-            {t('profile.copyright', { year: new Date().getFullYear() })}
-          </Text>
-        </View>
           </Animated.ScrollView>
         </ContentFrame>
       </PreferenceTransition>

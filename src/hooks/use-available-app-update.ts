@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AppState } from 'react-native';
 import type { AvailableAppUpdate } from '../app-update/get-available-app-update';
 import { getAvailableAppUpdate } from '../app-update/get-available-app-update';
 
@@ -31,17 +32,26 @@ export function useAvailableAppUpdate() {
   useEffect(() => {
     let isCancelled = false;
 
-    void loadAvailableAppUpdate().then((result) => {
-      if (isCancelled) {
-        return;
-      }
+    const check = () => {
+      void loadAvailableAppUpdate().then((result) => {
+        if (isCancelled) {
+          return;
+        }
 
-      setUpdate(result);
-      setIsLoading(false);
+        setUpdate(result);
+        setIsLoading(false);
+      });
+    };
+    check();
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' && !lastResult) {
+        check();
+      }
     });
 
     return () => {
       isCancelled = true;
+      subscription.remove();
     };
   }, []);
 

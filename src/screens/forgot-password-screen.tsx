@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { AuthLayout } from '../components/auth-layout';
 import { EmailField } from '../components/email-field';
@@ -21,13 +21,16 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
   const { showError, showSuccess } = useToast();
   const [email, setEmail] = useState(route.params?.email ?? '');
   const [isBusy, setIsBusy] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleResetPassword = async () => {
+    if (submittingRef.current) return;
     if (!email.trim()) {
       showError(t('auth.enterEmail'));
       return;
     }
 
+    submittingRef.current = true;
     setIsBusy(true);
     try {
       await resetPassword(email.trim());
@@ -37,6 +40,7 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
       const message = error instanceof Error ? error.message : t('auth.couldNotSendReset');
       showError(message);
     } finally {
+      submittingRef.current = false;
       setIsBusy(false);
     }
   };
@@ -47,9 +51,7 @@ export function ForgotPasswordScreen({ navigation, route }: Props) {
       subtitle={t('auth.resetSubtitle')}
       footer={
         <Pressable
-          onPress={() =>
-            navigation.navigate('Login', { email: email.trim() || undefined })
-          }
+          onPress={() => navigation.navigate('Login', { email: email.trim() || undefined })}
           {...webFocusTarget('text-button')}
         >
           <Text style={styles.linkText}>{t('auth.backToSignIn')}</Text>

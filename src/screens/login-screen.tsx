@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { isEmailNotConfirmedError } from '../auth-errors';
 import { AuthLayout } from '../components/auth-layout';
@@ -26,6 +26,7 @@ export function LoginScreen({ navigation, route }: Props) {
   const [email, setEmail] = useState(route.params?.email ?? '');
   const [password, setPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const submittingRef = useRef(false);
   const [isGoogleBusy, setIsGoogleBusy] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [showEmailNotConfirmed, setShowEmailNotConfirmed] = useState(false);
@@ -37,12 +38,14 @@ export function LoginScreen({ navigation, route }: Props) {
   }, [route.params?.email]);
 
   const handleSignIn = async () => {
+    if (submittingRef.current || isGoogleBusy) return;
     if (!email.trim() || !password) {
       showError(t('auth.enterEmailPassword'));
       return;
     }
 
     setShowEmailNotConfirmed(false);
+    submittingRef.current = true;
     setIsBusy(true);
     try {
       await signIn(email.trim(), password);
@@ -54,16 +57,19 @@ export function LoginScreen({ navigation, route }: Props) {
       }
       showError(message);
     } finally {
+      submittingRef.current = false;
       setIsBusy(false);
     }
   };
 
   const handleResendConfirmation = async () => {
+    if (submittingRef.current || isGoogleBusy) return;
     if (!email.trim()) {
       showError(t('auth.enterEmailFirst'));
       return;
     }
 
+    submittingRef.current = true;
     setIsResending(true);
     try {
       await resendConfirmationEmail(email.trim());
@@ -72,6 +78,7 @@ export function LoginScreen({ navigation, route }: Props) {
       const message = error instanceof Error ? error.message : t('auth.couldNotResend');
       showError(message);
     } finally {
+      submittingRef.current = false;
       setIsResending(false);
     }
   };
@@ -107,9 +114,7 @@ export function LoginScreen({ navigation, route }: Props) {
 
       <Pressable
         style={styles.authInlineLink}
-        onPress={() =>
-          navigation.navigate('ForgotPassword', { email: email.trim() || undefined })
-        }
+        onPress={() => navigation.navigate('ForgotPassword', { email: email.trim() || undefined })}
         {...webFocusTarget('text-button')}
       >
         <Text style={styles.linkText}>{t('auth.forgotPassword')}</Text>
@@ -125,7 +130,7 @@ export function LoginScreen({ navigation, route }: Props) {
               pressed && styles.buttonPressed,
             ]}
             onPress={() => void handleResendConfirmation()}
-            disabled={isResending}
+            disabled={isResending || isBusy || isGoogleBusy}
           >
             {isResending ? (
               <ActivityIndicator color={colors.accent} />
@@ -139,11 +144,11 @@ export function LoginScreen({ navigation, route }: Props) {
       <Pressable
         style={({ pressed }) => [
           styles.primaryButton,
-          (isBusy || isGoogleBusy) && styles.buttonDisabled,
+          (isBusy || isGoogleBusy || isResending) && styles.buttonDisabled,
           pressed && styles.buttonPressed,
         ]}
         onPress={() => void handleSignIn()}
-        disabled={isBusy || isGoogleBusy}
+        disabled={isBusy || isGoogleBusy || isResending}
       >
         {isBusy ? (
           <ActivityIndicator color={colors.onAccent} />
@@ -154,7 +159,7 @@ export function LoginScreen({ navigation, route }: Props) {
 
       <AuthOrDivider />
 
-      <GoogleSignInButton disabled={isBusy} onBusyChange={setIsGoogleBusy} />
+      <GoogleSignInButton disabled={isBusy || isResending} onBusyChange={setIsGoogleBusy} />
     </AuthLayout>
   );
 }

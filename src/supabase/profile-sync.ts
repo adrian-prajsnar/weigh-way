@@ -1,3 +1,4 @@
+import { toSupabaseErrorFromUnknown } from './errors';
 import { getUserId } from './auth-user';
 import { supabase } from './client';
 import { BiologicalSex } from '../types';
@@ -20,37 +21,45 @@ export type UserProfileFields = {
 };
 
 export async function getUserProfile(): Promise<UserProfileFields> {
-  const userId = await getUserId();
-  const { data, error } = await supabase
-    .from('user_profiles')
-    .select('birth_date, sex')
-    .eq('user_id', userId)
-    .maybeSingle();
+  try {
+    const userId = await getUserId();
+    const { data, error } = await supabase
+      .from('user_profiles')
+      .select('birth_date, sex')
+      .eq('user_id', userId)
+      .maybeSingle();
 
-  if (error) {
-    throw error;
+    if (error) {
+      throw error;
+    }
+
+    const row = data as UserProfileRow | null;
+    return {
+      birthDate: row?.birth_date ?? null,
+      sex: parseSex(row?.sex),
+    };
+  } catch (error) {
+    throw toSupabaseErrorFromUnknown(error);
   }
-
-  const row = data as UserProfileRow | null;
-  return {
-    birthDate: row?.birth_date ?? null,
-    sex: parseSex(row?.sex),
-  };
 }
 
-export async function saveUserProfile(profile: UserProfileFields): Promise<void> {
-  const userId = await getUserId();
-  const { error } = await supabase.from('user_profiles').upsert(
-    {
-      user_id: userId,
-      birth_date: profile.birthDate,
-      sex: profile.sex,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'user_id' },
-  );
+export async function saveUserProfile(profile: Partial<UserProfileFields>): Promise<void> {
+  try {
+    const userId = await getUserId();
+    const { error } = await supabase.from('user_profiles').upsert(
+      {
+        user_id: userId,
+        ...(profile.birthDate !== undefined ? { birth_date: profile.birthDate } : {}),
+        ...(profile.sex !== undefined ? { sex: profile.sex } : {}),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    );
 
-  if (error) {
-    throw error;
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    throw toSupabaseErrorFromUnknown(error);
   }
 }

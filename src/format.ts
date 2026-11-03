@@ -23,11 +23,7 @@ export function getWeightUnitLabel(units: UnitSystem): string {
 
 export { formatDecimal } from './i18n/locale-number-format';
 
-export function formatWeightValue(
-  weightKg: number,
-  units: UnitSystem,
-  locale: AppLocale,
-): string {
+export function formatWeightValue(weightKg: number, units: UnitSystem, locale: AppLocale): string {
   if (units === 'imperial') {
     return formatDecimal(kgToLb(weightKg), 1, 1, locale);
   }
@@ -96,8 +92,8 @@ export function parseWeightInput(input: string, units: UnitSystem): number | nul
 export function getWeightRangeMessage(units: UnitSystem, locale: AppLocale): string {
   if (units === 'imperial') {
     return t('validation.weightRangeImperial', {
-      min: formatDecimal(MIN_WEIGHT_LB, 1, 1, locale),
-      max: formatDecimal(MAX_WEIGHT_LB, 1, 1, locale),
+      min: formatDecimal(Math.ceil(MIN_WEIGHT_LB * 10) / 10, 1, 1, locale),
+      max: formatDecimal(Math.floor(MAX_WEIGHT_LB * 10) / 10, 1, 1, locale),
     });
   }
   return t('validation.weightRangeMetric', {
@@ -106,12 +102,15 @@ export function getWeightRangeMessage(units: UnitSystem, locale: AppLocale): str
   });
 }
 
-export function formatWeightLabel(
-  weightKg: number,
-  units: UnitSystem,
-  locale: AppLocale,
-): string {
+export function formatWeightLabel(weightKg: number, units: UnitSystem, locale: AppLocale): string {
   return `${formatWeightValue(weightKg, units, locale)} ${getWeightUnitLabel(units)}`;
+}
+
+export function getDisplayedWeightDifference(deltaKg: number, units: UnitSystem): number {
+  const scale = units === 'imperial' ? 10 : 100;
+  const value = units === 'imperial' ? kgToLb(deltaKg) : deltaKg;
+  const rounded = Math.round(Math.abs(value) * scale) / scale;
+  return rounded === 0 ? 0 : Math.sign(value) * rounded;
 }
 
 export function formatWeightDifference(
@@ -122,8 +121,10 @@ export function formatWeightDifference(
   if (deltaKg === null) {
     return t('common.emDash');
   }
-  const sign = deltaKg > 0 ? '+' : '';
-  return `${sign}${formatWeightValue(deltaKg, units, locale)} ${getWeightUnitLabel(units)}`;
+  const displayed = getDisplayedWeightDifference(deltaKg, units);
+  const sign = displayed > 0 ? '+' : '';
+  const digits = units === 'imperial' ? 1 : 2;
+  return `${sign}${formatDecimal(displayed, digits, digits, locale)} ${getWeightUnitLabel(units)}`;
 }
 
 export function toDateKey(date: Date): string {
@@ -161,9 +162,7 @@ export function addDays(date: Date, days: number): Date {
   return next;
 }
 
-export function getDefaultHistoryDateRange(
-  today: Date = getTodayDate(),
-): { from: Date; to: Date } {
+export function getDefaultHistoryDateRange(today: Date = getTodayDate()): { from: Date; to: Date } {
   return {
     from: addMonths(today, -1),
     to: today,
@@ -180,14 +179,16 @@ function getHistoryLatestTo(from: Date, today: Date): Date {
 }
 
 export function addYears(date: Date, years: number): Date {
-  const next = new Date(date);
-  next.setFullYear(next.getFullYear() + years);
-  return next;
+  return addMonths(date, years * 12);
 }
 
 export function addMonths(date: Date, months: number): Date {
   const next = new Date(date);
+  const day = next.getDate();
+  next.setDate(1);
   next.setMonth(next.getMonth() + months);
+  const lastDay = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+  next.setDate(Math.min(day, lastDay));
   return next;
 }
 
@@ -375,10 +376,7 @@ export function getDefaultTrendDateRange(
 }
 
 export type TrendDateRangeValidationError =
-  | 'invalidOrder'
-  | 'maxSpanExceeded'
-  | 'beforeBirthDate'
-  | 'futureDate';
+  'invalidOrder' | 'maxSpanExceeded' | 'beforeBirthDate' | 'futureDate';
 
 export function validateTrendDateRange(
   from: Date,
@@ -506,10 +504,7 @@ function getLocaleTag(): string {
   return getDateLocale(getI18nLocale());
 }
 
-export function wasWeightEntryUpdated(entry: {
-  createdAt: string;
-  updatedAt: string;
-}): boolean {
+export function wasWeightEntryUpdated(entry: { createdAt: string; updatedAt: string }): boolean {
   const created = Date.parse(entry.createdAt);
   const updated = Date.parse(entry.updatedAt);
   if (Number.isNaN(created) || Number.isNaN(updated)) {
@@ -612,11 +607,7 @@ export function parseDateKey(input: string): string | null {
   const month = Number(match[2]);
   const year = Number(match[3]);
   const date = new Date(year, month - 1, day);
-  if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
     return null;
   }
 
@@ -625,8 +616,10 @@ export function parseDateKey(input: string): string | null {
 
 export function getHeightRangeMessage(units: UnitSystem): string {
   if (units === 'imperial') {
-    const min = cmToFeetInches(MIN_HEIGHT_CM);
-    const max = cmToFeetInches(MAX_HEIGHT_CM);
+    const minInches = Math.ceil(MIN_HEIGHT_CM / 2.54);
+    const maxInches = Math.floor(MAX_HEIGHT_CM / 2.54);
+    const min = { feet: Math.floor(minInches / 12), inches: minInches % 12 };
+    const max = { feet: Math.floor(maxInches / 12), inches: maxInches % 12 };
     return t('validation.heightRangeImperial', {
       minFt: min.feet,
       minIn: min.inches,

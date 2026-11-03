@@ -55,7 +55,6 @@ export default ({ config }: ConfigContext): ExpoConfig => {
           backgroundColor: SPLASH_BACKGROUND,
         },
       ],
-      'expo-web-browser',
       [
         '@sentry/react-native',
         {

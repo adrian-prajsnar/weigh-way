@@ -52,8 +52,7 @@ export default {
     noAccount: 'No account? Create one',
     password: 'Password',
     forgotPassword: 'Forgot password?',
-    emailNotConfirmed:
-      'Confirm your email first. Open the link we sent, then sign in again.',
+    emailNotConfirmed: 'Confirm your email first. Open the link we sent, then sign in again.',
     resendConfirmation: 'Resend confirmation email',
     signIn: 'Sign in',
     or: 'or',
@@ -76,6 +75,7 @@ export default {
     enterEmailPassword: 'Enter your email and password.',
     enterEmail: 'Enter your email address.',
     enterEmailFirst: 'Enter your email address first.',
+    passwordMustDiffer: 'Choose a password different from your current password.',
     passwordRequirements:
       'Use at least 8 characters with uppercase, lowercase, a number, and a symbol.',
     passwordsMismatch: 'Passwords do not match.',
@@ -105,7 +105,8 @@ export default {
       'Open this reset link on the device where you requested it, or request a new reset email.',
     unexpectedAuthLink:
       'This link does not match an active sign-up or reset on this device. Open it where you started, or sign in after confirming your email.',
-    oauthLinkMismatch: 'This sign-in link does not match the Google sign-in you started. Try again.',
+    oauthLinkMismatch:
+      'This sign-in link does not match the Google sign-in you started. Try again.',
     oauthLinkInvalid:
       'This Google sign-in link is invalid or has expired. Try signing in with Google again.',
     invalidEmail: 'Enter a valid email address.',
@@ -275,10 +276,13 @@ export default {
     heightSaved: 'Height saved.',
     heightUpdated: 'Height updated.',
     heightHistoryTitle: 'Height history',
-    heightHistorySubtitle: 'Add height and the date it applies from. Each weigh-in uses the height from that day.',
+    heightHistorySubtitle:
+      'Add height and the date it applies from. Each weigh-in uses the height from that day.',
     manageHeightRecords: 'Manage height records',
     heightTimelineEmptyHint:
       'No height yet. Add your height and the date it started — for example, your birth date if it has not changed.',
+    replaceHeightTitle: 'Replace height record?',
+    replaceHeightMessage: 'A height record already exists for %{date}. Replace it?',
     deleteHeight: 'Delete height record',
     deleteHeightConfirm:
       'Delete the height from %{date}?\n\nBMI on affected weigh-ins may change or show as unavailable. Your data may be less accurate.',
@@ -311,8 +315,7 @@ export default {
     signedOut: 'Signed out.',
     signOutFailed: 'Could not sign out.',
     signOutRateLimited: 'Too many attempts. Please try again in a moment.',
-    signOutPersistFailedOffline:
-      "You're signed out on this device. We couldn't reach the server.",
+    signOutPersistFailedOffline: "You're signed out on this device. We couldn't reach the server.",
     deleteAccount: 'Delete account',
     deleteAccountConfirm:
       'This permanently deletes your account and all weigh-ins. This cannot be undone.',
@@ -389,7 +392,10 @@ export default {
     created: 'Created',
     updated: 'Updated',
     notSavedYet: 'This weigh-in is not saved yet.',
-    coverage: 'BMI from %{withBmi} of %{total} weigh-ins.',
+    coverage: {
+      one: 'BMI from %{withBmi} of %{total} weigh-in.',
+      other: 'BMI from %{withBmi} of %{total} weigh-ins.',
+    },
     coverageNone: 'No weigh-ins in this period have a height for that date, so BMI is “-”.',
     missingHeight: {
       one: '1 weigh-in has no height for that date.',
@@ -415,12 +421,9 @@ export default {
     yearsMonthsDays: '%{years}, %{months}, %{days}',
   },
   validation: {
-    weightRangeMetric:
-      'Enter a weight between %{min} and %{max} kg with up to 2 decimals.',
-    weightRangeImperial:
-      'Enter a weight between %{min} and %{max} lb with up to 1 decimal.',
-    heightRangeMetric:
-      'Enter height between 1 m 00 cm and 2 m 50 cm (%{min}–%{max} cm total).',
+    weightRangeMetric: 'Enter a weight between %{min} and %{max} kg with up to 2 decimals.',
+    weightRangeImperial: 'Enter a weight between %{min} and %{max} lb with up to 1 decimal.',
+    heightRangeMetric: 'Enter height between 1 m 00 cm and 2 m 50 cm (%{min}–%{max} cm total).',
     heightRangeImperial:
       'Enter height between %{minFt} ft %{minIn} in and %{maxFt} ft %{maxIn} in.',
   },

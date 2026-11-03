@@ -171,6 +171,15 @@ export function formatUpdatePasswordError(error: unknown): string {
     return network;
   }
 
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    error.code === 'same_password'
+  ) {
+    return t('auth.passwordMustDiffer');
+  }
+
   if (isWeakPasswordError(error)) {
     return t('auth.passwordRequirements');
   }
@@ -195,10 +204,6 @@ export function formatSignOutError(error: unknown): string {
   const network = mapNetworkError(error);
   if (network) {
     return network;
-  }
-
-  if (getErrorMessage(error).includes('sign_out_rate_limited')) {
-    return t('profile.signOutRateLimited');
   }
 
   return t('profile.signOutFailed');

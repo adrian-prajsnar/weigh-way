@@ -1,9 +1,10 @@
 import { getMockLatestVersion, isAppUpdateMockEnabled } from './app-update-mock';
-import { fetchLatestReleaseVersion } from './fetch-latest-release-version';
+import { fetchLatestRelease } from './fetch-latest-release';
 
 export type AppUpdateCheckResult = {
   mode: 'mock' | 'github';
   latestVersion: string;
+  downloadUrl: string | null;
 };
 
 export async function resolveAppUpdateCheck(): Promise<AppUpdateCheckResult | null> {
@@ -11,6 +12,7 @@ export async function resolveAppUpdateCheck(): Promise<AppUpdateCheckResult | nu
     return {
       mode: 'mock',
       latestVersion: getMockLatestVersion(),
+      downloadUrl: null,
     };
   }
 
@@ -18,13 +20,13 @@ export async function resolveAppUpdateCheck(): Promise<AppUpdateCheckResult | nu
     return null;
   }
 
-  const latestVersion = await fetchLatestReleaseVersion();
-  if (!latestVersion) {
+  const release = await fetchLatestRelease();
+  if (!release) {
     return null;
   }
 
   return {
     mode: 'github',
-    latestVersion,
+    ...release,
   };
 }

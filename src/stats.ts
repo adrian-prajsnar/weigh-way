@@ -1,9 +1,4 @@
-import {
-  getAgeOnDate,
-  getLastAgeYearRange,
-  getLastBirthdayDate,
-  getThisAgeYearRange,
-} from './age';
+import { getAgeOnDate, getLastAgeYearRange, getLastBirthdayDate, getThisAgeYearRange } from './age';
 import {
   addDays,
   formatDateLabel,
@@ -104,13 +99,8 @@ export function getDashboardPeriodRange(
   }
 }
 
-export function filterEntriesByRange(
-  entries: WeightEntry[],
-  range: DateRange,
-): WeightEntry[] {
-  return entries.filter(
-    (entry) => entry.date >= range.start && entry.date <= range.end,
-  );
+export function filterEntriesByRange(entries: WeightEntry[], range: DateRange): WeightEntry[] {
+  return entries.filter((entry) => entry.date >= range.start && entry.date <= range.end);
 }
 
 export function filterEntriesByBounds(
@@ -145,10 +135,7 @@ function buildStatsFromEntries(filtered: WeightEntry[]): WeightStats {
   };
 }
 
-export function getStatsForRange(
-  entries: WeightEntry[],
-  range: DateRange,
-): WeightStats {
+export function getStatsForRange(entries: WeightEntry[], range: DateRange): WeightStats {
   return buildStatsFromEntries(filterEntriesByRange(entries, range));
 }
 
@@ -172,9 +159,7 @@ function assignEntriesToBuckets(
 }
 
 export function getLast7WeighIns(entries: WeightEntry[]): WeightEntry[] {
-  return [...entries]
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 7);
+  return [...entries].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
 }
 
 function clipRangeToFilter(bucket: DateRange, filter: DateRange): DateRange {
@@ -363,10 +348,7 @@ function hasTrendData(stats: WeightStats): boolean {
   return stats.count > 0 && stats.average !== null;
 }
 
-function computeDeltaToOlder(
-  newer: WeightStats,
-  older: WeightStats,
-): number | null {
+function computeDeltaToOlder(newer: WeightStats, older: WeightStats): number | null {
   if (newer.average === null || older.average === null) {
     return null;
   }
@@ -396,12 +378,7 @@ export function getTrendRows(
             count: 1,
           }
         : { average: null, min: null, max: null, count: 0 };
-      const { title, subtitle } = getTrendRowTitle(
-        granularity,
-        range,
-        birthDate,
-        labelRange,
-      );
+      const { title, subtitle } = getTrendRowTitle(granularity, range, birthDate, labelRange);
       return {
         key: `${granularity}-${range.start}-${range.end}`,
         title,
@@ -416,12 +393,7 @@ export function getTrendRows(
     const bucketEntries = assignEntriesToBuckets(entries, buckets);
     rows = buckets.map(({ range, labelRange }, index) => {
       const stats = buildStatsFromEntries(bucketEntries[index]);
-      const { title, subtitle } = getTrendRowTitle(
-        granularity,
-        range,
-        birthDate,
-        labelRange,
-      );
+      const { title, subtitle } = getTrendRowTitle(granularity, range, birthDate, labelRange);
       return {
         key: `${granularity}-${range.start}-${range.end}`,
         title,
@@ -445,10 +417,7 @@ export function getTrendRows(
     }
 
     if (olderIndex < rows.length) {
-      rows[index].deltaToOlder = computeDeltaToOlder(
-        rows[index].stats,
-        rows[olderIndex].stats,
-      );
+      rows[index].deltaToOlder = computeDeltaToOlder(rows[index].stats, rows[olderIndex].stats);
     }
   }
 
@@ -478,16 +447,18 @@ export function getComparison(
 
   const rangeA = customRanges.rangeA;
   const rangeB = customRanges.rangeB;
-  const labelA =
-    customKind === 'dates' ? formatDateLabel(rangeA.start) : t('periods.rangeA');
-  const labelB =
-    customKind === 'dates' ? formatDateLabel(rangeB.start) : t('periods.rangeB');
+  const labelA = customKind === 'dates' ? formatDateLabel(rangeA.start) : t('periods.rangeA');
+  const labelB = customKind === 'dates' ? formatDateLabel(rangeB.start) : t('periods.rangeB');
 
   const statsA = getStatsForRange(entries, rangeA);
   const statsB = getStatsForRange(entries, rangeB);
+  const aIsNewer =
+    rangeA.start > rangeB.start || (rangeA.start === rangeB.start && rangeA.end >= rangeB.end);
   const difference =
     statsA.average !== null && statsB.average !== null
-      ? Math.round((statsA.average - statsB.average) * 100) / 100
+      ? Math.round(
+          (aIsNewer ? statsA.average - statsB.average : statsB.average - statsA.average) * 100,
+        ) / 100
       : null;
 
   return {

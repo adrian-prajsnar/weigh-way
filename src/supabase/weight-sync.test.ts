@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { t } from '../i18n';
+import { registerErrorReporter } from '../report-error';
 import { POSTGREST_PAGE_SIZE } from './fetch-all-rows';
 
 const supabaseFrom = vi.hoisted(() => vi.fn());
@@ -15,7 +17,7 @@ vi.mock('./auth-user', () => ({
 }));
 
 // eslint-disable-next-line import/first -- load after vi.mock
-import { getEntries } from './weight-sync';
+import { getEntries, saveEntry } from './weight-sync';
 
 type WeightRow = {
   entry_date: string;
@@ -110,6 +112,30 @@ describe('getEntries', () => {
     });
     supabaseFrom.mockReturnValue(chain);
 
-    await expect(getEntries()).rejects.toMatchObject({ message: 'db unavailable' });
+    await expect(getEntries()).rejects.toMatchObject({ message: t('errors.couldNotLoadData') });
+  });
+});
+
+describe('saveEntry errors', () => {
+  it('maps raw database messages and reports only a code', async () => {
+    const captureMessage = vi.fn();
+    registerErrorReporter({ captureMessage, captureException: vi.fn() });
+    getUserId.mockResolvedValue('user-1');
+    const single = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: 'private database detail', code: '42501' },
+    });
+    const select = vi.fn().mockReturnValue({ single });
+    const upsert = vi.fn().mockReturnValue({ select });
+    supabaseFrom.mockReturnValue({ upsert });
+    try {
+      await expect(saveEntry('2026-01-01', 70)).rejects.toThrow(t('errors.couldNotLoadData'));
+      expect(captureMessage).toHaveBeenCalledWith('supabase_failure', {
+        tags: { supabase_code: '42501' },
+      });
+      expect(upsert.mock.calls[0]?.[0]).not.toHaveProperty('updated_at');
+    } finally {
+      registerErrorReporter(null);
+    }
   });
 });

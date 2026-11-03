@@ -1,11 +1,19 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { useEffect } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
   getSession: vi.fn(),
   onAuthStateChange: vi.fn(),
+}));
+
+const recoveryState = vi.hoisted(() => ({
+  getUserId: vi.fn(),
+  setUserId: vi.fn(),
+  linkContext: vi.fn(),
+  initialUrl: vi.fn(),
+  performOAuthSignIn: vi.fn(),
 }));
 
 const weightSyncState = vi.hoisted(() => ({
@@ -49,12 +57,12 @@ vi.mock('../auth-redirect', () => ({
   isOAuthFlowActive: vi.fn(() => false),
   markEmailConfirmationPending: vi.fn(),
   markPasswordResetPending: vi.fn(),
-  performOAuthSignIn: vi.fn(),
+  performOAuthSignIn: recoveryState.performOAuthSignIn,
   resetOAuthRedirectState: vi.fn(),
 }));
 
 vi.mock('expo-linking', () => ({
-  getInitialURL: vi.fn().mockResolvedValue(null),
+  getInitialURL: recoveryState.initialUrl,
   addEventListener: vi.fn(() => ({ remove: vi.fn() })),
 }));
 
@@ -63,7 +71,9 @@ vi.mock('../storage/pkce-verifier-backup', () => ({
 }));
 
 vi.mock('../storage/auth-pending-flow', () => ({
-  getAuthLinkErrorContext: vi.fn().mockResolvedValue({}),
+  getAuthLinkErrorContext: recoveryState.linkContext,
+  getPasswordRecoveryUserId: recoveryState.getUserId,
+  setPasswordRecoveryUserId: recoveryState.setUserId,
 }));
 
 /* eslint-disable import/first -- after vi.mock */
@@ -107,6 +117,11 @@ function setupAuthListener() {
 
 describe('SupabaseAuthProvider bootstrap', () => {
   beforeEach(() => {
+    recoveryState.getUserId.mockReset().mockResolvedValue(null);
+    recoveryState.setUserId.mockReset().mockResolvedValue(undefined);
+    recoveryState.linkContext.mockReset().mockResolvedValue({});
+    recoveryState.initialUrl.mockReset().mockResolvedValue(null);
+    recoveryState.performOAuthSignIn.mockReset();
     authState.getSession.mockReset();
     authState.onAuthStateChange.mockReset();
     weightSyncState.getEntries.mockReset();
@@ -116,6 +131,67 @@ describe('SupabaseAuthProvider bootstrap', () => {
 
   afterEach(() => {
     cleanup();
+  });
+
+  it('does not enter recovery from a pending reset and unrelated startup URL', async () => {
+    recoveryState.linkContext.mockResolvedValue({ isPasswordRecovery: true });
+    recoveryState.initialUrl.mockResolvedValue('weighway://');
+    authState.getSession.mockResolvedValue({ data: { session: null } });
+    const { result } = renderHook(() => useSupabaseAuth(), {
+      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.isPasswordRecovery).toBe(false);
+  });
+
+  it('enters and persists recovery only for a session from PASSWORD_RECOVERY', async () => {
+    authState.getSession.mockResolvedValue({ data: { session: null } });
+    const { result } = renderHook(() => useSupabaseAuth(), {
+      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    act(() => authStateChangeListener?.('PASSWORD_RECOVERY', sampleSession));
+    expect(result.current.isPasswordRecovery).toBe(true);
+    expect(result.current.isAuthenticated).toBe(false);
+    expect(recoveryState.setUserId).toHaveBeenCalledWith('user-a');
+  });
+
+  it.each(['user-a', 'user-b'])(
+    'restores recovery only for the session owner (%s)',
+    async (storedUser) => {
+      recoveryState.getUserId.mockResolvedValue(storedUser);
+      authState.getSession.mockResolvedValue({ data: { session: sampleSession } });
+      const { result } = renderHook(() => useSupabaseAuth(), {
+        wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+      });
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+      expect(result.current.isPasswordRecovery).toBe(storedUser === sampleSession.user.id);
+    },
+  );
+
+  it('keeps the auth form mounted while the Google browser is open or cancelled', async () => {
+    authState.getSession.mockResolvedValue({ data: { session: null } });
+    let cancel: (value: string) => void = () => {};
+    recoveryState.performOAuthSignIn.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          cancel = resolve;
+        }),
+    );
+    const { result } = renderHook(() => useSupabaseAuth(), {
+      wrapper: ({ children }) => <SupabaseAuthProvider>{children}</SupabaseAuthProvider>,
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    let signIn: Promise<boolean>;
+    act(() => {
+      signIn = result.current.signInWithGoogle();
+    });
+    expect(result.current.isCompletingOAuth).toBe(false);
+    await act(async () => {
+      cancel('cancelled');
+      expect(await signIn!).toBe(false);
+    });
+    expect(result.current.isCompletingOAuth).toBe(false);
   });
 
   it('authenticates after getSession returns a session', async () => {

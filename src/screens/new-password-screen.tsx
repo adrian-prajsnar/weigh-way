@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text } from 'react-native';
 import { AuthLayout } from '../components/auth-layout';
 import { PasswordField } from '../components/password-field';
@@ -13,13 +13,15 @@ export function NewPasswordScreen() {
   const styles = useAppStyles();
   const colors = useColors();
   const { t } = useTranslation();
-  const { updatePassword } = useSupabaseAuth();
+  const { updatePassword, signOut } = useSupabaseAuth();
   const { showError, showSuccess } = useToast();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isBusy, setIsBusy] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleSavePassword = async () => {
+    if (submittingRef.current) return;
     if (!password) {
       showError(t('auth.enterNewPassword'));
       return;
@@ -35,6 +37,7 @@ export function NewPasswordScreen() {
       return;
     }
 
+    submittingRef.current = true;
     setIsBusy(true);
     try {
       await updatePassword(password);
@@ -43,15 +46,27 @@ export function NewPasswordScreen() {
       const message = error instanceof Error ? error.message : t('auth.couldNotUpdatePassword');
       showError(message);
     } finally {
+      submittingRef.current = false;
+      setIsBusy(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setIsBusy(true);
+    try {
+      await signOut();
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t('profile.signOutFailed'));
+    } finally {
+      submittingRef.current = false;
       setIsBusy(false);
     }
   };
 
   return (
-    <AuthLayout
-      title={t('auth.chooseNewPassword')}
-      subtitle={t('auth.newPasswordSubtitle')}
-    >
+    <AuthLayout title={t('auth.chooseNewPassword')} subtitle={t('auth.newPasswordSubtitle')}>
       <PasswordField
         label={t('auth.newPassword')}
         value={password}
@@ -87,6 +102,13 @@ export function NewPasswordScreen() {
         ) : (
           <Text style={styles.primaryButtonText}>{t('auth.savePassword')}</Text>
         )}
+      </Pressable>
+      <Pressable
+        style={({ pressed }) => [styles.secondaryButton, pressed && styles.buttonPressed]}
+        disabled={isBusy}
+        onPress={() => void handleCancel()}
+      >
+        <Text style={styles.secondaryButtonText}>{t('common.cancel')}</Text>
       </Pressable>
     </AuthLayout>
   );

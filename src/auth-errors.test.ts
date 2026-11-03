@@ -5,6 +5,7 @@ import {
   formatSignOutError,
   formatSignOutOfflineNotice,
   formatSignUpError,
+  formatUpdatePasswordError,
   isEmailNotConfirmedError,
   isNetworkError,
 } from './auth-errors';
@@ -83,10 +84,8 @@ describe('formatAuthLinkError', () => {
 });
 
 describe('formatSignOutError', () => {
-  it('maps sign-out rate limiting to a dedicated message', () => {
-    expect(formatSignOutError(new Error('sign_out_rate_limited'))).toBe(
-      'Too many attempts. Please try again in a moment.',
-    );
+  it('maps unrecognised sign-out failures to the generic message', () => {
+    expect(formatSignOutError(new Error('sign_out_rate_limited'))).toBe('Could not sign out.');
   });
 });
 
@@ -95,5 +94,16 @@ describe('formatSignOutOfflineNotice', () => {
     expect(formatSignOutOfflineNotice()).toBe(
       "You're signed out on this device. We couldn't reach the server.",
     );
+  });
+});
+
+describe('formatUpdatePasswordError', () => {
+  it('explains password reuse before considering weak-password wording', () => {
+    expect(
+      formatUpdatePasswordError({
+        code: 'same_password',
+        message: 'New password should be different from the old password.',
+      }),
+    ).toBe('Choose a password different from your current password.');
   });
 });

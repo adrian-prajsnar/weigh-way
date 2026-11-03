@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { useSupabaseAuth } from '../context/supabase-auth-context';
 import { useToast } from '../context/toast-context';
@@ -19,12 +19,16 @@ export function GoogleSignInButton({ disabled = false, onBusyChange }: Props) {
   const { signInWithGoogle } = useSupabaseAuth();
   const { showError, showSuccess } = useToast();
   const [isBusy, setIsBusy] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     onBusyChange?.(isBusy);
   }, [isBusy, onBusyChange]);
 
   const handlePress = async () => {
+    if (disabled || submittingRef.current) return;
+    submittingRef.current = true;
+    onBusyChange?.(true);
     setIsBusy(true);
     try {
       const signedIn = await signInWithGoogle();
@@ -35,7 +39,9 @@ export function GoogleSignInButton({ disabled = false, onBusyChange }: Props) {
       const message = error instanceof Error ? error.message : t('auth.googleSignInFailed');
       showError(message);
     } finally {
+      submittingRef.current = false;
       setIsBusy(false);
+      onBusyChange?.(false);
     }
   };
 

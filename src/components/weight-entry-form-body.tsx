@@ -1,13 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import type { TextInputInstance } from 'react-native';
 import { calculateBmi } from '../bmi';
 import { BmiBadge } from './bmi-badge';
@@ -20,12 +13,14 @@ import { useToast } from '../context/toast-context';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { isDemoMode } from '../demo/is-demo-mode';
+import { useTodayKey } from '../hooks/use-today-key';
 import { useNetworkStatus } from '../hooks/use-network-status';
 import { shouldBlockSaveForOffline } from '../network/connectivity';
 import {
   formatDateLabel,
   formatWeightValue,
   getTodayDate,
+  fromDateKey,
   getWeightRangeMessage,
   getWeightUnitLabel,
   normalizeWeightInputText,
@@ -46,7 +41,6 @@ import { useWeightEntryPrefill } from './use-weight-entry-prefill';
 
 type WeightEntryFormBodyProps = {
   entries: WeightEntry[];
-  onSaved: () => Promise<void>;
   isDataLoading?: boolean;
   initialDate?: Date;
   resetDateAfterSave?: boolean;
@@ -57,7 +51,6 @@ type WeightEntryFormBodyProps = {
 
 export function WeightEntryFormBody({
   entries,
-  onSaved: _onSaved,
   isDataLoading = false,
   initialDate,
   resetDateAfterSave = false,
@@ -76,6 +69,8 @@ export function WeightEntryFormBody({
   const { confirm } = useConfirm();
   const { isOffline } = useNetworkStatus();
   const { upsertEntry } = useSharedWeightEntries();
+  const todayKey = useTodayKey();
+  const dateTouchedRef = useRef(false);
   const [selectedDate, setSelectedDate] = useState(initialDate ?? getTodayDate);
   const [isSaving, setIsSaving] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -116,6 +111,12 @@ export function WeightEntryFormBody({
   }, [parsedWeightKg, heightAtDate, showBmi, selectedDateKey, birthDate, sex]);
 
   useEffect(() => {
+    if (!initialDate && !dateTouchedRef.current && !weightInputTouchedRef.current) {
+      setSelectedDate(fromDateKey(todayKey));
+    }
+  }, [initialDate, todayKey, weightInputTouchedRef]);
+
+  useEffect(() => {
     if (initialDate) {
       setSelectedDate(initialDate);
     }
@@ -145,9 +146,7 @@ export function WeightEntryFormBody({
     const deltaKg =
       units === 'imperial' ? lbToKg(WEIGHT_STEP_LB) * direction : WEIGHT_STEP_KG * direction;
     weightInputTouchedRef.current = true;
-    setWeightInput(
-      formatWeightValue(Math.round((current + deltaKg) * 100) / 100, units, locale),
-    );
+    setWeightInput(formatWeightValue(Math.round((current + deltaKg) * 100) / 100, units, locale));
   };
 
   const decreaseWeightStepper = useWebStepperPress(() => adjustWeight(-1));
@@ -176,6 +175,8 @@ export function WeightEntryFormBody({
     setWeightValidationMessage(null);
 
     if (existingEntryForDate !== undefined && existingEntryForDate.weightKg === weightKg) {
+      weightInputTouchedRef.current = false;
+      if (selectedDateKey === toDateKey(getTodayDate())) dateTouchedRef.current = false;
       onSaveSuccess?.();
       return;
     }
@@ -207,7 +208,10 @@ export function WeightEntryFormBody({
 
     try {
       await upsertEntry(selectedDateKey, weightKg);
+      weightInputTouchedRef.current = false;
+      if (selectedDateKey === toDateKey(getTodayDate())) dateTouchedRef.current = false;
       if (resetDateAfterSave) {
+        dateTouchedRef.current = false;
         setSelectedDate(getTodayDate());
       }
       showSuccess(t('entryForm.saved'));
@@ -227,6 +231,7 @@ export function WeightEntryFormBody({
         value={selectedDate}
         onChange={(date) => {
           if (date) {
+            dateTouchedRef.current = true;
             setSelectedDate(date);
           }
         }}

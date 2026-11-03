@@ -24,18 +24,12 @@ import { useDashboardAlertDismissals } from '../hooks/use-dashboard-alert-dismis
 import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTranslation } from '../i18n/language-context';
-import { formatDateLabel, formatDateRange } from '../format';
+import { useTodayKey } from '../hooks/use-today-key';
+import { formatDateLabel, formatDateRange, fromDateKey } from '../format';
 import { RootTabParamList } from '../navigation/types';
-import {
-  getDashboardPeriodRange,
-  getLast7WeighIns,
-  getStatsForRange,
-} from '../stats';
+import { getDashboardPeriodRange, getLast7WeighIns, getStatsForRange } from '../stats';
 import { DashboardPeriod } from '../types';
-import {
-  PROFILE_SETUP_DISMISS_IDS,
-  shouldShowProfileSetupBanner,
-} from '../profile-setup-banner';
+import { PROFILE_SETUP_DISMISS_IDS, shouldShowProfileSetupBanner } from '../profile-setup-banner';
 import { useAppStyles } from '../theme/styles';
 import { webFocusTarget } from '../theme/web-focus-target';
 
@@ -52,6 +46,7 @@ export function DashboardScreen({ navigation }: Props) {
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
   const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
+  const todayKey = useTodayKey();
   const [period, setPeriod] = useState<DashboardPeriod>('thisWeek');
   const [editingDate, setEditingDate] = useState<string | null>(null);
 
@@ -89,8 +84,8 @@ export function DashboardScreen({ navigation }: Props) {
   };
 
   const range = useMemo(
-    () => getDashboardPeriodRange(period, undefined, birthDate),
-    [period, birthDate],
+    () => getDashboardPeriodRange(period, fromDateKey(todayKey), birthDate),
+    [period, birthDate, todayKey],
   );
   const stats = useMemo(() => getStatsForRange(entries, range), [entries, range]);
   const recentEntries = useMemo(() => getLast7WeighIns(entries), [entries]);
@@ -105,14 +100,7 @@ export function DashboardScreen({ navigation }: Props) {
       heightEntries.length > 0,
       isDismissed,
     );
-  }, [
-    areDismissalsReady,
-    isProfileLoading,
-    birthDate,
-    sex,
-    heightEntries.length,
-    isDismissed,
-  ]);
+  }, [areDismissalsReady, isProfileLoading, birthDate, sex, heightEntries.length, isDismissed]);
 
   const openProfileSection = (focusSection: 'birthDate' | 'height' | 'sex' | undefined) => {
     navigation.navigate('Profile', {
@@ -141,75 +129,74 @@ export function DashboardScreen({ navigation }: Props) {
             />
           }
         >
-        {error && !isLoading ? (
-          <ErrorCard message={error} onRetry={() => void refreshEntries().catch(() => undefined)} />
-        ) : null}
-
-        {showProfileBanner ? (
-          <DismissibleInfoBanner
-            message={t('dashboard.profileBannerMessage')}
-            actionLabel={t('dashboard.profileBannerAction')}
-            onAction={() => openProfileSection(undefined)}
-            onDismiss={() => void dismiss(PROFILE_SETUP_DISMISS_IDS)}
-          />
-        ) : null}
-
-        <HeroWeightCard entries={entries} isLoading={isLoading} isBusy={isRefreshing} />
-
-        <EntryForm entries={entries} onSaved={refreshEntries} isDataLoading={isLoading} />
-
-        <AppCard
-          title={t('dashboard.averages')}
-          subtitle={formatDateRange(range)}
-          isBusy={isRefreshing}
-          delay={120}
-        >
-          <PeriodSelector
-            selected={period}
-            onSelect={setPeriod}
-            showAgeYear={Boolean(birthDate)}
-          />
-          {isLoading ? (
-            <StatsSummarySkeleton />
-          ) : (
-            <StatsSummary stats={stats} entries={entries} range={range} />
-          )}
-        </AppCard>
-
-        <AppCard
-          title={t('dashboard.recentHistory')}
-          isBusy={isRefreshing}
-          delay={180}
-          right={
-            <Pressable
-              onPress={() => navigation.navigate('History')}
-              hitSlop={8}
-              {...webFocusTarget('text-button')}
-            >
-              <Text style={styles.linkText}>{t('dashboard.viewAll')}</Text>
-            </Pressable>
-          }
-        >
-          {isLoading ? (
-            <HistoryListSkeleton rows={3} />
-          ) : (
-            <HistoryList
-              entries={recentEntries}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              deletingDate={deletingDate}
-              emptyMessage={t('dashboard.emptyRecent')}
+          {error && !isLoading ? (
+            <ErrorCard
+              message={error}
+              onRetry={() => void refreshEntries().catch(() => undefined)}
             />
-          )}
-        </AppCard>
+          ) : null}
 
-        {birthDate && !isLoading && entries.length > 0 ? (
-          <WeightHighlightsCard
-            entries={entries}
-            birthDate={birthDate}
+          {showProfileBanner ? (
+            <DismissibleInfoBanner
+              message={t('dashboard.profileBannerMessage')}
+              actionLabel={t('dashboard.profileBannerAction')}
+              onAction={() => openProfileSection(undefined)}
+              onDismiss={() => void dismiss(PROFILE_SETUP_DISMISS_IDS)}
+            />
+          ) : null}
+
+          <HeroWeightCard entries={entries} isLoading={isLoading} isBusy={isRefreshing} />
+
+          <EntryForm entries={entries} isDataLoading={isLoading} />
+
+          <AppCard
+            title={t('dashboard.averages')}
+            subtitle={formatDateRange(range)}
             isBusy={isRefreshing}
-          />
-        ) : null}
+            delay={120}
+          >
+            <PeriodSelector
+              selected={period}
+              onSelect={setPeriod}
+              showAgeYear={Boolean(birthDate)}
+            />
+            {isLoading ? (
+              <StatsSummarySkeleton />
+            ) : (
+              <StatsSummary stats={stats} entries={entries} range={range} />
+            )}
+          </AppCard>
+
+          <AppCard
+            title={t('dashboard.recentHistory')}
+            isBusy={isRefreshing}
+            delay={180}
+            right={
+              <Pressable
+                onPress={() => navigation.navigate('History')}
+                hitSlop={8}
+                {...webFocusTarget('text-button')}
+              >
+                <Text style={styles.linkText}>{t('dashboard.viewAll')}</Text>
+              </Pressable>
+            }
+          >
+            {isLoading ? (
+              <HistoryListSkeleton rows={3} />
+            ) : (
+              <HistoryList
+                entries={recentEntries}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                deletingDate={deletingDate}
+                emptyMessage={t('dashboard.emptyRecent')}
+              />
+            )}
+          </AppCard>
+
+          {birthDate && !isLoading && entries.length > 0 ? (
+            <WeightHighlightsCard entries={entries} birthDate={birthDate} isBusy={isRefreshing} />
+          ) : null}
         </Animated.ScrollView>
       </ContentFrame>
 
@@ -218,7 +205,6 @@ export function DashboardScreen({ navigation }: Props) {
         date={editingDate}
         entries={entries}
         onClose={() => setEditingDate(null)}
-        onSaved={refreshEntries}
         isDataLoading={isLoading}
       />
     </View>
