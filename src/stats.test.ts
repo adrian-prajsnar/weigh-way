@@ -128,14 +128,14 @@ describe('getTrendRows', () => {
 });
 
 describe('getComparison', () => {
-  it('uses newer minus older even when the older custom range is selected first', () => {
+  it('uses later minus earlier when the earlier period is selected first', () => {
     const result = getComparison(entries, 'custom', {
       rangeA: { start: '2024-01-15', end: '2024-01-15' },
       rangeB: { start: '2024-06-01', end: '2024-06-02' },
     });
     expect(result?.difference).toBe(-1.25);
   });
-  it('compares custom period averages', () => {
+  it('uses later minus earlier when the later period is selected first', () => {
     const result = getComparison(entries, 'custom', {
       rangeA: { start: '2024-06-01', end: '2024-06-02' },
       rangeB: { start: '2024-01-15', end: '2024-01-15' },
@@ -144,6 +144,33 @@ describe('getComparison', () => {
     expect(result?.statsA.average).toBe(76.75);
     expect(result?.statsB.average).toBe(78);
     expect(result?.difference).toBe(-1.25);
+  });
+
+  it.each([
+    ['2024-01-15', '2024-06-01'],
+    ['2024-06-01', '2024-01-15'],
+  ])('keeps custom dates chronological for %s compared with %s', (dateA, dateB) => {
+    const result = getComparison(
+      entries,
+      'custom',
+      {
+        rangeA: { start: dateA, end: dateA },
+        rangeB: { start: dateB, end: dateB },
+      },
+      null,
+      'dates',
+    );
+
+    expect(result?.difference).toBe(-1);
+  });
+
+  it('has no difference when either period has no entries', () => {
+    const result = getComparison(entries, 'custom', {
+      rangeA: { start: '2025-01-01', end: '2025-01-31' },
+      rangeB: { start: '2024-06-01', end: '2024-06-02' },
+    });
+
+    expect(result?.difference).toBeNull();
   });
 
   it('returns null for invalid custom ranges', () => {
