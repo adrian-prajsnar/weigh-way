@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { SlideInUp } from 'react-native-reanimated';
 import { fromDateKey } from '../format';
 import { useTranslation } from '../i18n/language-context';
 import { WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
-import { spacing } from '../theme/tokens';
 import { ModalSheetDismissArea } from './modal-sheet-dismiss-area';
 import { WeightEntryFormBody } from './weight-entry-form-body';
 
@@ -27,23 +26,19 @@ export function WeightEntryModal({
 }: WeightEntryModalProps) {
   const styles = useAppStyles();
   const colors = useColors();
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  if (!date) {
+  if (!visible || !date) {
     return null;
   }
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={[styles.modalSheetBackdrop, styles.weightEntryModalBackdrop]}>
-        <View
-          style={[
-            styles.datePickerSheet,
-            styles.weightEntryModalSheet,
-            { marginTop: insets.top + spacing.lg },
-          ]}
-        >
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View
+        entering={SlideInUp.duration(300)}
+        style={[styles.modalSheetBackdrop, styles.weightEntryModalBackdrop]}
+      >
+        <View style={[styles.datePickerSheet, styles.weightEntryModalSheet]}>
           <View style={styles.datePickerSheetHeader}>
             <Text style={styles.datePickerSheetTitle}>{t('entryForm.editTitle')}</Text>
             <Pressable
@@ -72,7 +67,7 @@ export function WeightEntryModal({
           </ScrollView>
         </View>
         <ModalSheetDismissArea onPress={onClose} />
-      </View>
+      </Animated.View>
     </Modal>
   );
 }

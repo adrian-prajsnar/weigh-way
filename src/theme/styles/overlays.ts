@@ -95,6 +95,9 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     },
     weightEntryModalSheet: {
       maxHeight: '90%',
+      borderTopLeftRadius: 0,
+      borderTopRightRadius: 0,
+      borderTopWidth: 0,
       borderBottomLeftRadius: radius.xl,
       borderBottomRightRadius: radius.xl,
       paddingBottom: spacing.lg,
