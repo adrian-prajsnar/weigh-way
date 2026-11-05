@@ -6,6 +6,7 @@ import {
   toDateKey,
   getTrendDateRangeFieldHighlight,
   validateTrendDateRange,
+  getTrendLatestTo,
 } from '../format';
 import { getComparison, getEarliestEntryDate, getTrendRows } from '../stats';
 import { ComparisonMode, CustomCompareKind, TrendGranularity, WeightEntry } from '../types';
@@ -271,20 +272,32 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     setCustomKind(nextKind);
   };
 
-  const handleFromChange = (date: Date | null) => {
-    if (!date || !isTrendMode(mode)) {
+  const handleRangeChange = (start: Date, end: Date) => {
+    if (!isTrendMode(mode)) {
       return;
     }
     beginListLoading();
-    setFromDate(date);
+    setFromDate(start);
+    setToDate(end);
   };
 
-  const handleToChange = (date: Date | null) => {
-    if (!date || !isTrendMode(mode)) {
-      return;
-    }
-    beginListLoading();
-    setToDate(date);
+  const validateRange = (start: Date, end: Date) => {
+    if (!isTrendMode(mode)) return null;
+    const error = validateTrendDateRange(start, end, mode, today, birthDate);
+    return error ? t(getTrendDateRangeValidationMessageKey(error, mode)) : null;
+  };
+
+  const getLatestEnd = (start: Date) =>
+    isTrendMode(mode) ? getTrendLatestTo(start, mode, today) : today;
+
+  const handleRangeAChange = (start: Date, end: Date) => {
+    setRangeAStart(start);
+    setRangeAEnd(end);
+  };
+
+  const handleRangeBChange = (start: Date, end: Date) => {
+    setRangeBStart(start);
+    setRangeBEnd(end);
   };
 
   const resetRange = () => {
@@ -325,13 +338,12 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     trendEmptyMessage,
     handleModeChange,
     handleCustomKindChange,
-    handleFromChange,
-    handleToChange,
+    handleRangeChange,
+    validateRange,
+    getLatestEnd,
     resetRange,
-    setRangeAStart,
-    setRangeAEnd,
-    setRangeBStart,
-    setRangeBEnd,
+    handleRangeAChange,
+    handleRangeBChange,
     setDateA,
     setDateB,
   };

@@ -4,7 +4,7 @@ import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
 import { ContentFrame } from '../components/content-frame';
-import { DateField } from '../components/date-field';
+import { DateRangeField } from '../components/date-range-field';
 import { ErrorCard } from '../components/error-card';
 import { HistoryList } from '../components/history-list';
 import { HistoryListSkeleton } from '../components/history-list-skeleton';
@@ -16,13 +16,13 @@ import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTodayKey } from '../hooks/use-today-key';
-import { useWideLayout } from '../hooks/use-wide-layout';
 import { useTranslation } from '../i18n/language-context';
 import {
   formatDateLabel,
   getDefaultHistoryDateRange,
   getHistoryDateRangeFieldHighlight,
   getHistoryDateRangeValidationMessageKey,
+  getHistoryLatestTo,
   fromDateKey,
   toDateKey,
   validateHistoryDateRange,
@@ -45,7 +45,6 @@ export function HistoryScreen() {
   const { confirm } = useConfirm();
   const { scrollY, onScroll } = useScrollHeader();
   const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
-  const isWideLayout = useWideLayout();
   const todayKey = useTodayKey();
   const today = useMemo(() => fromDateKey(todayKey), [todayKey]);
   const defaultRange = useMemo(() => getDefaultHistoryDateRange(today), [today]);
@@ -106,21 +105,16 @@ export function HistoryScreen() {
     return filterEntriesByBounds(entries, fromKey, toKey);
   }, [entries, fromKey, toKey, isInvalidRange]);
 
-  const handleFromChange = useCallback(async (date: Date | null) => {
-    if (!date) {
-      return;
-    }
-    setFromDate(date);
+  const handleRangeChange = useCallback(async (start: Date, end: Date) => {
+    setFromDate(start);
+    setToDate(end);
     await waitForInteractions();
   }, []);
 
-  const handleToChange = useCallback(async (date: Date | null) => {
-    if (!date) {
-      return;
-    }
-    setToDate(date);
-    await waitForInteractions();
-  }, []);
+  const validateRange = (start: Date, end: Date) => {
+    const error = validateHistoryDateRange(start, end, today);
+    return error ? t(getHistoryDateRangeValidationMessageKey(error)) : null;
+  };
 
   const handleEdit = useCallback((date: string) => {
     setEditingDate(date);
@@ -207,28 +201,15 @@ export function HistoryScreen() {
           ) : null}
 
           <AppCard delay={0}>
-            <View
-              style={[styles.historyDateFilters, isWideLayout && styles.historyDateFiltersWide]}
-            >
-              <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
-                <DateField
-                  label={t('history.from')}
-                  value={fromDate}
-                  onChange={handleFromChange}
-                  maximumDate={toDate}
-                  invalid={rangeFieldHighlight.from}
-                />
-              </View>
-              <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
-                <DateField
-                  label={t('history.to')}
-                  value={toDate}
-                  onChange={handleToChange}
-                  maximumDate={today}
-                  invalid={rangeFieldHighlight.to}
-                />
-              </View>
-            </View>
+            <DateRangeField
+              start={fromDate}
+              end={toDate}
+              onChange={handleRangeChange}
+              maximumDate={today}
+              invalid={rangeFieldHighlight.from || rangeFieldHighlight.to}
+              validateRange={validateRange}
+              getLatestEnd={(start) => getHistoryLatestTo(start, today)}
+            />
             {isFilterCustom || isClearingFilter ? (
               <View style={styles.filterActionsRow}>
                 <Pressable

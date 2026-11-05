@@ -141,6 +141,93 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     datePickerSheetConfirm: {
       marginTop: spacing.xs,
     },
+    datePickerContent: {
+      flexGrow: 0,
+      flexShrink: 1,
+    },
+    datePickerScrollContent: {
+      gap: spacing.md,
+      paddingBottom: spacing.xs,
+    },
+    dateRangeEndpoint: {
+      flex: 1,
+      gap: spacing.xs,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: colors.borderStrong,
+      backgroundColor: colors.surfaceMuted,
+      padding: spacing.sm,
+    },
+    dateRangeEndpointActive: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    dateRangeEndpointActiveText: {
+      color: colors.onAccent,
+    },
+    datePickerCalendarViewport: {
+      overflow: 'hidden',
+    },
+    dateRangeCalendarDay: {
+      alignSelf: 'stretch',
+      minHeight: 38,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    dateRangeCalendarDaySelected: {
+      backgroundColor: colors.accentSoft,
+    },
+    dateRangeCalendarDayEndpoint: {
+      backgroundColor: colors.accent,
+    },
+    dateRangeCalendarDayStart: {
+      borderTopLeftRadius: radius.xl,
+      borderBottomLeftRadius: radius.xl,
+    },
+    dateRangeCalendarDayEnd: {
+      borderTopRightRadius: radius.xl,
+      borderBottomRightRadius: radius.xl,
+    },
+    dateRangeCalendarDayText: {
+      fontFamily: fontFamily.medium,
+      fontSize: 15,
+      color: colors.text,
+    },
+    dateRangeCalendarDayToday: {
+      color: colors.accent,
+      fontFamily: fontFamily.semibold,
+    },
+    dateRangeCalendarDayDisabled: {
+      color: colors.textSubtle,
+    },
+    dateRangeCalendarDaySelectedText: {
+      color: colors.accentText,
+    },
+    dateRangeCalendarDayEndpointText: {
+      color: colors.onAccent,
+    },
+    dateRangeStatusRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: spacing.sm,
+    },
+    dateRangeDayCount: {
+      color: colors.accentText,
+      backgroundColor: colors.accentSoft,
+      fontFamily: fontFamily.semibold,
+      fontSize: 14,
+      borderRadius: radius.sm,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+    },
+    dateRangeFieldValue: {
+      flex: 1,
+      fontSize: 15,
+      color: colors.text,
+      fontFamily: fontFamily.medium,
+    },
     datePickerPeriodRow: {
       flexDirection: 'row',
       gap: spacing.sm,

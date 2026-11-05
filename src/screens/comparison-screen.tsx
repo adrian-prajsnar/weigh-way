@@ -8,6 +8,7 @@ import { ComparisonResult } from '../components/comparison-result';
 import { ComparisonResultSkeleton } from '../components/comparison-result-skeleton';
 import { ComparisonTrendList } from '../components/comparison-trend-list';
 import { DateField } from '../components/date-field';
+import { DateRangeField } from '../components/date-range-field';
 import { EmptyState } from '../components/empty-state';
 import { ErrorCard } from '../components/error-card';
 import { HistoryListSkeleton } from '../components/history-list-skeleton';
@@ -18,7 +19,6 @@ import { useSharedWeightEntries } from '../context/weight-entries-context';
 import { isTrendMode, useComparison } from '../hooks/use-comparison';
 import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
-import { useWideLayout } from '../hooks/use-wide-layout';
 import { useTranslation } from '../i18n/language-context';
 import { CustomCompareKind } from '../types';
 import { useAppStyles } from '../theme/styles';
@@ -29,8 +29,7 @@ type RangePickerProps = {
   delay: number;
   start: Date | null;
   end: Date | null;
-  onStartChange: (date: Date | null) => void;
-  onEndChange: (date: Date | null) => void;
+  onChange: (start: Date, end: Date) => void;
   invalid?: boolean;
   maximumDate: Date;
 };
@@ -40,8 +39,7 @@ function RangePicker({
   delay,
   start,
   end,
-  onStartChange,
-  onEndChange,
+  onChange,
   invalid = false,
   maximumDate,
 }: RangePickerProps) {
@@ -50,19 +48,12 @@ function RangePicker({
 
   return (
     <AppCard title={title} delay={delay}>
-      <DateField
-        label={t('comparison.start')}
-        value={start}
-        onChange={onStartChange}
-        maximumDate={end ?? maximumDate}
-        invalid={invalid}
-      />
-      <DateField
-        label={t('comparison.end')}
-        value={end}
-        onChange={onEndChange}
+      <DateRangeField
+        start={start}
+        end={end}
+        onChange={onChange}
         maximumDate={maximumDate}
-        minimumDate={start ?? undefined}
+        invalid={invalid}
       />
       {invalid ? <Text style={styles.warningText}>{t('comparison.invalidCustom')}</Text> : null}
     </AppCard>
@@ -76,7 +67,6 @@ export function ComparisonScreen() {
   const { birthDate } = useSharedUserProfile();
   const { scrollY, onScroll } = useScrollHeader();
   const { scrollViewStyle, contentContainerStyle } = useTabScreenScroll();
-  const isWideLayout = useWideLayout();
 
   const comparison = useComparison({
     entries,
@@ -127,33 +117,18 @@ export function ComparisonScreen() {
 
             {isTrendMode(comparison.mode) ? (
               <>
-                <View
-                  style={[
-                    styles.historyDateFilters,
-                    isWideLayout && styles.historyDateFiltersWide,
-                  ]}
-                >
-                  <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
-                    <DateField
-                      label={t('comparison.start')}
-                      value={comparison.fromDate}
-                      onChange={comparison.handleFromChange}
-                      maximumDate={comparison.toDate}
-                      minimumDate={comparison.filterMinimumFrom}
-                      invalid={comparison.rangeFieldHighlight.from}
-                    />
-                  </View>
-                  <View style={isWideLayout ? styles.historyDateFilterField : undefined}>
-                    <DateField
-                      label={t('comparison.end')}
-                      value={comparison.toDate}
-                      onChange={comparison.handleToChange}
-                      maximumDate={comparison.today}
-                      minimumDate={comparison.fromDate}
-                      invalid={comparison.rangeFieldHighlight.to}
-                    />
-                  </View>
-                </View>
+                <DateRangeField
+                  start={comparison.fromDate}
+                  end={comparison.toDate}
+                  onChange={comparison.handleRangeChange}
+                  maximumDate={comparison.today}
+                  minimumDate={comparison.filterMinimumFrom}
+                  invalid={
+                    comparison.rangeFieldHighlight.from || comparison.rangeFieldHighlight.to
+                  }
+                  validateRange={comparison.validateRange}
+                  getLatestEnd={comparison.getLatestEnd}
+                />
                 {!comparison.isDefaultRange ? (
                   <View style={styles.filterActionsRow}>
                     <Pressable onPress={comparison.resetRange} hitSlop={8} {...webFocusTarget('text-button')}>
@@ -182,8 +157,7 @@ export function ComparisonScreen() {
               delay={60}
               start={comparison.rangeAStart}
               end={comparison.rangeAEnd}
-              onStartChange={comparison.setRangeAStart}
-              onEndChange={comparison.setRangeAEnd}
+              onChange={comparison.handleRangeAChange}
               invalid={comparison.rangeAInvalid}
               maximumDate={comparison.today}
             />
@@ -192,8 +166,7 @@ export function ComparisonScreen() {
               delay={120}
               start={comparison.rangeBStart}
               end={comparison.rangeBEnd}
-              onStartChange={comparison.setRangeBStart}
-              onEndChange={comparison.setRangeBEnd}
+              onChange={comparison.handleRangeBChange}
               invalid={comparison.rangeBInvalid}
               maximumDate={comparison.today}
             />

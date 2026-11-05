@@ -173,7 +173,7 @@ function getHistoryEarliestFrom(to: Date): Date {
   return addYears(to, -1);
 }
 
-function getHistoryLatestTo(from: Date, today: Date): Date {
+export function getHistoryLatestTo(from: Date, today: Date): Date {
   const latest = addYears(from, 1);
   return toDateKey(latest) > toDateKey(today) ? today : latest;
 }
@@ -348,7 +348,7 @@ function getTrendDefaultFrom(
   return withEarliestWeighInFloor(from, earliestWeighInDate);
 }
 
-function getTrendLatestTo(from: Date, granularity: TrendGranularity, today: Date): Date {
+export function getTrendLatestTo(from: Date, granularity: TrendGranularity, today: Date): Date {
   switch (granularity) {
     case 'day':
       return addDays(from, TREND_DAY_MAX_RANGE_DAYS - 1);

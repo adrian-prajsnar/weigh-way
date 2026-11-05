@@ -128,7 +128,7 @@ export const layoutWidth = {
   toast: 480,
 } as const;
 
-/** Minimum window width before side-by-side date filters and taller charts apply. */
+/** Minimum window width before wide-screen content sizing applies. */
 export const layoutBreakpoint = {
   wide: 600,
 } as const;
