@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { SlideInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fromDateKey } from '../format';
 import { useTranslation } from '../i18n/language-context';
 import { WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
+import { spacing } from '../theme/tokens';
 import { ModalSheetDismissArea } from './modal-sheet-dismiss-area';
 import { WeightEntryFormBody } from './weight-entry-form-body';
 
@@ -26,6 +28,7 @@ export function WeightEntryModal({
 }: WeightEntryModalProps) {
   const styles = useAppStyles();
   const colors = useColors();
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
   if (!visible || !date) {
@@ -38,7 +41,13 @@ export function WeightEntryModal({
         entering={SlideInUp.duration(300)}
         style={[styles.modalSheetBackdrop, styles.weightEntryModalBackdrop]}
       >
-        <View style={[styles.datePickerSheet, styles.weightEntryModalSheet]}>
+        <View
+          style={[
+            styles.datePickerSheet,
+            styles.weightEntryModalSheet,
+            { paddingTop: insets.top + spacing.lg },
+          ]}
+        >
           <View style={styles.datePickerSheetHeader}>
             <Text style={styles.datePickerSheetTitle}>{t('entryForm.editTitle')}</Text>
             <Pressable
