@@ -17,12 +17,18 @@ describe('tab-bar-layout', () => {
   });
 
   it('pads scroll content when the tab bar inset is reserved in padding', () => {
-    expect(getScrollBottomPadding(0)).toBe(132);
-    expect(getScrollBottomPadding(34)).toBe(166);
+    expect(getScrollBottomPadding(0)).toBe(96);
+    expect(getScrollBottomPadding(34)).toBe(130);
   });
 
   it('uses only content breathing room when the tab bar uses marginBottom', () => {
-    expect(getScrollBottomPadding(0, false)).toBe(44);
-    expect(getScrollBottomPadding(34, false)).toBe(44);
+    expect(getScrollBottomPadding(0, false)).toBe(8);
+    expect(getScrollBottomPadding(34, false)).toBe(8);
+  });
+
+  it.each([0, 34])('leaves a 16px content gap above the tab bar with a %ipx safe area', (inset) => {
+    const gapAboveTabBar = getTabBarViewportInset(inset) - getTabBarBottomOffset(inset) - 72;
+
+    expect(gapAboveTabBar + getScrollBottomPadding(inset, false)).toBe(16);
   });
 });

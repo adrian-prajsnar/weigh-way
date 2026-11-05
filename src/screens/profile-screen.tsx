@@ -380,7 +380,9 @@ export function ProfileScreen({
             onScroll={onScroll}
             scrollEventThrottle={16}
             refreshControl={
-              <RefreshControl refreshing={isRefreshing} onRefresh={() => void refreshProfile()} />
+              Platform.OS === 'web' ? undefined : (
+                <RefreshControl refreshing={isRefreshing} onRefresh={() => void refreshProfile()} />
+              )
             }
           >
             {error && !isLoading ? (
