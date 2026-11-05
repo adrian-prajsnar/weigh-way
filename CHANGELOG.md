@@ -1,3 +1,29 @@
+# [1.6.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.5.0...v1.6.0) (2026-11-05)
+
+
+### Bug Fixes
+
+* address PR [#6](https://github.com/adrian-prajsnar/weigh-way/issues/6) review (locale memos, card enter, tab padding) ([f986f46](https://github.com/adrian-prajsnar/weigh-way/commit/f986f463cbbdfcc0da08e4b7dd271b5d699aa6d7))
+* **app:** resolve audit defects in data, auth, and calculations ([2d0034d](https://github.com/adrian-prajsnar/weigh-way/commit/2d0034d5d5d5dda2a4cc13601458b98427041f97))
+* auth deep links, PostgREST paging, and web stepper regressions ([#4](https://github.com/adrian-prajsnar/weigh-way/issues/4)) ([236ecd6](https://github.com/adrian-prajsnar/weigh-way/commit/236ecd6327151fa67a295eb7dc3aaca6da342519))
+* auth storage sign-out durability and startup session validation ([#9](https://github.com/adrian-prajsnar/weigh-way/issues/9)) ([7e713f0](https://github.com/adrian-prajsnar/weigh-way/commit/7e713f0b1fec5dd3223b50aec21e52d54e71ae47))
+* blocked web storage, confirm focus, and prefill follow-ups ([#8](https://github.com/adrian-prajsnar/weigh-way/issues/8)) ([04bf59b](https://github.com/adrian-prajsnar/weigh-way/commit/04bf59bcad86f7fe10a62a1233c04ec048ce834b))
+* **ci:** read production migration settings from secrets ([ae764d6](https://github.com/adrian-prajsnar/weigh-way/commit/ae764d63739c52dc06fcaffa353691e602020127))
+* confirm dialog a11y, Polish decimals, and Sentry upload guard ([#7](https://github.com/adrian-prajsnar/weigh-way/issues/7)) ([744eb91](https://github.com/adrian-prajsnar/weigh-way/commit/744eb9130185032d1acfee41bb82543798baec55))
+* **demo:** make web demo steppers and inputs reliable on touch ([0b28932](https://github.com/adrian-prajsnar/weigh-way/commit/0b28932c7acfdf17a406ba3ed64404da3323e854))
+* **modal:** anchor weigh-in edit sheet to top ([34bc0d8](https://github.com/adrian-prajsnar/weigh-way/commit/34bc0d8881b6172a1a0d1a8678d5217b005afab8)), closes [wei#in](https://github.com/wei/issues/in)
+* **modal:** slide weigh-in edit sheet from top ([e105e09](https://github.com/adrian-prajsnar/weigh-way/commit/e105e09f4ab7a633f882ea2e7bae81f21715ed3d)), closes [wei#in](https://github.com/wei/issues/in)
+* pr6 review minors for bump script, locale t, and ios build ([46212d1](https://github.com/adrian-prajsnar/weigh-way/commit/46212d1f86f76073e41cd8ac8f9b7583513e5089))
+* QA follow-ups for weight entry, offline UX, auth, and export ([#5](https://github.com/adrian-prajsnar/weigh-way/issues/5)) ([9bc2ab8](https://github.com/adrian-prajsnar/weigh-way/commit/9bc2ab86c5f158f6758e21e998db663daeb47950))
+* tab bar overlap, confirm dialog UX, card enter fallback, versionCode ([ac119ca](https://github.com/adrian-prajsnar/weigh-way/commit/ac119ca967cd488b134db9d752f6f0842dc24f15))
+* **website:** separate header navigation links ([5f64558](https://github.com/adrian-prajsnar/weigh-way/commit/5f645583cc15ca33de42784279353cd3b0ea6f7a))
+
+
+### Features
+
+* **comparison:** add range date picker and chronological custom periods ([c2fd656](https://github.com/adrian-prajsnar/weigh-way/commit/c2fd6565b3da81bf61bb5e0a211ddd855f8ad56f))
+* upgrade to Expo SDK 58 ([2a063fc](https://github.com/adrian-prajsnar/weigh-way/commit/2a063fcc3f8f157fcf713206b6266c8653085936))
+
 # [1.5.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.4.0...v1.5.0) (2026-10-21)
 
 
