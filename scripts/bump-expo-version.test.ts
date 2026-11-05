@@ -33,6 +33,8 @@ describe('bump-expo-version.cjs', () => {
   });
 
   it('increments android versionCode and ios buildNumber in an explicit temp project root', () => {
+    const repoConfigPath = path.join(repoRoot, 'app.config.ts');
+    const repoConfigBefore = fs.readFileSync(repoConfigPath, 'utf8');
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'weigh-way-bump-'));
     tempDirs.push(tempDir);
     writeMinimalProject(
@@ -46,8 +48,8 @@ describe('bump-expo-version.cjs', () => {
     expect(updated).toContain('versionCode: 8');
     expect(updated).toContain("buildNumber: '8'");
 
-    const repoConfig = fs.readFileSync(path.join(repoRoot, 'app.config.ts'), 'utf8');
-    expect(repoConfig).toContain('versionCode: 7');
+    const repoConfig = fs.readFileSync(repoConfigPath, 'utf8');
+    expect(repoConfig).toBe(repoConfigBefore);
   });
 
   it('inserts ios buildNumber when missing and prefers projectRoot arg over empty env', () => {
