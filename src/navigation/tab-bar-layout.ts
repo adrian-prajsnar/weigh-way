@@ -12,9 +12,9 @@ export function getTabBarViewportInset(bottomInset: number): number {
   return getTabBarBottomOffset(bottomInset) + TAB_BAR_HEIGHT + spacing.sm;
 }
 
-/** Bottom padding inside tab scroll content (xxl+lg breathing room). */
+/** Together with the viewport's 8px gap, match the 16px gap below screen headers. */
 function getScrollContentBottomPadding(): number {
-  return spacing.xxl + spacing.lg;
+  return spacing.sm;
 }
 
 /**
