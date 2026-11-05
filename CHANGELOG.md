@@ -1,3 +1,12 @@
+## [1.6.1](https://github.com/adrian-prajsnar/weigh-way/compare/v1.6.0...v1.6.1) (2026-11-05)
+
+
+### Bug Fixes
+
+* **demo:** prevent duplicate bottom spacing on web ([dba8ea7](https://github.com/adrian-prajsnar/weigh-way/commit/dba8ea70403f32f22bfd558d1367b903af65fc41))
+* **modal:** respect top safe area in weigh-in editor ([30f3b3a](https://github.com/adrian-prajsnar/weigh-way/commit/30f3b3a8f35348b5ddab28c1c70b726df195daed)), closes [wei#in](https://github.com/wei/issues/in)
+* **navigation:** match bottom content spacing to screen headers ([d1c2417](https://github.com/adrian-prajsnar/weigh-way/commit/d1c2417a898cbdfbe44ee3fe7e4fcf682f5cceac))
+
 # [1.6.0](https://github.com/adrian-prajsnar/weigh-way/compare/v1.5.0...v1.6.0) (2026-11-05)
 
 
