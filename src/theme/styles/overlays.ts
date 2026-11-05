@@ -90,6 +90,15 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
       justifyContent: 'flex-end',
       alignItems: 'center',
     },
+    weightEntryModalBackdrop: {
+      justifyContent: 'flex-start',
+    },
+    weightEntryModalSheet: {
+      maxHeight: '90%',
+      borderBottomLeftRadius: radius.xl,
+      borderBottomRightRadius: radius.xl,
+      paddingBottom: spacing.lg,
+    },
     modalSheetDismissArea: {
       flex: 1,
       alignSelf: 'stretch',

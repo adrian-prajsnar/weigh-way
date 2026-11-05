@@ -2,8 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fromDateKey } from '../format';
-import { useKeyboardHeight } from '../hooks/use-keyboard-height';
-import { useSheetContainerStyle } from '../hooks/use-sheet-container-style';
 import { useTranslation } from '../i18n/language-context';
 import { WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
@@ -30,29 +28,20 @@ export function WeightEntryModal({
   const styles = useAppStyles();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const keyboardHeight = useKeyboardHeight(visible && date !== null);
-  const sheetContainerStyle = useSheetContainerStyle();
   const { t } = useTranslation();
 
   if (!date) {
     return null;
   }
 
-  const sheetBottomInset = keyboardHeight > 0 ? spacing.xl : Math.max(insets.bottom, spacing.lg);
-  const sheetLift = keyboardHeight > 0 ? keyboardHeight + spacing.lg : 0;
-
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalSheetBackdrop}>
-        <ModalSheetDismissArea onPress={onClose} />
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={[styles.modalSheetBackdrop, styles.weightEntryModalBackdrop]}>
         <View
           style={[
-            sheetContainerStyle,
-            {
-              marginBottom: sheetLift,
-              paddingBottom: sheetBottomInset,
-              maxHeight: keyboardHeight > 0 ? '100%' : '90%',
-            },
+            styles.datePickerSheet,
+            styles.weightEntryModalSheet,
+            { marginTop: insets.top + spacing.lg },
           ]}
         >
           <View style={styles.datePickerSheetHeader}>
@@ -70,7 +59,6 @@ export function WeightEntryModal({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
             automaticallyAdjustKeyboardInsets
-            contentContainerStyle={keyboardHeight > 0 ? { paddingBottom: spacing.sm } : undefined}
           >
             <WeightEntryFormBody
               key={date}
@@ -83,6 +71,7 @@ export function WeightEntryModal({
             />
           </ScrollView>
         </View>
+        <ModalSheetDismissArea onPress={onClose} />
       </View>
     </Modal>
   );
