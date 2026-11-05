@@ -63,6 +63,12 @@ describe('migration release integration', () => {
       'cancel-in-progress': false,
     });
     const gate = job.steps?.find((step) => step.run?.includes('node scripts/db-migrations.cjs'));
+    expect(gate?.env?.SUPABASE_PRODUCTION_PROJECT_REF).toBe(
+      '${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}',
+    );
+    expect(gate?.env?.SUPABASE_MIGRATIONS_BASELINED).toBe(
+      '${{ secrets.SUPABASE_MIGRATIONS_BASELINED }}',
+    );
     expect(gate?.env?.SUPABASE_DB_PASSWORD).toBe(
       "${{ inputs.mode == 'apply' && secrets.SUPABASE_DB_PASSWORD || '' }}",
     );

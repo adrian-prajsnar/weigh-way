@@ -10,6 +10,10 @@ on:
         required: true
         type: string
     secrets:
+      SUPABASE_PRODUCTION_PROJECT_REF:
+        required: false
+      SUPABASE_MIGRATIONS_BASELINED:
+        required: false
       SUPABASE_ACCESS_TOKEN:
         required: false
       SUPABASE_DB_PASSWORD:
@@ -55,8 +59,8 @@ jobs:
       - name: Check or deploy migrations
         env:
           MIGRATION_MODE: ${{ inputs.mode }}
-          SUPABASE_PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
-          SUPABASE_MIGRATIONS_BASELINED: ${{ vars.SUPABASE_MIGRATIONS_BASELINED }}
+          SUPABASE_PRODUCTION_PROJECT_REF: ${{ secrets.SUPABASE_PRODUCTION_PROJECT_REF }}
+          SUPABASE_MIGRATIONS_BASELINED: ${{ secrets.SUPABASE_MIGRATIONS_BASELINED }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ inputs.mode == 'apply' && secrets.SUPABASE_DB_PASSWORD || '' }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}

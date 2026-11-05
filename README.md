@@ -203,8 +203,8 @@ Manual **Rebuild mobile artifacts** and **Build iOS IPA** workflows run a read-o
 
    | Setting | Kind | Value |
    | --- | --- | --- |
-   | `SUPABASE_PRODUCTION_PROJECT_REF` | Variable | Confirmed 20-letter production project reference |
-   | `SUPABASE_MIGRATIONS_BASELINED` | Variable | Leave unset until the baseline is verified, then set to `true` |
+   | `SUPABASE_PRODUCTION_PROJECT_REF` | Secret | Confirmed 20-letter production project reference |
+   | `SUPABASE_MIGRATIONS_BASELINED` | Secret | Leave unset until the baseline is verified, then set to `true` |
    | `SUPABASE_ACCESS_TOKEN` | Secret | Supabase access token authorized for this project |
    | `SUPABASE_DB_PASSWORD` | Secret | Production database password; passed only to deployment |
    | `EXPO_PUBLIC_SUPABASE_URL` | Secret | `https://<production-project-ref>.supabase.co` |
