@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, RefreshControl, Text, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
 import { ContentFrame } from '../components/content-frame';
@@ -97,10 +97,12 @@ export function ComparisonScreen() {
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={() => void refreshEntries().catch(() => undefined)}
-            />
+            Platform.OS === 'web' ? undefined : (
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={() => void refreshEntries().catch(() => undefined)}
+              />
+            )
           }
         >
         {error && !isLoading ? (

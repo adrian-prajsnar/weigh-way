@@ -1,6 +1,6 @@
 import { useIsFocused } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
 import { ContentFrame } from '../components/content-frame';
@@ -187,10 +187,12 @@ export function HistoryScreen() {
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
-            <RefreshControl
-              refreshing={isRefreshing}
-              onRefresh={() => void refreshEntries().catch(() => undefined)}
-            />
+            Platform.OS === 'web' ? undefined : (
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={() => void refreshEntries().catch(() => undefined)}
+              />
+            )
           }
         >
           {error && !isLoading ? (

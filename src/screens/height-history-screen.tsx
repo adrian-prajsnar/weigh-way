@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
 import { ContentFrame } from '../components/content-frame';
@@ -117,7 +117,9 @@ export function HeightHistoryScreen({ navigation }: Props) {
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
-            <RefreshControl refreshing={isRefreshing} onRefresh={() => void refreshProfile()} />
+            Platform.OS === 'web' ? undefined : (
+              <RefreshControl refreshing={isRefreshing} onRefresh={() => void refreshProfile()} />
+            )
           }
         >
         {error && !isLoading ? (
