@@ -55,9 +55,9 @@ const pl: SiteMessages = {
     heroSliderPrev: 'Wróć do opisu',
     preview: {
       latest: 'Ostatnia waga',
-      latestValue: '72.25 kg',
+      latestValue: '78,25 kg',
       bmi: 'BMI',
-      bmiValue: '23.6',
+      bmiValue: '23,6',
       thisWeek: 'Ten tydzień',
       thisWeekValue: '+0,35 kg',
       days30: '30 dni',
@@ -84,11 +84,11 @@ const pl: SiteMessages = {
     features: [
       {
         title: 'Średnie i rekordy',
-        body: 'Porównuj wyniki na podstawie dni, tygodni, miesięcy i lat. Sprawdź swoją najniższą i najwyższą wagę w historii, a także porównuj wagę z różnych okresów w swoim życiu.',
+        body: 'Sprawdź średnie z tego i poprzedniego tygodnia, bieżącego miesiąca i innych okresów. Dodaj datę urodzenia, aby zobaczyć także bieżący i poprzedni rok życia, najwyższą i najniższą wagę wraz z wiekiem w dniu tych pomiarów oraz zmianę od ostatnich urodzin.',
       },
       {
         title: 'Porównuj okresy',
-        body: 'Porównuj dni, tygodnie, miesiące, lata. Sprawdzaj niestandardowe okresy, które Cię interesują i sprawdzaj, jak zmieniała się Twoja waga.',
+        body: 'Zestawiaj dni, tygodnie, miesiące, lata lub lata swojego życia — albo porównaj dwa dowolne okresy lub dwie konkretne daty — i sprawdzaj, jak zmieniała się średnia waga.',
       },
       {
         title: 'Twoje dane, Twoje konto',
@@ -118,27 +118,27 @@ const pl: SiteMessages = {
     ],
     screensTitle: 'W środku aplikacji',
     screensSubtitle:
-      'Cztery zakładki, wszystko czego potrzebujesz — od dzisiejszego ważenia po historię, porównania i profil.',
+      'Cztery zakładki, wszystko, czego potrzebujesz — od dzisiejszego ważenia po historię, porównania i profil.',
     screens: [
       {
         id: 'home',
         title: 'Strona główna',
-        body: 'Zapisz wagę, sprawdź ostatni wynik, trend i najważniejsze statystyki.',
+        body: 'Zapisz wagę, sprawdź ostatni wynik, trend, najważniejsze statystyki i wyróżnione wyniki z Twojej historii.',
       },
       {
         id: 'history',
         title: 'Historia',
-        body: 'Przeglądaj poprzednie dni, filtruj wyniki po dacie i edytuj wpisy.',
+        body: 'Wybierz zakres dat obejmujący maksymalnie rok, sprawdź, kiedy każdy pomiar został zapisany lub zmieniony, i edytuj lub usuwaj wpisy.',
       },
       {
         id: 'compare',
         title: 'Porównaj',
-        body: 'Porównuj dni, tygodnie, miesiące lub lata i sprawdzaj, jak zmieniała się Twoja waga.',
+        body: 'Porównuj dni, tygodnie, miesiące, lata lub lata swojego życia — albo dwa dowolne okresy — i sprawdzaj, jak zmieniała się średnia waga.',
       },
       {
         id: 'profile',
         title: 'Profil',
-        body: 'Historia wzrostu, jednostki wagi i wzrostu, motyw, język i ustawienia konta.',
+        body: 'Data urodzenia, płeć, historia wzrostu, jednostki, wyświetlanie BMI, motyw, język, eksport i ustawienia konta.',
       },
     ],
     howTitle: 'Jak to działa',
@@ -147,7 +147,7 @@ const pl: SiteMessages = {
     steps: [
       {
         title: 'Utwórz konto',
-        body: 'Zarejestruj się za pomocą adresu e-mail, potwierdź link i gotowe. Od tego momentu masz własną, prywatną historię pomiarów.',
+        body: 'Zarejestruj się za pomocą adresu e-mail i potwierdź rejestrację linkiem albo kontynuuj z Google — i gotowe. To Twoja osobista historia pomiarów — Twoje dane są dostępne tylko dla Ciebie.',
       },
       {
         title: 'Zapisz swoją wagę',
@@ -155,7 +155,7 @@ const pl: SiteMessages = {
       },
       {
         title: 'Obserwuj zmiany',
-        body: 'Obserwuj postępy korzystając z aplikacji na dowolnym urządzeniu. Twoje dane są zapisywane w chmurze.',
+        body: 'Obserwuj postępy, korzystając z aplikacji na dowolnym urządzeniu. Twoje dane są zapisywane w chmurze.',
       },
     ],
     faqTitle: 'Najczęściej zadawane pytania',
@@ -174,12 +174,12 @@ const pl: SiteMessages = {
       {
         question: 'Czy mogę używać funtów?',
         answer:
-          'Tak. W Profilu wybierz jednostki metryczne lub imperialne. Jednostki wagi i wzrostu zostaną automatycznie dopasowane do wybranego ustawienia.',
+          'Tak. Domyślnie jednostki są zgodne z ustawieniami urządzenia, ale możesz też wybrać jednostki metryczne lub imperialne w Profilu. Jednostki wagi i wzrostu zostaną dopasowane do tego ustawienia.',
       },
       {
         question: 'Jak obliczane jest BMI?',
         answer:
-          'BMI obliczane jest na podstawie wzrostu obowiązującego w dniu ważenia. Jeśli dla danej daty nie ma odpowiedniego wpisu wzrostu, BMI wyświetla się jako niedostępne. Wyświetlanie BMI możesz wyłączyć w Profilu.',
+          'BMI obliczane jest na podstawie wzrostu obowiązującego w dniu ważenia. Jeśli dla danej daty nie ma odpowiedniego wpisu wzrostu, BMI nie jest wyświetlane. Dotknij oznaczenia BMI, aby zobaczyć kategorię, zastosowaną klasyfikację (kategorie WHO dla dorosłych lub BMI względem wieku według CDC od 2. do 20. roku życia), percentyl, jeśli ma zastosowanie, oraz wzrost użyty do obliczeń. Wyświetlanie BMI możesz wyłączyć w Profilu.',
       },
       {
         question: 'Czy mogę usunąć swoje dane?',
@@ -190,6 +190,11 @@ const pl: SiteMessages = {
         question: 'Gdzie mogę pobrać aplikację?',
         answer:
           'Android: pobierz plik APK z tej strony. iOS: pobierz plik IPA z tej strony i zainstaluj go przez SideStore (bezpłatne Apple ID; odświeżanie około co 7 dni). Dla bezpieczeństwa korzystaj wyłącznie z oficjalnych linków na tej stronie.',
+      },
+      {
+        question: 'Jak zaktualizować aplikację?',
+        answer:
+          'Aplikacja powiadomi Cię o dostępności nowej wersji. Na Androidzie dotknij przycisku aktualizacji, aby pobrać nowy plik APK i go zainstalować. Na iOS pobierz nowy plik IPA i zaimportuj go do SideStore. Najnowszą wersję możesz też w każdej chwili pobrać z tej strony.',
       },
     ],
     ctaTitle: 'Gotowy na pierwsze wRażenie?',
@@ -215,7 +220,7 @@ const pl: SiteMessages = {
   privacy: {
     title: 'Polityka prywatności',
     updatedLabel: 'Ostatnia aktualizacja',
-    updatedDate: '10 października 2026 r.',
+    updatedDate: '8 listopada 2026 r.',
     lead:
       'Niniejsza Polityka prywatności opisuje zasady przetwarzania danych osobowych w związku z korzystaniem z aplikacji mobilnej WeighWay oraz niniejszej strony internetowej (łącznie „Usługa”).',
     sections: [
@@ -227,12 +232,12 @@ const pl: SiteMessages = {
       {
         title: '2. Jakie dane przetwarzamy',
         body:
-          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące dane:\n\n### Dane konta\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nPomiary wagi, wzrostu oraz informacje wynikające z tych danych, takie jak BMI, mogą w określonym kontekście stanowić dane dotyczące zdrowia w rozumieniu art. 9 RODO. Traktujemy te dane z odpowiednią ochroną.\n\n### Preferencje aplikacji i strony\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może przechowywać podobne ustawienia, takie jak wybrany język lub motyw, w pamięci przeglądarki. Służy to wyłącznie zapewnieniu prawidłowego działania i zapamiętaniu preferencji użytkownika.\n\n### Raporty błędów\n\nWersja produkcyjna może wysłać raport o awarii albo błędzie synchronizacji. Raport zawiera wersję aplikacji i rodzaj błędu, na przykład kod błędu bazy. Nie zawiera wagi, wzrostu, BMI, daty urodzenia, płci ani innych danych pomiarowych. Wersje deweloperskie i podgląd aplikacji na tej stronie nie wysyłają takich raportów.',
+          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące dane:\n\n### Dane konta\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nJeżeli logujesz się przez Google, Google udostępnia naszemu dostawcy usługi uwierzytelniania Twój adres e-mail i podstawowe dane konta, takie jak imię i nazwisko, aby umożliwić utworzenie konta i logowanie.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nPomiary wagi, wzrostu oraz informacje wynikające z tych danych, takie jak BMI, mogą w określonym kontekście stanowić dane dotyczące zdrowia w rozumieniu art. 9 RODO. Zapewniamy tym danym odpowiednią ochronę.\n\n### Preferencje aplikacji i strony\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może przechowywać podobne ustawienia, takie jak wybrany język lub motyw, w pamięci przeglądarki. Służy to wyłącznie zapewnieniu prawidłowego działania i zapamiętaniu preferencji użytkownika.\n\n### Raporty błędów\n\nWersja produkcyjna może wysłać raport o awarii albo błędzie synchronizacji. Raport zawiera wersję aplikacji, rodzaj błędu, na przykład kod błędu bazy danych, oraz szczegóły techniczne potrzebne do jego zdiagnozowania, takie jak model urządzenia, wersja systemu operacyjnego i miejsce w aplikacji, w którym wystąpił błąd. Nie zawiera wagi, wzrostu, BMI, daty urodzenia, płci ani innych danych pomiarowych. Wersje deweloperskie i podgląd aplikacji na tej stronie nie wysyłają takich raportów.',
       },
       {
         title: '3. W jakich celach wykorzystujemy dane',
         body:
-          'Przetwarzamy dane w celu:\n\n• utworzenia i obsługi konta użytkownika;\n• uwierzytelniania użytkownika;\n• synchronizowania danych pomiędzy urządzeniami;\n• przechowywania i wyświetlania pomiarów wagi oraz historii wzrostu;\n• obliczania i prezentowania BMI, gdy wymagane dane są dostępne;\n• umożliwienia edycji i usuwania danych;\n• umożliwienia usunięcia konta;\n• eksportu pomiarów na urządzeniu;\n• diagnozowania awarii wydanej wersji, bez wysyłania treści pomiarów;\n• zapewnienia bezpieczeństwa i prawidłowego działania Usługi;\n• obsługi zgłoszeń i kontaktu z użytkownikiem;\n• wypełniania obowiązków prawnych, jeżeli takie obowiązki mają zastosowanie.\n\nNie wykorzystujemy danych dotyczących wagi, wzrostu, BMI ani danych profilu do celów reklamowych, sprzedaży danych, tworzenia profili reklamowych ani udostępniania ich brokerom danych.',
+          'Przetwarzamy dane w celu:\n\n• utworzenia i obsługi konta użytkownika;\n• uwierzytelniania użytkownika;\n• synchronizowania danych pomiędzy urządzeniami;\n• przechowywania i wyświetlania pomiarów wagi oraz historii wzrostu;\n• obliczania i prezentowania BMI, gdy wymagane dane są dostępne;\n• umożliwienia edycji i usuwania danych;\n• umożliwienia usunięcia konta;\n• eksportu pomiarów na urządzeniu;\n• sprawdzania, czy jest dostępna nowsza wersja aplikacji;\n• diagnozowania awarii wydanej wersji, bez wysyłania treści pomiarów;\n• zapewnienia bezpieczeństwa i prawidłowego działania Usługi;\n• obsługi zgłoszeń i kontaktu z użytkownikiem;\n• wypełniania obowiązków prawnych, jeżeli takie obowiązki mają zastosowanie.\n\nNie wykorzystujemy danych dotyczących wagi, wzrostu, BMI ani danych profilu do celów reklamowych, sprzedaży danych, tworzenia profili reklamowych ani udostępniania ich brokerom danych.',
       },
       {
         title: '4. Podstawy prawne przetwarzania',
@@ -247,7 +252,7 @@ const pl: SiteMessages = {
       {
         title: '6. Dostawcy usług i odbiorcy danych',
         body:
-          'Korzystamy z zewnętrznych dostawców usług, którzy pomagają nam zapewnić działanie WeighWay. W szczególności korzystamy z:\n\nSupabase — infrastruktura chmurowa, baza danych i uwierzytelnianie użytkowników.\n\nSentry — odbiera raporty błędów z wersji produkcyjnych, gdy raportowanie awarii jest włączone dla danego wydania. Raport zawiera wersję aplikacji i kod błędu. Nie zawiera treści pomiarów.\n\nDostawcy ci mogą przetwarzać dane wyłącznie w zakresie niezbędnym do świadczenia odpowiednich usług na naszą rzecz.\n\nNie sprzedajemy danych osobowych i nie udostępniamy ich reklamodawcom ani brokerom danych.\n\nMożemy ujawnić dane osobowe, jeżeli jest to wymagane przez obowiązujące prawo, prawnie wiążące żądanie właściwego organu lub w celu ochrony naszych praw i bezpieczeństwa Usługi.',
+          'Korzystamy z zewnętrznych dostawców usług, którzy pomagają nam zapewnić działanie WeighWay. W szczególności korzystamy z:\n\nSupabase — infrastruktura chmurowa, baza danych i uwierzytelnianie użytkowników.\n\nSentry — odbiera raporty błędów z wersji produkcyjnych, gdy raportowanie awarii jest włączone dla danego wydania. Raporty zawierają wersję aplikacji, kod błędu oraz szczegóły techniczne dotyczące urządzenia i błędu. Nie zawierają danych pomiarowych.\n\nGoogle — umożliwia logowanie, jeżeli wybierzesz opcję kontynuowania z Google.\n\nGitHub — udostępnia tę stronę internetową i pliki aplikacji do pobrania oraz odpowiada na zapytania aplikacji o nowe wersje. Gdy aplikacja sprawdza dostępność aktualizacji lub pobierasz plik, GitHub otrzymuje techniczne dane połączenia, takie jak adres IP oraz typ urządzenia lub przeglądarki. Sprawdzanie dostępności aktualizacji nie wiąże się z wysyłaniem danych konta ani danych pomiarowych. GitHub przetwarza te dane połączenia jako niezależny administrator zgodnie z własnym oświadczeniem o ochronie prywatności.\n\nSupabase i Sentry mogą przetwarzać dane osobowe w naszym imieniu jako podmioty przetwarzające wyłącznie w zakresie niezbędnym do świadczenia swoich usług. Google przetwarza dane związane z logowaniem zgodnie z własną polityką prywatności.\n\nNie sprzedajemy danych osobowych i nie udostępniamy ich reklamodawcom ani brokerom danych.\n\nMożemy ujawnić dane osobowe, jeżeli jest to wymagane przez obowiązujące prawo, prawnie wiążące żądanie właściwego organu lub gdy jest to niezbędne do ochrony naszych praw, użytkowników lub bezpieczeństwa Usługi.',
       },
       {
         title: '7. Transfery międzynarodowe',
@@ -257,7 +262,7 @@ const pl: SiteMessages = {
       {
         title: '8. Jak długo przechowujemy dane',
         body:
-          'Przechowujemy dane osobowe tak długo, jak jest to niezbędne do świadczenia Usługi i utrzymywania aktywnego konta, chyba że przepisy prawa wymagają dłuższego przechowywania.\n\nMożesz w dowolnym momencie:\n\n• edytować swoje dane;\n• usuwać pojedyncze pomiary wagi;\n• usuwać wpisy dotyczące wzrostu;\n• usunąć swoje konto;\n• wyeksportować pomiary z Profilu jako plik JSON oraz CSV z pomiarami. Pliki powstają na urządzeniu z danych, które aplikacja już wczytała. Ta czynność ich nie wysyła.\n\nPo usunięciu konta dane aplikacji są usuwane z aktywnych systemów, z zastrzeżeniem danych, które mogą pozostać przez ograniczony czas w kopiach zapasowych lub systemach odzyskiwania danych.\n\nPo upływie okresu przechowywania kopii zapasowych dane zostają usunięte lub trwale nadpisane zgodnie z cyklem przechowywania stosowanym przez dostawcę infrastruktury.',
+          'Przechowujemy dane osobowe tak długo, jak jest to niezbędne do świadczenia Usługi i utrzymywania aktywnego konta, chyba że przepisy prawa wymagają dłuższego przechowywania.\n\nMożesz w dowolnym momencie:\n\n• edytować swoje dane;\n• usuwać pojedyncze pomiary wagi;\n• usuwać wpisy dotyczące wzrostu;\n• usunąć swoje konto;\n• wyeksportować swoje dane z Profilu: eksport JSON zawierający pomiary wagi, historię wzrostu, datę urodzenia i płeć oraz zestawienie CSV z pomiarami wagi. Eksport jest przygotowywany na Twoim urządzeniu na podstawie danych, które aplikacja już wczytała. Na telefonie otwiera się systemowy panel udostępniania, w którym wybierasz, dokąd wysłać lub gdzie zapisać wyeksportowane dane. Nie przesyłamy ich na serwer.\n\nPo usunięciu konta dane aplikacji są usuwane z aktywnych systemów, z zastrzeżeniem danych, które mogą pozostać przez ograniczony czas w kopiach zapasowych lub systemach odzyskiwania danych.\n\nPo upływie okresu przechowywania kopii zapasowych dane zostają usunięte lub trwale nadpisane zgodnie z cyklem przechowywania stosowanym przez dostawcę infrastruktury.',
       },
       {
         title: '9. Twoje prawa',
@@ -287,7 +292,7 @@ const pl: SiteMessages = {
       {
         title: '14. Zmiany Polityki prywatności',
         body:
-          'Możemy okresowo aktualizować niniejszą Politykę prywatności, na przykład w przypadku zmian w Usłudze, sposobie przetwarzania danych lub obowiązujących przepisach prawa.\n\nData „Ostatnia aktualizacja” na dole strony zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować Cię za pośrednictwem aplikacji, strony internetowej lub w inny odpowiedni sposób, jeżeli wymagają tego obowiązujące przepisy.',
+          'Możemy okresowo aktualizować niniejszą Politykę prywatności, na przykład w przypadku zmian w Usłudze, sposobie przetwarzania danych lub obowiązujących przepisach prawa.\n\nData oznaczona jako „Ostatnia aktualizacja”, widoczna na tej stronie, zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować Cię za pośrednictwem aplikacji, strony internetowej lub w inny odpowiedni sposób, jeżeli wymagają tego obowiązujące przepisy.',
       },
       {
         title: '15. Dystrybucja aplikacji',
@@ -304,7 +309,7 @@ const pl: SiteMessages = {
   terms: {
     title: 'Regulamin',
     updatedLabel: 'Ostatnia aktualizacja',
-    updatedDate: '28 września 2026 r.',
+    updatedDate: '8 listopada 2026 r.',
     lead: 'Korzystając z WeighWay, akceptujesz niniejszy Regulamin.',
     sections: [
       {
@@ -325,7 +330,7 @@ const pl: SiteMessages = {
       {
         title: '4. Dozwolone korzystanie',
         body:
-          'Zobowiązujesz się korzystać z Usługi zgodnie z prawem, niniejszym Regulaminem oraz w sposób, który nie narusza praw innych osób ani nie zakłóca działania Usługi.\n\nZabronione jest w szczególności:\n• uzyskiwanie lub podejmowanie prób uzyskania nieuprawnionego dostępu do kont, danych lub systemów innych użytkowników;\n• podejmowanie prób inżynierii wstecznej, dekompilacji lub innego sposobu pozyskania kodu źródłowego aplikacji, z wyjątkiem przypadków dozwolonych przez bezwzględnie obowiązujące przepisy prawa;\n• zakłócanie działania Usługi lub infrastruktury, na której działa;\n• przesyłanie złośliwego kodu, wirusów lub innych szkodliwych elementów;\n• wykorzystywanie Usługi do celów niezgodnych z prawem.\n\nW przypadku naruszenia Regulaminu lub obowiązujących przepisów prawa możemy zawiesić lub zakończyć dostęp do konta w zakresie dozwolonym przez prawo.',
+          'Zobowiązujesz się korzystać z Usługi zgodnie z prawem oraz w sposób, który nie narusza praw innych osób ani nie zakłóca działania Usługi.\n\nZabronione jest w szczególności:\n• uzyskiwanie lub podejmowanie prób uzyskania nieuprawnionego dostępu do kont, danych lub systemów innych użytkowników;\n• zakłócanie działania Usługi lub infrastruktury, na której działa;\n• przesyłanie złośliwego kodu, wirusów lub innych szkodliwych elementów;\n• wykorzystywanie Usługi do celów niezgodnych z prawem.\n\nW przypadku istotnego naruszenia Regulaminu lub obowiązujących przepisów prawa możemy zawiesić lub zakończyć dostęp do konta w zakresie dozwolonym przez prawo.',
       },
       {
         title: '5. Zastrzeżenie medyczne',
@@ -340,7 +345,7 @@ const pl: SiteMessages = {
       {
         title: '7. Własność intelektualna',
         body:
-          'Nazwa WeighWay, logo i branding, aplikacja, jej oprogramowanie oraz treści znajdujące się na stronie internetowej, z wyłączeniem danych wprowadzanych przez użytkowników, stanowią własność Adrian Prajsnar DEV lub odpowiednich licencjodawców.\n\nZ zastrzeżeniem praw przyznanych użytkownikowi na podstawie obowiązujących przepisów prawa, nie wolno kopiować, modyfikować, rozpowszechniać ani redystrybuować aplikacji lub jej elementów poza oficjalnymi kanałami udostępnionymi przez nas.',
+          'Kod źródłowy aplikacji WeighWay oraz niniejszej strony internetowej jest publicznie dostępny i udostępniany na licencji MIT. Możesz korzystać z kodu źródłowego, kopiować go, modyfikować i rozpowszechniać na warunkach tej licencji, opublikowanych wraz z kodem w publicznym repozytorium.\n\nNazwa WeighWay, logo i identyfikacja wizualna stanowią własność Adrian Prajsnar DEV. Licencja MIT nie przyznaje prawa do korzystania z nich. Nie wolno używać ich w sposób sugerujący, że zmodyfikowana lub redystrybuowana wersja jest oficjalną aplikacją WeighWay lub jest przez nas rekomendowana.\n\nOficjalne kompilacje WeighWay to pliki udostępniane za pośrednictwem linków do pobrania na tej stronie. Nie ponosimy odpowiedzialności za kompilacje uzyskane z innych źródeł.',
       },
       {
         title: '8. Dostępność i działanie Usługi',
@@ -365,7 +370,7 @@ const pl: SiteMessages = {
       {
         title: '12. Zmiany Regulaminu',
         body:
-          'Możemy okresowo aktualizować niniejszy Regulamin.\n\nData „Ostatnia aktualizacja” na dole strony zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować o nich za pośrednictwem Usługi lub na tej stronie.\n\nJeżeli zmiana Regulaminu istotnie wpływa na Twoje prawa lub sposób korzystania z Usługi, poinformujemy Cię o niej z odpowiednim wyprzedzeniem, jeżeli wymagają tego obowiązujące przepisy prawa.\n\nDalsze korzystanie z Usługi po wejściu zmian w życie oznacza akceptację zaktualizowanego Regulaminu, z zastrzeżeniem praw przysługujących użytkownikowi na podstawie obowiązujących przepisów prawa.',
+          'Możemy okresowo aktualizować niniejszy Regulamin, na przykład w przypadku zmian w Usłudze, naszych praktykach lub obowiązujących przepisach prawa.\n\nData oznaczona jako „Ostatnia aktualizacja”, widoczna na tej stronie, zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować o nich za pośrednictwem Usługi, na tej stronie lub w inny odpowiedni sposób, jeżeli wymagają tego obowiązujące przepisy prawa.\n\nJeżeli zmiana Regulaminu istotnie wpływa na Twoje prawa lub sposób korzystania z Usługi, poinformujemy Cię o niej z odpowiednim wyprzedzeniem, jeżeli wymagają tego obowiązujące przepisy prawa.\n\nDalsze korzystanie z Usługi po wejściu zmian w życie oznacza akceptację zaktualizowanego Regulaminu, z zastrzeżeniem praw przysługujących użytkownikowi na podstawie obowiązujących przepisów prawa.',
       },
       {
         title: '13. Prawo właściwe',
@@ -418,7 +423,7 @@ const pl: SiteMessages = {
       {
         title: 'Logowanie',
         body:
-          'Logowanie za pomocą adresu e-mail i hasła obsługuje Supabase Auth. Pomiary są dostępne dopiero po zalogowaniu. Link do resetowania hasła prowadzi z powrotem do aplikacji.',
+          'Logowanie za pomocą adresu e-mail i hasła lub konta Google obsługuje Supabase Auth. Pomiary są dostępne dopiero po zalogowaniu. Linki do potwierdzenia adresu e-mail i resetowania hasła prowadzą z powrotem do aplikacji.',
       },
       {
         title: 'Baza danych',
@@ -431,7 +436,7 @@ const pl: SiteMessages = {
       {
         name: 'weight_entries',
         body:
-          'Jeden rekord na użytkownika na każdy dzień kalendarzowy. Waga jest przechowywana w kilogramach. Klucz główny składa się z identyfikatora użytkownika i daty, więc ponowne zapisanie pomiaru z tego samego dnia aktualizuje istniejący rekord.',
+          'Jeden rekord na użytkownika na każdy dzień kalendarzowy. Waga jest przechowywana w kilogramach. Klucz główny składa się z identyfikatora użytkownika i daty, więc ponowne zapisanie pomiaru z tego samego dnia aktualizuje istniejący rekord. Baza danych ustawia czas utworzenia i ostatniej aktualizacji rekordu — pochodzi on z serwera, a nie z zegara telefonu.',
       },
       {
         name: 'height_entries',
@@ -484,6 +489,13 @@ const pl: SiteMessages = {
           'Przechowywanie wyłącznie aktualnego wzrostu powodowałoby zmianę historycznych wyników BMI po każdej aktualizacji profilu.',
       },
       {
+        title: 'Zmiana daty wpisu wzrostu w jednym kroku',
+        body:
+          'Zmiana daty wpisu wzrostu odbywa się w ramach jednego wywołania funkcji bazy danych: zapis pod nową datą i usunięcie wpisu spod starej daty następują łącznie, z zachowaniem tych samych reguł bezpieczeństwa na poziomie rekordów co w aplikacji.',
+        tradeoff:
+          'Dwa oddzielne żądania mogłyby spowodować powstanie duplikatu lub brak wpisu, gdyby połączenie zostało przerwane w połowie operacji.',
+      },
+      {
         title: 'Kategorie dla dorosłych od 20. roku życia',
         body:
           'Od 2. urodzin do dnia 20. urodzin, jeśli podano płeć, BMI klasyfikowane jest na podstawie percentyla BMI względem wieku według CDC. W tym celu na podstawie płci i wieku w miesiącach pobierane są parametry LMS, z których obliczany jest wynik z, a następnie percentyl. Od 20. urodzin stosowane są kategorie BMI dla dorosłych. U dzieci poniżej 2 lat oraz osób przed 20. urodzinami, których płci nie podano, wynik nie otrzymuje klasyfikacji.',
@@ -493,7 +505,7 @@ const pl: SiteMessages = {
       {
         title: 'Pomiary przechowywane na serwerze',
         body:
-          'Aplikacja nie przechowuje pomiarów w lokalnej bazie danych na urządzeniu. Zapamiętuje sesję użytkownika i kilka ustawień: język, motyw, jednostki oraz informację o tym, czy wyświetlać BMI. Bez połączenia z internetem pokazuje ekran trybu offline.',
+          'Aplikacja nie przechowuje pomiarów w lokalnej bazie danych na urządzeniu. Zapamiętuje sesję użytkownika i kilka ustawień interfejsu, takich jak język, motyw, jednostki oraz informacja o tym, czy wyświetlać BMI. O braku połączenia informuje baner: wczytane dane pozostają na ekranie, zapisywanie jest zablokowane, a po odzyskaniu połączenia dane są wczytywane ponownie.',
         tradeoff:
           'Zapisywanie pomiarów bez połączenia z internetem wymagałoby kolejki oczekujących zmian oraz zasad rozwiązywania konfliktów, gdyby dwa telefony edytowały pomiar z tego samego dnia. Takiego mechanizmu obecnie nie ma.',
       },

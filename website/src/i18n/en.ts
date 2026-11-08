@@ -238,11 +238,11 @@ const en: SiteMessages = {
     features: [
       {
         title: 'Averages and highlights',
-        body: 'See this week, last week, this month, and more — plus your heaviest and lightest points.',
+        body: 'See this week, last week, this month, and more. Add your birth date to unlock this and last year of life, your heaviest and lightest weigh-ins with your age at the time, and the change since your last birthday.',
       },
       {
         title: 'Compare periods',
-        body: 'Stack weeks, months, years, or custom ranges next to each other and see how the average moved.',
+        body: 'Stack days, weeks, months, years, or years of your life side by side — or compare two custom periods or two specific dates — and see how the average moved.',
       },
       {
         title: 'Your data, your account',
@@ -276,22 +276,22 @@ const en: SiteMessages = {
       {
         id: 'home',
         title: 'Home',
-        body: 'Log a weigh-in, see the latest number, trend, and quick stats.',
+        body: 'Log a weigh-in, see the latest number, trend, quick stats, and highlights from your history.',
       },
       {
         id: 'history',
         title: 'History',
-        body: 'Scroll through past days, filter by date, and edit entries.',
+        body: 'Pick a date range of up to a year, see when each weigh-in was logged or edited, and edit or delete entries.',
       },
       {
         id: 'compare',
         title: 'Compare',
-        body: 'Stack days, weeks, months, or years and see how the average moved.',
+        body: 'Stack days, weeks, months, years, or years of your life — or two custom periods — and see how the average moved.',
       },
       {
         id: 'profile',
         title: 'Profile',
-        body: 'Height history, units, theme, language, and account settings.',
+        body: 'Birth date, sex, height history, units, BMI display, theme, language, export, and account settings.',
       },
     ],
     howTitle: 'How it works',
@@ -299,7 +299,7 @@ const en: SiteMessages = {
     steps: [
       {
         title: 'Create an account',
-        body: 'Sign up with email, confirm the link, and you are in. It’s your personal weigh-in history — your data is private to you.',
+        body: 'Sign up with email and confirm the link, or continue with Google, and you are in. It’s your personal weigh-in history — your data is private to you.',
       },
       {
         title: 'Log a weigh-in',
@@ -326,12 +326,12 @@ const en: SiteMessages = {
       {
         question: 'Can I use pounds?',
         answer:
-          'Yes. Choose metric or imperial in Profile. Weight and height units follow that preference.',
+          'Yes. Units follow your device by default, or you can choose metric or imperial in Profile. Weight and height units follow that preference.',
       },
       {
         question: 'How is BMI calculated?',
         answer:
-          'BMI uses the height that applied on that weigh-in date. If no height covers the date, BMI is not displayed. You can turn BMI off in Profile.',
+          'BMI uses the height that applied on that weigh-in date. If no height covers the date, BMI is not displayed. Tap a BMI badge to see the category, the reference used (adult WHO categories, or CDC BMI-for-age from 2 to 20 years), the percentile where it applies, and the height behind it. You can turn BMI off in Profile.',
       },
       {
         question: 'Can I delete my data?',
@@ -342,6 +342,11 @@ const en: SiteMessages = {
         question: 'Where do I download it?',
         answer:
           'Android: download the APK from this website. iOS: download the IPA from this website and install it with SideStore (free Apple ID; refresh about every 7 days). Install only from the official download links on this site.',
+      },
+      {
+        question: 'How do I update?',
+        answer:
+          'The app tells you when a new version is available. On Android, tap the update button to download the new APK and install it. On iOS, download the new IPA and import it into SideStore. You can also download the latest version from this website at any time.',
       },
     ],
     ctaTitle: 'Ready for the first weigh-in?',
@@ -365,7 +370,7 @@ const en: SiteMessages = {
   privacy: {
     title: 'Privacy Policy',
     updatedLabel: 'Last update',
-    updatedDate: 'October 10, 2026',
+    updatedDate: 'November 8, 2026',
     lead:
       'This Privacy Policy explains how personal data is processed in connection with the WeighWay mobile app and this website (together, the “Service”).',
     sections: [
@@ -377,12 +382,12 @@ const en: SiteMessages = {
       {
         title: '2. What data we process',
         body:
-          'Depending on how you use the Service, we may process the following categories of data.\n\n### Account data\n\nThis may include:\n\n• your email address;\n• your user ID;\n• information required to authenticate and manage your account.\n\nPasswords are handled by our authentication provider. We do not store passwords in plain text.\n\n### Data you enter into the app\n\nYou may voluntarily enter:\n\n• weight measurements;\n• height history;\n• date of birth;\n• sex;\n• other information included in your profile, where the app allows you to provide it.\n\nWeight and height information, as well as information derived from it, such as BMI, may constitute data concerning health under applicable data protection laws depending on the context in which they are processed. We treat such data with appropriate safeguards.\n\n### Device and website preferences\n\nPreferences such as language, units and theme may be stored locally on your device.\n\nThis website may store similar display preferences, such as language and theme, in your browser. These preferences are used solely to provide the requested functionality and remember your settings.\n\n### Error reports\n\nA production build can send a crash or sync-error report. The report includes the app version and the kind of error, such as a database error code. It does not include weight, height, BMI, birth date, sex, or any other measurement data. Development builds and the app preview on this website do not send these reports.',
+          'Depending on how you use the Service, we may process the following categories of data.\n\n### Account data\n\nThis may include:\n\n• your email address;\n• your user ID;\n• information required to authenticate and manage your account.\n\nIf you sign in with Google, Google shares your email address and basic account details, such as your name, with our authentication provider so that your account can be created and you can sign in.\n\nPasswords are handled by our authentication provider. We do not store passwords in plain text.\n\n### Data you enter into the app\n\nYou may voluntarily enter:\n\n• weight measurements;\n• height history;\n• date of birth;\n• sex;\n• other information included in your profile, where the app allows you to provide it.\n\nWeight and height information, as well as information derived from it, such as BMI, may constitute data concerning health under applicable data protection laws depending on the context in which they are processed. We treat such data with appropriate safeguards.\n\n### Device and website preferences\n\nPreferences such as language, units and theme may be stored locally on your device.\n\nThis website may store similar display preferences, such as language and theme, in your browser. These preferences are used solely to provide the requested functionality and remember your settings.\n\n### Error reports\n\nA production build can send a crash or sync-error report. The report includes the app version, the kind of error, such as a database error code, and technical details needed to diagnose it, such as the device model, operating system version, and where in the app the error happened. It does not include weight, height, BMI, birth date, sex, or any other measurement data. Development builds and the app preview on this website do not send these reports.',
       },
       {
         title: '3. How we use your data',
         body:
-          'We process your data for the following purposes:\n\n• creating and managing your account;\n• authenticating you;\n• synchronizing your data between devices;\n• storing and displaying your weight measurements and height history;\n• calculating and displaying BMI when the required information is available;\n• allowing you to edit and delete your data;\n• allowing you to delete your account;\n• letting you export your weigh-ins on your device;\n• diagnosing failures in a released build, without sending measurement data;\n• maintaining the security and proper operation of the Service;\n• responding to support requests and communications;\n• complying with applicable legal obligations.\n\nWe do not use your weight, height, BMI or profile data for advertising, advertising profiling, selling personal data, or sharing data with data brokers.',
+          'We process your data for the following purposes:\n\n• creating and managing your account;\n• authenticating you;\n• synchronizing your data between devices;\n• storing and displaying your weight measurements and height history;\n• calculating and displaying BMI when the required information is available;\n• allowing you to edit and delete your data;\n• allowing you to delete your account;\n• letting you export your weigh-ins on your device;\n• checking whether a newer version of the app is available;\n• diagnosing failures in a released build, without sending measurement data;\n• maintaining the security and proper operation of the Service;\n• responding to support requests and communications;\n• complying with applicable legal obligations.\n\nWe do not use your weight, height, BMI or profile data for advertising, advertising profiling, selling personal data, or sharing data with data brokers.',
       },
       {
         title: '4. Legal bases for processing',
@@ -397,7 +402,7 @@ const en: SiteMessages = {
       {
         title: '6. Service providers and recipients',
         body:
-          'We use third-party service providers to operate and maintain WeighWay.\n\nIn particular:\n\nSupabase — provides cloud infrastructure, database and authentication services.\n\nSentry — receives error reports from production builds when crash reporting is enabled for that release. Those reports include the app version and an error code. They do not include measurement data.\n\nThese providers may process personal data on our behalf only to the extent necessary to provide their services.\n\nWe do not sell personal data and do not share it with advertisers or data brokers.\n\nWe may disclose personal data where required by applicable law, a legally binding request from a competent authority, or where necessary to protect our legal rights, users or the security of the Service.',
+          'We use third-party service providers to operate and maintain WeighWay.\n\nIn particular:\n\nSupabase — provides cloud infrastructure, database and authentication services.\n\nSentry — receives error reports from production builds when crash reporting is enabled for that release. Those reports include the app version, an error code, and technical details about the device and the error. They do not include measurement data.\n\nGoogle — provides sign-in when you choose to continue with Google.\n\nGitHub — hosts this website and the app download files, and answers the app’s check for new versions. When the app checks for an update or you download a file, GitHub receives technical connection data, such as your IP address and device or browser type. The update check does not send your account or measurement data. GitHub processes this connection data as an independent controller under its own privacy statement.\n\nSupabase and Sentry may process personal data on our behalf only to the extent necessary to provide their services. Google processes sign-in data under its own privacy policy.\n\nWe do not sell personal data and do not share it with advertisers or data brokers.\n\nWe may disclose personal data where required by applicable law, a legally binding request from a competent authority, or where necessary to protect our legal rights, users or the security of the Service.',
       },
       {
         title: '7. International transfers',
@@ -407,7 +412,7 @@ const en: SiteMessages = {
       {
         title: '8. How long we keep your data',
         body:
-          'We retain your personal data for as long as necessary to provide the Service and maintain your active account, unless a longer retention period is required by law.\n\nYou can:\n\n• edit your data;\n• delete individual weight measurements;\n• delete height records;\n• delete your account;\n• export your weigh-ins from Profile as a JSON file and a CSV of weigh-ins. The files are created on your device from data the app has already loaded. They are not uploaded by that action.\n\nWhen you delete your account, your application data is deleted from our active systems, subject to limited retention in backups or disaster-recovery systems.\n\nBackup copies may remain for a limited period until they are overwritten or securely deleted in accordance with the applicable backup retention cycle.',
+          'We retain your personal data for as long as necessary to provide the Service and maintain your active account, unless a longer retention period is required by law.\n\nYou can:\n\n• edit your data;\n• delete individual weight measurements;\n• delete height records;\n• delete your account;\n• export your data from Profile: a JSON export with your weigh-ins, height history, birth date and sex, and a CSV of weigh-ins. The export is prepared on your device from data the app has already loaded. On a phone, it opens your device’s share sheet, and you choose where to send or save it. We do not upload it.\n\nWhen you delete your account, your application data is deleted from our active systems, subject to limited retention in backups or disaster-recovery systems.\n\nBackup copies may remain for a limited period until they are overwritten or securely deleted in accordance with the applicable backup retention cycle.',
       },
       {
         title: '9. Your rights',
@@ -437,7 +442,7 @@ const en: SiteMessages = {
       {
         title: '14. Changes to this Privacy Policy',
         body:
-          'We may update this Privacy Policy from time to time, for example when the Service, our data processing practices or applicable laws change.\n\nThe “Last updated” date at the bottom of this page will be updated whenever this Privacy Policy changes.\n\nIf we make material changes, we may notify you through the application, this website, or another appropriate method where required by applicable law.',
+          'We may update this Privacy Policy from time to time, for example when the Service, our data processing practices or applicable laws change.\n\nThe “Last update” date shown on this page will be updated whenever this Privacy Policy changes.\n\nIf we make material changes, we may notify you through the application, this website, or another appropriate method where required by applicable law.',
       },
       {
         title: '15. App distribution',
@@ -454,7 +459,7 @@ const en: SiteMessages = {
   terms: {
     title: 'Terms of Service',
     updatedLabel: 'Last update',
-    updatedDate: 'September 28, 2026',
+    updatedDate: 'November 8, 2026',
     lead: 'By using WeighWay, you agree to these Terms of Service.',
     sections: [
       {
@@ -475,7 +480,7 @@ const en: SiteMessages = {
       {
         title: '4. Acceptable use',
         body:
-          'You agree to use the Service lawfully and in a manner that does not infringe the rights of others or interfere with the operation of the Service.\n\nIn particular, you must not:\n\n• access or attempt to access another user’s account, data or systems without authorization;\n• reverse engineer, decompile or otherwise attempt to obtain the source code of the application, except where expressly permitted by applicable law;\n• interfere with or disrupt the Service or the infrastructure on which it operates;\n• upload malware, viruses or other harmful code or content;\n• use the Service for unlawful purposes.\n\nWe may suspend or terminate access to an account if you materially breach these Terms or applicable law, to the extent permitted by law.',
+          'You agree to use the Service lawfully and in a manner that does not infringe the rights of others or interfere with the operation of the Service.\n\nIn particular, you must not:\n\n• access or attempt to access another user’s account, data or systems without authorization;\n• interfere with or disrupt the Service or the infrastructure on which it operates;\n• upload malware, viruses or other harmful code or content;\n• use the Service for unlawful purposes.\n\nWe may suspend or terminate access to an account if you materially breach these Terms or applicable law, to the extent permitted by law.',
       },
       {
         title: '5. Health and medical disclaimer',
@@ -490,7 +495,7 @@ const en: SiteMessages = {
       {
         title: '7. Intellectual property',
         body:
-          'The WeighWay name, logo and branding, application, software, and website content, excluding data provided by users, are owned by Adrian Prajsnar DEV or its licensors.\n\nExcept as permitted by applicable law or expressly authorized by us, you may not copy, modify, distribute, reproduce or redistribute the application or its components outside the official distribution channels provided by us.',
+          'The source code of the WeighWay application and this website is publicly available and licensed under the MIT License. You may use, copy, modify and distribute the source code under the terms of that license, which are published with the code in the public repository.\n\nThe WeighWay name, logo and branding are owned by Adrian Prajsnar DEV. The MIT License does not grant rights to use them. Do not use them in a way that suggests that a modified or redistributed version is the official WeighWay app or is endorsed by us.\n\nThe official WeighWay builds are the files published through the download links on this website. We are not responsible for builds obtained from other sources.',
       },
       {
         title: '8. Availability and operation of the Service',
@@ -515,7 +520,7 @@ const en: SiteMessages = {
       {
         title: '12. Changes to these Terms',
         body:
-          'We may update these Terms from time to time, for example when the Service, our practices or applicable laws change.\n\nThe “Last updated” date at the bottom of this page will be updated whenever these Terms are changed.\n\nFor material changes, we may notify you through the Service, on this website, or by another appropriate means where required by applicable law.\n\nIf a change materially affects your rights or use of the Service, we will provide notice in advance where required by applicable law.\n\nYour continued use of the Service after the changes take effect constitutes acceptance of the updated Terms, subject to any rights you may have under applicable law.',
+          'We may update these Terms from time to time, for example when the Service, our practices or applicable laws change.\n\nThe “Last update” date shown on this page will be updated whenever these Terms are changed.\n\nFor material changes, we may notify you through the Service, on this website, or by another appropriate means where required by applicable law.\n\nIf a change materially affects your rights or use of the Service, we will provide notice in advance where required by applicable law.\n\nYour continued use of the Service after the changes take effect constitutes acceptance of the updated Terms, subject to any rights you may have under applicable law.',
       },
       {
         title: '13. Governing law',
@@ -565,7 +570,7 @@ const en: SiteMessages = {
       },
       {
         title: 'Sign-in',
-        body: 'Email and password through Supabase Auth. Weigh-ins stay locked until there is a session. Password reset returns through the app’s own link.',
+        body: 'Email and password, or Google, through Supabase Auth. Weigh-ins stay locked until there is a session. Email confirmation and password reset return through the app’s own link.',
       },
       {
         title: 'Database',
@@ -576,7 +581,7 @@ const en: SiteMessages = {
     tables: [
       {
         name: 'weight_entries',
-        body: 'One row per person per calendar day. Weight is stored in kilograms. The primary key is the user and the date, so saving the same day updates that row.',
+        body: 'One row per person per calendar day. Weight is stored in kilograms. The primary key is the user and the date, so saving the same day updates that row. The database sets when a row was created and last updated, so the time comes from the server, not the phone’s clock.',
       },
       {
         name: 'height_entries',
@@ -621,6 +626,12 @@ const en: SiteMessages = {
           'Storing only the current height would change last year’s BMI whenever the profile changes.',
       },
       {
+        title: 'Moving a height is one step',
+        body: 'Changing the date of a height record runs as one database function: it writes the new date and removes the old one together, under the same row-level security as the app.',
+        tradeoff:
+          'Two separate requests could leave a duplicate or a missing record if the connection drops halfway.',
+      },
+      {
         title: 'Adult categories start at 20',
         body: 'From the 2nd birthday until the 20th, when sex is set, BMI is a CDC BMI-for-age percentile: an LMS lookup by sex and age in months, a z-score, then a percentile. From the 20th birthday it uses adult categories. Under 2, or before 20 without sex, the result stays unclassified.',
         tradeoff:
@@ -628,7 +639,7 @@ const en: SiteMessages = {
       },
       {
         title: 'Weigh-ins live on the server',
-        body: 'There is no local database of weigh-ins. The device stores the session and a few preferences: language, theme, units, and whether BMI is shown. Without a connection, the app shows an offline screen.',
+        body: 'There is no local database of weigh-ins. The device stores the session and a few interface preferences, such as language, theme, units, and whether BMI is shown. Without a connection, a banner says so: what is already loaded stays on screen, saving is blocked, and data reloads when the connection returns.',
         tradeoff:
           'Logging without a network would need a queue of pending writes, and a rule for two phones editing the same day. That queue is not in the app.',
       },
