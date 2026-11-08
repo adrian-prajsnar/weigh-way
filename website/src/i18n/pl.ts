@@ -55,9 +55,9 @@ const pl: SiteMessages = {
     heroSliderPrev: 'Wróć do opisu',
     preview: {
       latest: 'Ostatnia waga',
-      latestValue: '72.25 kg',
+      latestValue: '78,25 kg',
       bmi: 'BMI',
-      bmiValue: '23.6',
+      bmiValue: '23,6',
       thisWeek: 'Ten tydzień',
       thisWeekValue: '+0,35 kg',
       days30: '30 dni',
@@ -84,11 +84,11 @@ const pl: SiteMessages = {
     features: [
       {
         title: 'Średnie i rekordy',
-        body: 'Porównuj wyniki na podstawie dni, tygodni, miesięcy i lat. Sprawdź swoją najniższą i najwyższą wagę w historii, a także porównuj wagę z różnych okresów w swoim życiu.',
+        body: 'Sprawdź średnie z tego i poprzedniego tygodnia, bieżącego miesiąca i innych okresów. Dodaj datę urodzenia, aby zobaczyć także bieżący i poprzedni rok życia, najwyższą i najniższą wagę wraz z wiekiem w dniu tych pomiarów oraz zmianę od ostatnich urodzin.',
       },
       {
         title: 'Porównuj okresy',
-        body: 'Porównuj dni, tygodnie, miesiące, lata. Sprawdzaj niestandardowe okresy, które Cię interesują i sprawdzaj, jak zmieniała się Twoja waga.',
+        body: 'Zestawiaj dni, tygodnie, miesiące, lata lub lata swojego życia — albo porównaj dwa dowolne okresy lub dwie konkretne daty — i sprawdzaj, jak zmieniała się średnia waga.',
       },
       {
         title: 'Twoje dane, Twoje konto',
@@ -118,27 +118,27 @@ const pl: SiteMessages = {
     ],
     screensTitle: 'W środku aplikacji',
     screensSubtitle:
-      'Cztery zakładki, wszystko czego potrzebujesz — od dzisiejszego ważenia po historię, porównania i profil.',
+      'Cztery zakładki, wszystko, czego potrzebujesz — od dzisiejszego ważenia po historię, porównania i profil.',
     screens: [
       {
         id: 'home',
         title: 'Strona główna',
-        body: 'Zapisz wagę, sprawdź ostatni wynik, trend i najważniejsze statystyki.',
+        body: 'Zapisz wagę, sprawdź ostatni wynik, trend, najważniejsze statystyki i wyróżnione wyniki z Twojej historii.',
       },
       {
         id: 'history',
         title: 'Historia',
-        body: 'Przeglądaj poprzednie dni, filtruj wyniki po dacie i edytuj wpisy.',
+        body: 'Wybierz zakres dat obejmujący maksymalnie rok, sprawdź, kiedy każdy pomiar został zapisany lub zmieniony, i edytuj lub usuwaj wpisy.',
       },
       {
         id: 'compare',
         title: 'Porównaj',
-        body: 'Porównuj dni, tygodnie, miesiące lub lata i sprawdzaj, jak zmieniała się Twoja waga.',
+        body: 'Porównuj dni, tygodnie, miesiące, lata lub lata swojego życia — albo dwa dowolne okresy — i sprawdzaj, jak zmieniała się średnia waga.',
       },
       {
         id: 'profile',
         title: 'Profil',
-        body: 'Historia wzrostu, jednostki wagi i wzrostu, motyw, język i ustawienia konta.',
+        body: 'Data urodzenia, płeć, historia wzrostu, jednostki, wyświetlanie BMI, motyw, język, eksport i ustawienia konta.',
       },
     ],
     howTitle: 'Jak to działa',
@@ -147,7 +147,7 @@ const pl: SiteMessages = {
     steps: [
       {
         title: 'Utwórz konto',
-        body: 'Zarejestruj się za pomocą adresu e-mail, potwierdź link i gotowe. Od tego momentu masz własną, prywatną historię pomiarów.',
+        body: 'Zarejestruj się za pomocą adresu e-mail i potwierdź rejestrację linkiem albo kontynuuj z Google — i gotowe. To Twoja osobista historia pomiarów — Twoje dane są dostępne tylko dla Ciebie.',
       },
       {
         title: 'Zapisz swoją wagę',
@@ -155,7 +155,7 @@ const pl: SiteMessages = {
       },
       {
         title: 'Obserwuj zmiany',
-        body: 'Obserwuj postępy korzystając z aplikacji na dowolnym urządzeniu. Twoje dane są zapisywane w chmurze.',
+        body: 'Obserwuj postępy, korzystając z aplikacji na dowolnym urządzeniu. Twoje dane są zapisywane w chmurze.',
       },
     ],
     faqTitle: 'Najczęściej zadawane pytania',
@@ -174,12 +174,12 @@ const pl: SiteMessages = {
       {
         question: 'Czy mogę używać funtów?',
         answer:
-          'Tak. W Profilu wybierz jednostki metryczne lub imperialne. Jednostki wagi i wzrostu zostaną automatycznie dopasowane do wybranego ustawienia.',
+          'Tak. Domyślnie jednostki są zgodne z ustawieniami urządzenia, ale możesz też wybrać jednostki metryczne lub imperialne w Profilu. Jednostki wagi i wzrostu zostaną dopasowane do tego ustawienia.',
       },
       {
         question: 'Jak obliczane jest BMI?',
         answer:
-          'BMI obliczane jest na podstawie wzrostu obowiązującego w dniu ważenia. Jeśli dla danej daty nie ma odpowiedniego wpisu wzrostu, BMI wyświetla się jako niedostępne. Wyświetlanie BMI możesz wyłączyć w Profilu.',
+          'BMI obliczane jest na podstawie wzrostu obowiązującego w dniu ważenia. Jeśli dla danej daty nie ma odpowiedniego wpisu wzrostu, BMI nie jest wyświetlane. Dotknij oznaczenia BMI, aby zobaczyć kategorię, zastosowaną klasyfikację (kategorie WHO dla dorosłych lub BMI względem wieku według CDC od 2. do 20. roku życia), percentyl, jeśli ma zastosowanie, oraz wzrost użyty do obliczeń. Wyświetlanie BMI możesz wyłączyć w Profilu.',
       },
       {
         question: 'Czy mogę usunąć swoje dane?',
@@ -190,6 +190,11 @@ const pl: SiteMessages = {
         question: 'Gdzie mogę pobrać aplikację?',
         answer:
           'Android: pobierz plik APK z tej strony. iOS: pobierz plik IPA z tej strony i zainstaluj go przez SideStore (bezpłatne Apple ID; odświeżanie około co 7 dni). Dla bezpieczeństwa korzystaj wyłącznie z oficjalnych linków na tej stronie.',
+      },
+      {
+        question: 'Jak zaktualizować aplikację?',
+        answer:
+          'Aplikacja powiadomi Cię o dostępności nowej wersji. Na Androidzie dotknij przycisku aktualizacji, aby pobrać nowy plik APK i go zainstalować. Na iOS pobierz nowy plik IPA i zaimportuj go do SideStore. Najnowszą wersję możesz też w każdej chwili pobrać z tej strony.',
       },
     ],
     ctaTitle: 'Gotowy na pierwsze wRażenie?',
@@ -215,7 +220,7 @@ const pl: SiteMessages = {
   privacy: {
     title: 'Polityka prywatności',
     updatedLabel: 'Ostatnia aktualizacja',
-    updatedDate: '10 października 2026 r.',
+    updatedDate: '8 listopada 2026 r.',
     lead:
       'Niniejsza Polityka prywatności opisuje zasady przetwarzania danych osobowych w związku z korzystaniem z aplikacji mobilnej WeighWay oraz niniejszej strony internetowej (łącznie „Usługa”).',
     sections: [
@@ -227,67 +232,67 @@ const pl: SiteMessages = {
       {
         title: '2. Jakie dane przetwarzamy',
         body:
-          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące dane:\n\n### Dane konta\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nPomiary wagi, wzrostu oraz informacje wynikające z tych danych, takie jak BMI, mogą w określonym kontekście stanowić dane dotyczące zdrowia w rozumieniu art. 9 RODO. Traktujemy te dane z odpowiednią ochroną.\n\n### Preferencje aplikacji i strony\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może przechowywać podobne ustawienia, takie jak wybrany język lub motyw, w pamięci przeglądarki. Służy to wyłącznie zapewnieniu prawidłowego działania i zapamiętaniu preferencji użytkownika.\n\n### Raporty błędów\n\nWersja produkcyjna może wysłać raport o awarii albo błędzie synchronizacji. Raport zawiera wersję aplikacji i rodzaj błędu, na przykład kod błędu bazy. Nie zawiera wagi, wzrostu, BMI, daty urodzenia, płci ani innych danych pomiarowych. Wersje deweloperskie i podgląd aplikacji na tej stronie nie wysyłają takich raportów.',
+          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące kategorie danych.\n\n### Dane konta\n\nMogą one obejmować:\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nJeżeli logujesz się przez Google, Google udostępnia naszemu dostawcy usługi uwierzytelniania Twój adres e-mail i podstawowe dane konta, takie jak imię i nazwisko, aby umożliwić utworzenie konta i logowanie.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nInformacje o wadze i wzroście oraz informacje z nich wywodzone, takie jak BMI, mogą stanowić dane dotyczące zdrowia w rozumieniu obowiązujących przepisów o ochronie danych osobowych, w zależności od kontekstu ich przetwarzania. Stosujemy odpowiednie zabezpieczenia tych danych.\n\n### Preferencje urządzenia i strony internetowej\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może przechowywać podobne ustawienia, takie jak wybrany język lub motyw, w pamięci przeglądarki. Preferencje te służą wyłącznie zapewnieniu żądanych funkcji i zapamiętaniu Twoich ustawień.\n\n### Raporty błędów\n\nWersja produkcyjna może wysłać raport o awarii albo błędzie synchronizacji. Raport zawiera wersję aplikacji, rodzaj błędu, na przykład kod błędu bazy danych, oraz szczegóły techniczne potrzebne do jego zdiagnozowania, takie jak model urządzenia, wersja systemu operacyjnego i miejsce w aplikacji, w którym wystąpił błąd. Nie zawiera wagi, wzrostu, BMI, daty urodzenia, płci ani innych danych pomiarowych. Wersje deweloperskie i podgląd aplikacji na tej stronie nie wysyłają takich raportów.',
       },
       {
         title: '3. W jakich celach wykorzystujemy dane',
         body:
-          'Przetwarzamy dane w celu:\n\n• utworzenia i obsługi konta użytkownika;\n• uwierzytelniania użytkownika;\n• synchronizowania danych pomiędzy urządzeniami;\n• przechowywania i wyświetlania pomiarów wagi oraz historii wzrostu;\n• obliczania i prezentowania BMI, gdy wymagane dane są dostępne;\n• umożliwienia edycji i usuwania danych;\n• umożliwienia usunięcia konta;\n• eksportu pomiarów na urządzeniu;\n• diagnozowania awarii wydanej wersji, bez wysyłania treści pomiarów;\n• zapewnienia bezpieczeństwa i prawidłowego działania Usługi;\n• obsługi zgłoszeń i kontaktu z użytkownikiem;\n• wypełniania obowiązków prawnych, jeżeli takie obowiązki mają zastosowanie.\n\nNie wykorzystujemy danych dotyczących wagi, wzrostu, BMI ani danych profilu do celów reklamowych, sprzedaży danych, tworzenia profili reklamowych ani udostępniania ich brokerom danych.',
+          'Przetwarzamy dane w celu:\n\n• utworzenia i obsługi konta użytkownika;\n• uwierzytelniania użytkownika;\n• synchronizowania danych pomiędzy urządzeniami;\n• przechowywania i wyświetlania pomiarów wagi oraz historii wzrostu;\n• obliczania i prezentowania BMI, gdy wymagane dane są dostępne;\n• umożliwienia edycji i usuwania danych;\n• umożliwienia usunięcia konta;\n• eksportu pomiarów na urządzeniu;\n• sprawdzania, czy jest dostępna nowsza wersja aplikacji;\n• diagnozowania awarii wydanej wersji, bez wysyłania treści pomiarów;\n• zapewnienia bezpieczeństwa i prawidłowego działania Usługi;\n• obsługi zgłoszeń i kontaktu z użytkownikiem;\n• wypełniania obowiązków prawnych, jeżeli takie obowiązki mają zastosowanie.\n\nNie wykorzystujemy danych dotyczących wagi, wzrostu, BMI ani danych profilu do celów reklamowych, sprzedaży danych, tworzenia profili reklamowych ani udostępniania ich brokerom danych.',
       },
       {
         title: '4. Podstawy prawne przetwarzania',
         body:
-          '### Dane konta i świadczenie Usługi\n\nDane niezbędne do utworzenia i obsługi konta oraz świadczenia podstawowych funkcji Usługi przetwarzamy na podstawie art. 6 ust. 1 lit. b RODO, jeżeli przetwarzanie jest niezbędne do wykonania umowy z Tobą.\n\n### Dane dotyczące zdrowia\n\nJeżeli dane wprowadzane do WeighWay stanowią dane dotyczące zdrowia w rozumieniu art. 9 RODO, ich przetwarzanie odbywa się na podstawie Twojej wyraźnej zgody, zgodnie z art. 9 ust. 2 lit. a RODO, w zakresie, w jakim zgoda jest wymagana.\n\nZgoda jest dobrowolna i możesz ją wycofać w dowolnym momencie. Wycofanie zgody nie wpływa na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem.\n\nWycofanie zgody może oznaczać, że niektóre funkcje aplikacji wymagające przetwarzania tych danych nie będą mogły być dalej dostępne.\n\n### Dane opcjonalne\n\nDane takie jak data urodzenia lub płeć, jeżeli nie są niezbędne do działania podstawowych funkcji Usługi, podajesz dobrowolnie. W zależności od sposobu ich wykorzystania podstawą ich przetwarzania może być Twoja zgoda lub inna podstawa prawna przewidziana przez RODO.',
+          '### Dane konta i świadczenie Usługi\n\nW zakresie niezbędnym do świadczenia żądanej przez Ciebie Usługi przetwarzamy dane konta na podstawie niezbędności przetwarzania do wykonania umowy z Tobą.\n\nW stosownych przypadkach możemy również przetwarzać określone dane, gdy jest to niezbędne do wypełnienia obowiązku prawnego lub do celów wynikających z naszych prawnie uzasadnionych interesów, pod warunkiem że obowiązujące prawo dopuszcza takie przetwarzanie.\n\n### Dane dotyczące zdrowia\n\nJeżeli dane przetwarzane za pośrednictwem WeighWay stanowią dane dotyczące zdrowia lub inne szczególne kategorie danych w rozumieniu obowiązujących przepisów o ochronie danych osobowych, opieramy ich przetwarzanie na odpowiedniej podstawie prawnej określonej w art. 6 oraz mającej zastosowanie dodatkowej przesłance określonej w art. 9.\n\nJeżeli mającą zastosowanie przesłanką jest wyraźna zgoda, uzyskamy Twoją wyraźną zgodę przed rozpoczęciem przetwarzania odpowiednich danych w określonym celu.\n\nMożesz wycofać zgodę w dowolnym momencie. Wycofanie zgody nie wpływa na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem.\n\nJeżeli wycofasz zgodę, niektóre funkcje Usługi wymagające przetwarzania odpowiednich danych mogą przestać być dostępne.\n\nW przypadku użytkowników w Zjednoczonym Królestwie przetwarzanie szczególnych kategorii danych wymaga zarówno podstawy prawnej określonej w art. 6 UK GDPR, jak i dodatkowej przesłanki określonej w art. 9. Wyraźna zgoda jest jedną z możliwych przesłanek określonych w art. 9.\n\n### Opcjonalne dane profilu\n\nDane takie jak data urodzenia lub płeć są opcjonalne, chyba że w aplikacji wyraźnie wskazano inaczej.\n\nJeżeli takie dane nie są niezbędne do działania podstawowych funkcji Usługi, możesz zdecydować, czy je podać. W zależności od konkretnych danych i sposobu ich wykorzystania przetwarzamy je na właściwej podstawie prawnej przewidzianej w przepisach o ochronie danych osobowych, w tym na podstawie zgody, jeżeli jest wymagana.',
       },
       {
         title: '5. Gdzie przechowujemy dane',
         body:
-          'Dane konta oraz dane wprowadzone do aplikacji są przechowywane w chmurowej infrastrukturze Supabase, która zapewnia między innymi bazę danych oraz usługę uwierzytelniania.\n\nDane użytkowników są przypisane do odpowiedniego identyfikatora konta. Stosujemy mechanizmy kontroli dostępu, aby użytkownik miał dostęp wyłącznie do danych przypisanych do jego konta.\n\nSupabase umożliwia wybór regionu, w którym przechowywane są dane projektu. W przypadku WeighWay dane są przechowywane w regionie wybranym dla projektu zgodnie z konfiguracją Usługi. Supabase udostępnia również mechanizmy związane z RODO oraz umowę powierzenia przetwarzania danych (DPA).',
+          'Dane konta oraz dane wprowadzone do aplikacji są przechowywane w chmurowej infrastrukturze Supabase, która zapewnia między innymi bazę danych oraz usługę uwierzytelniania.\n\nDane użytkowników są przypisane do odpowiedniego identyfikatora konta. Stosujemy mechanizmy kontroli dostępu, aby użytkownik miał dostęp wyłącznie do danych przypisanych do jego konta.\n\nSupabase umożliwia klientom wybór regionu, w którym hostowany jest ich projekt. Projekt WeighWay jest hostowany w regionie wybranym dla Usługi.\n\nSupabase udostępnia klientom dokumentację dotyczącą ochrony danych oraz umowę powierzenia przetwarzania danych (DPA).',
       },
       {
         title: '6. Dostawcy usług i odbiorcy danych',
         body:
-          'Korzystamy z zewnętrznych dostawców usług, którzy pomagają nam zapewnić działanie WeighWay. W szczególności korzystamy z:\n\nSupabase — infrastruktura chmurowa, baza danych i uwierzytelnianie użytkowników.\n\nSentry — odbiera raporty błędów z wersji produkcyjnych, gdy raportowanie awarii jest włączone dla danego wydania. Raport zawiera wersję aplikacji i kod błędu. Nie zawiera treści pomiarów.\n\nDostawcy ci mogą przetwarzać dane wyłącznie w zakresie niezbędnym do świadczenia odpowiednich usług na naszą rzecz.\n\nNie sprzedajemy danych osobowych i nie udostępniamy ich reklamodawcom ani brokerom danych.\n\nMożemy ujawnić dane osobowe, jeżeli jest to wymagane przez obowiązujące prawo, prawnie wiążące żądanie właściwego organu lub w celu ochrony naszych praw i bezpieczeństwa Usługi.',
+          'Korzystamy z zewnętrznych dostawców usług w celu zapewnienia działania i utrzymania WeighWay.\n\nW szczególności:\n\nSupabase — infrastruktura chmurowa, baza danych i uwierzytelnianie użytkowników.\n\nSentry — odbiera raporty błędów z wersji produkcyjnych, gdy raportowanie awarii jest włączone dla danego wydania. Raporty zawierają wersję aplikacji, kod błędu oraz szczegóły techniczne dotyczące urządzenia i błędu. Nie zawierają danych pomiarowych.\n\nGoogle — umożliwia logowanie, jeżeli wybierzesz opcję kontynuowania z Google.\n\nGitHub — udostępnia tę stronę internetową i pliki aplikacji do pobrania oraz odpowiada na zapytania aplikacji o nowe wersje. Gdy aplikacja sprawdza dostępność aktualizacji lub pobierasz plik, GitHub otrzymuje techniczne dane połączenia, takie jak adres IP oraz typ urządzenia lub przeglądarki. Sprawdzanie dostępności aktualizacji nie wiąże się z wysyłaniem danych konta ani danych pomiarowych. GitHub przetwarza te dane połączenia jako niezależny administrator zgodnie z własnym oświadczeniem o ochronie prywatności.\n\nSupabase i Sentry mogą przetwarzać dane osobowe w naszym imieniu wyłącznie w zakresie niezbędnym do świadczenia swoich usług. Google przetwarza dane związane z logowaniem zgodnie z własną polityką prywatności.\n\nNie sprzedajemy danych osobowych i nie udostępniamy ich reklamodawcom ani brokerom danych.\n\nMożemy ujawnić dane osobowe, jeżeli jest to wymagane przez obowiązujące prawo, prawnie wiążące żądanie właściwego organu lub gdy jest to niezbędne do ochrony naszych praw wynikających z przepisów prawa, użytkowników lub bezpieczeństwa Usługi.',
       },
       {
         title: '7. Transfery międzynarodowe',
         body:
-          'W zależności od wykorzystywanej infrastruktury i usług dostawców dane mogą być przetwarzane poza Europejskim Obszarem Gospodarczym.\n\nJeżeli dochodzi do przekazania danych poza EOG, stosujemy odpowiedni mechanizm zgodny z RODO, w szczególności decyzję stwierdzającą odpowiedni stopień ochrony lub standardowe klauzule umowne, jeżeli mają zastosowanie.\n\nSupabase wskazuje, że w ramach swojej dokumentacji dotyczącej przetwarzania danych stosuje odpowiednie mechanizmy transferowe, w tym standardowe klauzule umowne w przypadkach, w których są one wymagane.',
+          'W zależności od wykorzystywanej infrastruktury i usług Twoje dane osobowe mogą być przetwarzane w państwach poza Europejskim Obszarem Gospodarczym (EOG) lub Zjednoczonym Królestwem.\n\nW przypadku międzynarodowego przekazywania danych osobowych stosujemy odpowiedni mechanizm przekazywania danych oraz zabezpieczenia wymagane przez obowiązujące przepisy o ochronie danych osobowych, takie jak decyzja stwierdzająca odpowiedni stopień ochrony lub odpowiednie zabezpieczenia umowne, jeżeli mają zastosowanie.',
       },
       {
         title: '8. Jak długo przechowujemy dane',
         body:
-          'Przechowujemy dane osobowe tak długo, jak jest to niezbędne do świadczenia Usługi i utrzymywania aktywnego konta, chyba że przepisy prawa wymagają dłuższego przechowywania.\n\nMożesz w dowolnym momencie:\n\n• edytować swoje dane;\n• usuwać pojedyncze pomiary wagi;\n• usuwać wpisy dotyczące wzrostu;\n• usunąć swoje konto;\n• wyeksportować pomiary z Profilu jako plik JSON oraz CSV z pomiarami. Pliki powstają na urządzeniu z danych, które aplikacja już wczytała. Ta czynność ich nie wysyła.\n\nPo usunięciu konta dane aplikacji są usuwane z aktywnych systemów, z zastrzeżeniem danych, które mogą pozostać przez ograniczony czas w kopiach zapasowych lub systemach odzyskiwania danych.\n\nPo upływie okresu przechowywania kopii zapasowych dane zostają usunięte lub trwale nadpisane zgodnie z cyklem przechowywania stosowanym przez dostawcę infrastruktury.',
+          'Przechowujemy dane osobowe tak długo, jak jest to niezbędne do świadczenia Usługi i utrzymywania aktywnego konta, chyba że przepisy prawa wymagają dłuższego przechowywania.\n\nMożesz:\n\n• edytować swoje dane;\n• usuwać pojedyncze pomiary wagi;\n• usuwać wpisy dotyczące wzrostu;\n• usunąć swoje konto;\n• wyeksportować swoje dane z Profilu: eksport JSON zawierający pomiary wagi, historię wzrostu, datę urodzenia i płeć oraz zestawienie CSV z pomiarami wagi. Eksport jest przygotowywany na Twoim urządzeniu na podstawie danych, które aplikacja już wczytała. Na telefonie otwiera się systemowy panel udostępniania, w którym wybierasz, dokąd wysłać lub gdzie zapisać wyeksportowane dane. Nie przesyłamy ich na serwer.\n\nPo usunięciu konta dane aplikacji są usuwane z aktywnych systemów, z zastrzeżeniem danych, które mogą pozostać przez ograniczony czas w kopiach zapasowych lub systemach odzyskiwania po awarii.\n\nKopie zapasowe mogą pozostawać przez ograniczony czas, dopóki nie zostaną nadpisane lub bezpiecznie usunięte zgodnie z mającym zastosowanie cyklem przechowywania kopii zapasowych.',
       },
       {
         title: '9. Twoje prawa',
         body:
-          'W zależności od podstawy prawnej przetwarzania i obowiązujących przepisów masz prawo do:\n\n• dostępu do swoich danych osobowych;\n• uzyskania kopii danych;\n• sprostowania nieprawidłowych lub niekompletnych danych;\n• usunięcia danych;\n• ograniczenia przetwarzania;\n• przenoszenia danych;\n• wniesienia sprzeciwu wobec przetwarzania w przypadkach przewidzianych przez RODO;\n• wycofania zgody w dowolnym momencie, jeżeli przetwarzanie odbywa się na podstawie zgody.\n\nWycofanie zgody nie wpływa na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem.\n\nMożesz również złożyć skargę do właściwego organu nadzorczego. W Polsce jest nim Prezes Urzędu Ochrony Danych Osobowych (UODO).\n\nAby skorzystać ze swoich praw, skontaktuj się z nami pod adresem:\n\nadrian.prajsnar.dev@outlook.com\n\nW celu ochrony danych możemy poprosić o informacje niezbędne do potwierdzenia, że żądanie pochodzi od właściwej osoby.',
+          'W zależności od Twojej lokalizacji i obowiązujących przepisów o ochronie danych osobowych może przysługiwać Ci prawo do:\n\n• dostępu do swoich danych osobowych;\n• uzyskania kopii swoich danych osobowych;\n• sprostowania nieprawidłowych lub niekompletnych danych;\n• żądania usunięcia swoich danych osobowych;\n• żądania ograniczenia przetwarzania;\n• otrzymania swoich danych osobowych w formacie umożliwiającym ich przenoszenie;\n• wniesienia sprzeciwu wobec określonych rodzajów przetwarzania;\n• wycofania zgody, jeżeli przetwarzanie odbywa się na podstawie zgody.\n\nWycofanie zgody nie wpływa na zgodność z prawem przetwarzania dokonanego przed jej wycofaniem.\n\nMoże przysługiwać Ci również prawo do wniesienia skargi do właściwego organu nadzorczego do spraw ochrony danych osobowych.\n\nW przypadku użytkowników w Polsce właściwym organem nadzorczym jest Prezes Urzędu Ochrony Danych Osobowych (PUODO).\n\nW przypadku użytkowników w Zjednoczonym Królestwie właściwym organem nadzorczym jest Information Commissioner’s Office (ICO).\n\nAby skorzystać ze swoich praw, skontaktuj się z nami pod adresem:\n\nadrian.prajsnar.dev@outlook.com\n\nPrzed realizacją żądania możemy poprosić o informacje w rozsądnym zakresie niezbędne do zweryfikowania Twojej tożsamości.\n\nNa prawidłowe żądania odpowiemy w terminie wymaganym przez obowiązujące prawo.',
       },
       {
         title: '10. Bezpieczeństwo',
         body:
-          'Stosujemy odpowiednie środki techniczne i organizacyjne mające na celu ochronę danych osobowych przed nieuprawnionym dostępem, utratą, zniszczeniem lub zmianą.\n\nW szczególności stosujemy:\n\n• szyfrowane połączenia HTTPS/TLS;\n• uwierzytelnianie użytkowników;\n• kontrolę dostępu do danych;\n• mechanizmy Row Level Security (RLS) w bazie danych;\n• ograniczenie dostępu do danych zgodnie z zasadą najmniejszych uprawnień.\n\nSupabase również udostępnia mechanizmy kontroli dostępu i RLS służące do ograniczania dostępu do danych poszczególnych użytkowników.\n\nŻadna metoda transmisji ani przechowywania danych nie gwarantuje jednak absolutnego bezpieczeństwa.',
+          'Stosujemy odpowiednie środki techniczne i organizacyjne mające na celu ochronę danych osobowych przed nieuprawnionym dostępem, utratą, zniszczeniem, zmianą lub ujawnieniem.\n\nŚrodki te obejmują, w stosownych przypadkach:\n\n• szyfrowane połączenia HTTPS/TLS;\n• uwierzytelnianie użytkowników;\n• kontrolę dostępu do danych;\n• mechanizmy Row Level Security (RLS) w bazie danych;\n• ograniczenie dostępu do danych zgodnie z zasadą najmniejszych uprawnień.\n\nŻadna metoda transmisji ani przechowywania danych nie gwarantuje jednak całkowitego bezpieczeństwa.\n\nNależy również używać silnego i unikalnego hasła do konta oraz zachowywać poufność danych logowania.',
       },
       {
         title: '11. Dzieci',
         body:
-          'WeighWay nie jest przeznaczona dla osób poniżej 16. roku życia bez zgody lub zaaprobowania zgody przez osobę sprawującą władzę rodzicielską lub opiekę, jeżeli takie zatwierdzenie jest wymagane przez obowiązujące przepisy.\n\nW przypadku usług społeczeństwa informacyjnego RODO ustanawia 16 lat jako ogólny próg dla zgody dziecka, przy czym państwa członkowskie mogą ustalić niższy próg, nie niższy jednak niż 13 lat.\n\nJeżeli dowiemy się, że przetwarzamy dane dziecka bez wymaganej zgody lub odpowiedniego zatwierdzenia, podejmiemy odpowiednie działania w celu ich usunięcia.',
+          'WeighWay jest przeznaczona dla użytkowników w wieku co najmniej 16 lat.\n\nJeżeli masz mniej niż 16 lat, możesz korzystać z Usługi wyłącznie za zgodą lub upoważnieniem rodzica lub opiekuna prawnego, jeżeli wymagają tego obowiązujące przepisy prawa.\n\nW przypadku użytkowników w EOG RODO co do zasady określa wiek wyrażenia zgody w odniesieniu do usług społeczeństwa informacyjnego na 16 lat, choć poszczególne państwa członkowskie UE mogą przewidzieć niższy wiek, jednak nie niższy niż 13 lat.\n\nJeżeli dowiemy się, że przetwarzaliśmy dane osobowe dziecka bez wymaganej zgody lub upoważnienia, podejmiemy odpowiednie działania w celu usunięcia tych danych.',
       },
       {
-        title: '12. Automatyczne decyzje i profilowanie',
+        title: '12. Zautomatyzowane podejmowanie decyzji i profilowanie',
         body:
-          'Nie wykorzystujemy danych użytkowników do podejmowania decyzji wywołujących wobec nich skutki prawne lub w podobny sposób istotnie na nich wpływających.\n\nNie wykorzystujemy danych użytkowników do profilowania w celach reklamowych.',
+          'Nie wykorzystujemy danych osobowych do podejmowania decyzji opartych wyłącznie na zautomatyzowanym przetwarzaniu, które wywołują wobec Ciebie skutki prawne lub w podobny sposób istotnie na Ciebie wpływają.\n\nNie wykorzystujemy danych użytkowników do profilowania w celach reklamowych.',
       },
       {
         title: '13. Pliki cookies i pamięć przeglądarki',
         body:
-          'Niniejsza strona może korzystać z pamięci lokalnej przeglądarki (local storage) lub podobnych mechanizmów w celu zapamiętania ustawień użytkownika, takich jak język lub motyw.\n\nNie wykorzystujemy tych mechanizmów do śledzenia użytkowników w celach reklamowych ani do tworzenia profili reklamowych.\n\nJeżeli w przyszłości na stronie zostaną zastosowane dodatkowe technologie śledzące lub pliki cookies wymagające zgody użytkownika, odpowiednie informacje i mechanizmy zgody zostaną zaktualizowane przed ich zastosowaniem.',
+          'Niniejsza strona może korzystać z pamięci lokalnej przeglądarki (local storage) lub podobnych mechanizmów w celu zapamiętania ustawień użytkownika, takich jak język lub motyw.\n\nNie wykorzystujemy tych mechanizmów do śledzenia użytkowników w celach reklamowych ani do tworzenia profili reklamowych.\n\nJeżeli wprowadzimy dodatkowe pliki cookies lub technologie śledzące wymagające zgody na podstawie obowiązującego prawa, niniejsza Polityka prywatności i odpowiednie mechanizmy uzyskiwania zgody zostaną zaktualizowane przed zastosowaniem tych technologii.',
       },
       {
         title: '14. Zmiany Polityki prywatności',
         body:
-          'Możemy okresowo aktualizować niniejszą Politykę prywatności, na przykład w przypadku zmian w Usłudze, sposobie przetwarzania danych lub obowiązujących przepisach prawa.\n\nData „Ostatnia aktualizacja” na dole strony zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować Cię za pośrednictwem aplikacji, strony internetowej lub w inny odpowiedni sposób, jeżeli wymagają tego obowiązujące przepisy.',
+          'Możemy okresowo aktualizować niniejszą Politykę prywatności, na przykład w przypadku zmian w Usłudze, sposobie przetwarzania danych lub obowiązujących przepisach prawa.\n\nData oznaczona jako „Ostatnia aktualizacja”, widoczna na tej stronie, zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować Cię za pośrednictwem aplikacji, strony internetowej lub w inny odpowiedni sposób, jeżeli wymagają tego obowiązujące przepisy.',
       },
       {
         title: '15. Dystrybucja aplikacji',
@@ -297,80 +302,80 @@ const pl: SiteMessages = {
       {
         title: '16. Kontakt',
         body:
-          'W przypadku pytań dotyczących prywatności lub przetwarzania danych osobowych skontaktuj się z nami:\n\nAdrian Prajsnar DEV\nadrian.prajsnar.dev@outlook.com',
+          'W przypadku pytań dotyczących niniejszej Polityki prywatności lub sposobu, w jaki przetwarzamy dane osobowe skontaktuj się z nami:\n\nAdrian Prajsnar DEV\nadrian.prajsnar.dev@outlook.com',
       },
     ],
   },
   terms: {
     title: 'Regulamin',
     updatedLabel: 'Ostatnia aktualizacja',
-    updatedDate: '28 września 2026 r.',
+    updatedDate: '8 listopada 2026 r.',
     lead: 'Korzystając z WeighWay, akceptujesz niniejszy Regulamin.',
     sections: [
       {
         title: '1. Postanowienia ogólne',
         body:
-          'Niniejszy Regulamin („Regulamin”) określa zasady korzystania z aplikacji mobilnej WeighWay oraz niniejszej strony internetowej (łącznie „Usługa”), których właścicielem i operatorem jest Adrian Prajsnar DEV.\n\nJeśli nie akceptujesz Regulaminu, nie korzystaj z Usługi.',
+          'Niniejszy Regulamin („Regulamin”) określa zasady korzystania z aplikacji mobilnej WeighWay oraz niniejszej strony internetowej (łącznie „Usługa”), których operatorem jest Adrian Prajsnar DEV.\n\nJeśli nie akceptujesz Regulaminu, nie korzystaj z Usługi.',
       },
       {
         title: '2. Usługa',
         body:
-          'WeighWay to osobista aplikacja do śledzenia wagi. Umożliwia w szczególności zapisywanie pomiarów wagi, przeglądanie historii, trendów i porównań oraz zarządzanie opcjonalną historią wzrostu i ustawieniami profilu.\n\nUsługa jest bezpłatna i nie zawiera reklam.',
+          'WeighWay to osobista aplikacja do śledzenia wagi. Umożliwia zapisywanie pomiarów wagi, przeglądanie historii, trendów i porównań oraz zarządzanie opcjonalną historią wzrostu i ustawieniami profilu.\n\nUsługa jest bezpłatna i nie zawiera reklam.',
       },
       {
-        title: '3. Kwalifikowalność i konto',
+        title: '3. Warunki korzystania i konta',
         body:
-          'Aby korzystać z Usługi, musisz mieć co najmniej 16 lat. Osoby poniżej 16. roku życia mogą korzystać z Usługi wyłącznie za zgodą lub zaaprobowaniem zgody przez osobę sprawującą władzę rodzicielską lub opiekę, jeżeli jest to wymagane przez obowiązujące przepisy prawa.\n\nDo korzystania z aplikacji wymagane jest utworzenie konta.\n\nOdpowiadasz za zachowanie poufności danych logowania oraz za aktywność wykonywaną za pośrednictwem Twojego konta.',
+          'Aby korzystać z Usługi, musisz mieć co najmniej 16 lat. Osoby poniżej 16. roku życia mogą korzystać z Usługi wyłącznie za zgodą lub upoważnieniem rodzica lub opiekuna prawnego, jeżeli jest to wymagane przez obowiązujące przepisy prawa.\n\nDo korzystania z aplikacji wymagane jest konto.\n\nOdpowiadasz za zachowanie poufności danych logowania oraz za aktywność wykonywaną za pośrednictwem Twojego konta.',
       },
       {
         title: '4. Dozwolone korzystanie',
         body:
-          'Zobowiązujesz się korzystać z Usługi zgodnie z prawem, niniejszym Regulaminem oraz w sposób, który nie narusza praw innych osób ani nie zakłóca działania Usługi.\n\nZabronione jest w szczególności:\n• uzyskiwanie lub podejmowanie prób uzyskania nieuprawnionego dostępu do kont, danych lub systemów innych użytkowników;\n• podejmowanie prób inżynierii wstecznej, dekompilacji lub innego sposobu pozyskania kodu źródłowego aplikacji, z wyjątkiem przypadków dozwolonych przez bezwzględnie obowiązujące przepisy prawa;\n• zakłócanie działania Usługi lub infrastruktury, na której działa;\n• przesyłanie złośliwego kodu, wirusów lub innych szkodliwych elementów;\n• wykorzystywanie Usługi do celów niezgodnych z prawem.\n\nW przypadku naruszenia Regulaminu lub obowiązujących przepisów prawa możemy zawiesić lub zakończyć dostęp do konta w zakresie dozwolonym przez prawo.',
+          'Zobowiązujesz się korzystać z Usługi zgodnie z prawem oraz w sposób, który nie narusza praw innych osób ani nie zakłóca działania Usługi.\n\nZabronione jest w szczególności:\n\n• uzyskiwanie lub podejmowanie prób uzyskania nieuprawnionego dostępu do kont, danych lub systemów innych użytkowników;\n• zakłócanie działania Usługi lub infrastruktury, na której działa;\n• przesyłanie złośliwego oprogramowania, wirusów lub innego szkodliwego kodu lub treści;\n• wykorzystywanie Usługi do celów niezgodnych z prawem.\n\nW przypadku istotnego naruszenia Regulaminu lub obowiązujących przepisów prawa możemy zawiesić lub zakończyć dostęp do konta w zakresie dozwolonym przez prawo.',
       },
       {
-        title: '5. Zastrzeżenie medyczne',
+        title: '5. Zastrzeżenia dotyczące zdrowia i kwestii medycznych',
         body:
-          'WeighWay służy wyłącznie do celów informacyjnych i nie zastępuje profesjonalnej porady medycznej.\n\nAplikacja nie jest wyrobem medycznym i nie zapewnia diagnozy, leczenia ani indywidualnych zaleceń medycznych.\n\nWartości BMI, trendy oraz inne informacje prezentowane w aplikacji mają charakter orientacyjny i nie powinny być traktowane jako porada medyczna ani podstawa do podejmowania decyzji dotyczących leczenia lub zdrowia.\n\nW sprawach dotyczących zdrowia skonsultuj się z lekarzem lub innym odpowiednio wykwalifikowanym specjalistą.',
+          'WeighWay służy wyłącznie do osobistych celów informacyjnych i nie zastępuje profesjonalnej porady medycznej.\n\nUsługa nie jest wyrobem medycznym i nie zapewnia diagnozy, leczenia ani indywidualnych zaleceń medycznych.\n\nWartości BMI, trendy oraz inne informacje prezentowane w Usłudze są wartościami szacunkowymi lub obliczeniami o charakterze informacyjnym i nie powinny być traktowane jako porada medyczna ani podstawa do podejmowania decyzji dotyczących leczenia lub zdrowia.\n\nDecyzje dotyczące kwestii medycznych lub zdrowia zawsze konsultuj z lekarzem lub innym odpowiednio wykwalifikowanym przedstawicielem personelu medycznego.',
       },
       {
         title: '6. Twoje dane',
         body:
-          'Zachowujesz prawa do danych, które wprowadzasz do Usługi, w szczególności danych dotyczących wagi, wzrostu i profilu.\n\nW zakresie niezbędnym do świadczenia Usługi udzielasz nam prawa do przechowywania i przetwarzania tych danych zgodnie z niniejszym Regulaminem oraz Polityką prywatności.\n\nSzczegółowe informacje dotyczące przetwarzania danych osobowych, w tym podstaw prawnych przetwarzania, okresów przechowywania danych, praw użytkowników oraz zasad ich usuwania, określa Polityka prywatności.',
+          'Zachowujesz prawa do danych, które wprowadzasz do Usługi, w szczególności danych dotyczących wagi, wzrostu i profilu.\n\nUdzielasz nam ograniczonego prawa do przechowywania i przetwarzania tych danych wyłącznie w zakresie niezbędnym do świadczenia i zapewnienia działania Usługi na Twoją rzecz, zgodnie z niniejszym Regulaminem oraz Polityką prywatności.\n\nSzczegółowe informacje dotyczące przetwarzania danych osobowych, w tym celów i podstaw prawnych przetwarzania, okresów przechowywania danych oraz Twoich praw w zakresie prywatności, określa Polityka prywatności.',
       },
       {
         title: '7. Własność intelektualna',
         body:
-          'Nazwa WeighWay, logo i branding, aplikacja, jej oprogramowanie oraz treści znajdujące się na stronie internetowej, z wyłączeniem danych wprowadzanych przez użytkowników, stanowią własność Adrian Prajsnar DEV lub odpowiednich licencjodawców.\n\nZ zastrzeżeniem praw przyznanych użytkownikowi na podstawie obowiązujących przepisów prawa, nie wolno kopiować, modyfikować, rozpowszechniać ani redystrybuować aplikacji lub jej elementów poza oficjalnymi kanałami udostępnionymi przez nas.',
+          'Kod źródłowy aplikacji WeighWay oraz niniejszej strony internetowej jest publicznie dostępny i udostępniany na licencji MIT. Możesz korzystać z kodu źródłowego, kopiować go, modyfikować i rozpowszechniać na warunkach tej licencji, opublikowanych wraz z kodem w publicznym repozytorium.\n\nNazwa WeighWay, logo i identyfikacja wizualna stanowią własność Adrian Prajsnar DEV. Licencja MIT nie przyznaje prawa do korzystania z nich. Nie wolno używać ich w sposób sugerujący, że zmodyfikowana lub redystrybuowana wersja jest oficjalną aplikacją WeighWay lub jest przez nas rekomendowana.\n\nOficjalne kompilacje WeighWay to pliki udostępniane za pośrednictwem linków do pobrania na tej stronie. Nie ponosimy odpowiedzialności za kompilacje uzyskane z innych źródeł.',
       },
       {
         title: '8. Dostępność i działanie Usługi',
         body:
-          'Dokładamy uzasadnionych starań, aby Usługa działała prawidłowo i była dostępna, jednak nie możemy zagwarantować jej nieprzerwanego działania.\n\nUsługa może być czasowo niedostępna w szczególności z powodu prac technicznych, aktualizacji, awarii, problemów z infrastrukturą lub działania usług zewnętrznych.\n\nNie gwarantujemy również, że przechowywane dane nigdy nie zostaną utracone. W przypadku danych, które są dla Ciebie istotne, zalecamy posiadanie własnej kopii lub dokumentacji.\n\nPowyższe postanowienia nie ograniczają praw konsumenta wynikających z bezwzględnie obowiązujących przepisów dotyczących usług cyfrowych.',
+          'Dokładamy uzasadnionych starań, aby Usługa działała prawidłowo i była dostępna, jednak nie możemy zagwarantować jej nieprzerwanego działania.\n\nUsługa może być czasowo niedostępna w szczególności z powodu prac konserwacyjnych, aktualizacji, problemów technicznych, awarii lub problemów dotyczących usług zewnętrznych lub infrastruktury.\n\nNie gwarantujemy również, że przechowywane dane nigdy nie zostaną utracone. W przypadku danych, które są dla Ciebie istotne, zalecamy, w stosownych przypadkach, zachowanie własnej kopii lub zapisu.\n\nŻadne postanowienie niniejszego Regulaminu nie ogranicza praw konsumenta, które mogą przysługiwać Ci na podstawie bezwzględnie obowiązujących przepisów prawa, w tym praw dotyczących zgodności usług cyfrowych z umową.',
       },
       {
         title: '9. Zgodność Usługi i prawa konsumenta',
         body:
-          'Jeżeli korzystasz z Usługi jako konsument, przysługują Ci prawa wynikające z obowiązujących przepisów dotyczących zgodności usług cyfrowych z umową.\n\nNiniejszy Regulamin nie wyłącza ani nie ogranicza praw konsumenta, których nie można wyłączyć ani ograniczyć na mocy obowiązującego prawa.\n\nJeżeli Usługa nie jest zgodna z umową, możesz korzystać ze środków ochrony przewidzianych przez obowiązujące przepisy prawa.',
+          'Jeżeli jesteś konsumentem, mogą przysługiwać Ci prawa wynikające z bezwzględnie obowiązujących przepisów o ochronie konsumentów dotyczących zgodności usług cyfrowych z umową.\n\nNiniejszy Regulamin nie wyłącza ani nie ogranicza praw konsumenta, których nie można wyłączyć ani ograniczyć na mocy obowiązującego prawa.\n\nJeżeli Usługa nie jest zgodna z umową, mogą przysługiwać Ci środki ochrony prawnej przewidziane przez obowiązujące prawo.\n\nW stosownych przypadkach prawa te mogą przysługiwać Ci również wtedy, gdy Usługa jest świadczona bezpłatnie, a zamiast zapłaty ceny w pieniądzu dostarczasz dane osobowe.',
       },
       {
         title: '10. Odpowiedzialność',
         body:
-          'W zakresie dozwolonym przez obowiązujące prawo nie ponosimy odpowiedzialności za szkody pośrednie, przypadkowe, szczególne lub wynikowe ani za utratę danych lub korzyści wynikającą z korzystania z Usługi lub niemożności korzystania z niej.\n\nNie ponosimy odpowiedzialności za przerwy w działaniu Usługi wynikające z okoliczności, na które nie mamy wpływu, w szczególności awarii usług zewnętrznych, infrastruktury lub sieci.\n\nPowyższe ograniczenia nie mają zastosowania w zakresie, w jakim odpowiedzialności nie można zgodnie z prawem wyłączyć lub ograniczyć, w szczególności w odniesieniu do praw konsumenta wynikających z bezwzględnie obowiązujących przepisów prawa.',
+          'W najszerszym zakresie dozwolonym przez obowiązujące prawo nie ponosimy odpowiedzialności za szkody pośrednie, przypadkowe, szczególne lub wynikowe ani za utratę danych, utracone zyski lub inne straty ekonomiczne wynikające z korzystania z Usługi lub niemożności korzystania z niej.\n\nNie ponosimy odpowiedzialności za przerwy lub awarie wynikające z okoliczności pozostających poza naszą rozsądną kontrolą, w szczególności awarii usług zewnętrznych, infrastruktury lub sieci.\n\nPowyższe ograniczenia nie mają zastosowania w zakresie, w jakim odpowiedzialności nie można zgodnie z prawem wyłączyć lub ograniczyć, w szczególności w odniesieniu do praw konsumenta wynikających z bezwzględnie obowiązujących przepisów prawa.',
       },
       {
         title: '11. Zakończenie korzystania z Usługi',
         body:
-          'Możesz w dowolnym momencie zaprzestać korzystania z Usługi i usunąć swoje konto za pomocą funkcji dostępnej w Profilu aplikacji.\n\nMożemy zawiesić lub zakończyć dostęp do konta w przypadku naruszenia Regulaminu lub obowiązujących przepisów prawa, w zakresie dozwolonym przez prawo.\n\nMożemy również zakończyć świadczenie Usługi lub wprowadzić w niej istotne zmiany, z uwzględnieniem praw użytkowników wynikających z obowiązujących przepisów prawa.\n\nPostanowienia, które ze względu na swój charakter powinny obowiązywać również po zakończeniu korzystania z Usługi, w szczególności dotyczące własności intelektualnej, odpowiedzialności oraz zastrzeżenia medycznego, pozostają w mocy.',
+          'Możesz w dowolnym momencie zaprzestać korzystania z Usługi i usunąć swoje konto za pomocą funkcji dostępnej w Profilu aplikacji.\n\nMożemy zawiesić lub zakończyć Twój dostęp do Usługi w przypadku naruszenia Regulaminu lub obowiązujących przepisów prawa, w zakresie dozwolonym przez prawo.\n\nMożemy również zakończyć świadczenie Usługi lub wprowadzić w niej istotne zmiany, z uwzględnieniem praw użytkowników wynikających z obowiązujących przepisów prawa.\n\nPostanowienia, które ze względu na swój charakter powinny obowiązywać również po zakończeniu korzystania z Usługi, w szczególności dotyczące własności intelektualnej, odpowiedzialności oraz zastrzeżeń dotyczących zdrowia i kwestii medycznych, pozostają w mocy.',
       },
       {
         title: '12. Zmiany Regulaminu',
         body:
-          'Możemy okresowo aktualizować niniejszy Regulamin.\n\nData „Ostatnia aktualizacja” na dole strony zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować o nich za pośrednictwem Usługi lub na tej stronie.\n\nJeżeli zmiana Regulaminu istotnie wpływa na Twoje prawa lub sposób korzystania z Usługi, poinformujemy Cię o niej z odpowiednim wyprzedzeniem, jeżeli wymagają tego obowiązujące przepisy prawa.\n\nDalsze korzystanie z Usługi po wejściu zmian w życie oznacza akceptację zaktualizowanego Regulaminu, z zastrzeżeniem praw przysługujących użytkownikowi na podstawie obowiązujących przepisów prawa.',
+          'Możemy okresowo aktualizować niniejszy Regulamin, na przykład w przypadku zmian w Usłudze, naszych praktykach lub obowiązujących przepisach prawa.\n\nData oznaczona jako „Ostatnia aktualizacja”, widoczna na tej stronie, zostanie zmieniona wraz z każdą aktualizacją.\n\nW przypadku istotnych zmian możemy poinformować o nich za pośrednictwem Usługi, na tej stronie lub w inny odpowiedni sposób, jeżeli wymagają tego obowiązujące przepisy prawa.\n\nJeżeli zmiana Regulaminu istotnie wpływa na Twoje prawa lub sposób korzystania z Usługi, poinformujemy Cię o niej z wyprzedzeniem, jeżeli wymagają tego obowiązujące przepisy prawa.\n\nDalsze korzystanie z Usługi po wejściu zmian w życie oznacza akceptację zaktualizowanego Regulaminu, z zastrzeżeniem praw przysługujących użytkownikowi na podstawie obowiązujących przepisów prawa.',
       },
       {
         title: '13. Prawo właściwe',
         body:
-          'Regulamin podlega prawu polskiemu.\n\nJeżeli jesteś konsumentem, żadne postanowienie Regulaminu nie pozbawia Cię ochrony przyznanej przez bezwzględnie obowiązujące przepisy prawa państwa, w którym mieszkasz.',
+          'Regulamin podlega prawu polskiemu.\n\nJeżeli jesteś konsumentem, żadne postanowienie Regulaminu nie pozbawia Cię ochrony przyznanej przez bezwzględnie obowiązujące przepisy o ochronie konsumentów państwa, w którym mieszkasz.',
       },
       {
         title: '14. Kontakt',
@@ -418,7 +423,7 @@ const pl: SiteMessages = {
       {
         title: 'Logowanie',
         body:
-          'Logowanie za pomocą adresu e-mail i hasła obsługuje Supabase Auth. Pomiary są dostępne dopiero po zalogowaniu. Link do resetowania hasła prowadzi z powrotem do aplikacji.',
+          'Logowanie za pomocą adresu e-mail i hasła lub konta Google obsługuje Supabase Auth. Pomiary są dostępne dopiero po zalogowaniu. Linki do potwierdzenia adresu e-mail i resetowania hasła prowadzą z powrotem do aplikacji.',
       },
       {
         title: 'Baza danych',
@@ -431,7 +436,7 @@ const pl: SiteMessages = {
       {
         name: 'weight_entries',
         body:
-          'Jeden rekord na użytkownika na każdy dzień kalendarzowy. Waga jest przechowywana w kilogramach. Klucz główny składa się z identyfikatora użytkownika i daty, więc ponowne zapisanie pomiaru z tego samego dnia aktualizuje istniejący rekord.',
+          'Jeden rekord na użytkownika na każdy dzień kalendarzowy. Waga jest przechowywana w kilogramach. Klucz główny składa się z identyfikatora użytkownika i daty, więc ponowne zapisanie pomiaru z tego samego dnia aktualizuje istniejący rekord. Baza danych ustawia czas utworzenia i ostatniej aktualizacji rekordu — pochodzi on z serwera, a nie z zegara telefonu.',
       },
       {
         name: 'height_entries',
@@ -484,6 +489,13 @@ const pl: SiteMessages = {
           'Przechowywanie wyłącznie aktualnego wzrostu powodowałoby zmianę historycznych wyników BMI po każdej aktualizacji profilu.',
       },
       {
+        title: 'Zmiana daty wpisu wzrostu w jednym kroku',
+        body:
+          'Zmiana daty wpisu wzrostu odbywa się w ramach jednego wywołania funkcji bazy danych: zapis pod nową datą i usunięcie wpisu spod starej daty następują łącznie, z zachowaniem tych samych reguł bezpieczeństwa na poziomie rekordów co w aplikacji.',
+        tradeoff:
+          'Dwa oddzielne żądania mogłyby spowodować powstanie duplikatu lub brak wpisu, gdyby połączenie zostało przerwane w połowie operacji.',
+      },
+      {
         title: 'Kategorie dla dorosłych od 20. roku życia',
         body:
           'Od 2. urodzin do dnia 20. urodzin, jeśli podano płeć, BMI klasyfikowane jest na podstawie percentyla BMI względem wieku według CDC. W tym celu na podstawie płci i wieku w miesiącach pobierane są parametry LMS, z których obliczany jest wynik z, a następnie percentyl. Od 20. urodzin stosowane są kategorie BMI dla dorosłych. U dzieci poniżej 2 lat oraz osób przed 20. urodzinami, których płci nie podano, wynik nie otrzymuje klasyfikacji.',
@@ -493,7 +505,7 @@ const pl: SiteMessages = {
       {
         title: 'Pomiary przechowywane na serwerze',
         body:
-          'Aplikacja nie przechowuje pomiarów w lokalnej bazie danych na urządzeniu. Zapamiętuje sesję użytkownika i kilka ustawień: język, motyw, jednostki oraz informację o tym, czy wyświetlać BMI. Bez połączenia z internetem pokazuje ekran trybu offline.',
+          'Aplikacja nie przechowuje pomiarów w lokalnej bazie danych na urządzeniu. Zapamiętuje sesję użytkownika i kilka ustawień interfejsu, takich jak język, motyw, jednostki oraz informacja o tym, czy wyświetlać BMI. O braku połączenia informuje baner: wczytane dane pozostają na ekranie, zapisywanie jest zablokowane, a po odzyskaniu połączenia dane są wczytywane ponownie.',
         tradeoff:
           'Zapisywanie pomiarów bez połączenia z internetem wymagałoby kolejki oczekujących zmian oraz zasad rozwiązywania konfliktów, gdyby dwa telefony edytowały pomiar z tego samego dnia. Takiego mechanizmu obecnie nie ma.',
       },

@@ -1264,6 +1264,11 @@ html.js[data-download-platform='ios'] .download-action--android {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+/* Keeps an odd card count from leaving a lone half-width card. */
+.feature-grid > :last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 .step-grid {
   position: relative;
 }
