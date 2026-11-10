@@ -3,6 +3,7 @@ import { HeightEntry } from '../types';
 import { getUserId } from './auth-user';
 import { supabase } from './client';
 import { fetchAllRows } from './fetch-all-rows';
+import { withTransientRetry } from './transient-retry';
 
 type HeightEntryRow = {
   effective_date: string;
@@ -17,7 +18,7 @@ function mapRow(row: HeightEntryRow): HeightEntry {
 }
 
 export async function getHeightEntries(): Promise<HeightEntry[]> {
-  try {
+  return withTransientRetry(async () => {
     const userId = await getUserId();
     const rows = await fetchAllRows<HeightEntryRow>(async (limit, after) => {
       let query = supabase
@@ -40,9 +41,7 @@ export async function getHeightEntries(): Promise<HeightEntry[]> {
     });
 
     return rows.map(mapRow);
-  } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
-  }
+  });
 }
 
 export async function saveHeight(effectiveDate: string, heightCm: number): Promise<void> {

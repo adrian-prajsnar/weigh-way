@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '../i18n';
 import { registerErrorReporter } from '../report-error';
 import { POSTGREST_PAGE_SIZE } from './fetch-all-rows';
@@ -113,6 +113,32 @@ describe('getEntries', () => {
     supabaseFrom.mockReturnValue(chain);
 
     await expect(getEntries()).rejects.toMatchObject({ message: t('errors.couldNotLoadData') });
+  });
+});
+
+describe('getEntries after a cold start', () => {
+  beforeEach(() => {
+    getUserId.mockResolvedValue('user-1');
+    supabaseFrom.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('reads again when the refreshed token is rejected once', async () => {
+    vi.useFakeTimers();
+    const chain = mockWeightQuery([buildPage(0, 2), []]);
+    chain.limit.mockResolvedValueOnce({
+      data: null,
+      error: { code: 'PGRST303', message: 'JWT issued at future' },
+    });
+
+    const pending = getEntries();
+    await vi.runAllTimersAsync();
+
+    await expect(pending).resolves.toHaveLength(2);
+    expect(chain.limit).toHaveBeenCalledTimes(3);
   });
 });
 

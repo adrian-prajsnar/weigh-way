@@ -1,6 +1,7 @@
 import { toSupabaseErrorFromUnknown } from './errors';
 import { getUserId } from './auth-user';
 import { supabase } from './client';
+import { withTransientRetry } from './transient-retry';
 import { BiologicalSex } from '../types';
 
 type UserProfileRow = {
@@ -21,7 +22,7 @@ export type UserProfileFields = {
 };
 
 export async function getUserProfile(): Promise<UserProfileFields> {
-  try {
+  return withTransientRetry(async () => {
     const userId = await getUserId();
     const { data, error } = await supabase
       .from('user_profiles')
@@ -38,9 +39,7 @@ export async function getUserProfile(): Promise<UserProfileFields> {
       birthDate: row?.birth_date ?? null,
       sex: parseSex(row?.sex),
     };
-  } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
-  }
+  });
 }
 
 export async function saveUserProfile(profile: Partial<UserProfileFields>): Promise<void> {

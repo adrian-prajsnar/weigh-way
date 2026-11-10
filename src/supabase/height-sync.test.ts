@@ -76,4 +76,38 @@ describe('getHeightEntries', () => {
     expect(entries).toHaveLength(POSTGREST_PAGE_SIZE + 50);
     expect(lt).toHaveBeenCalledWith('effective_date', page1[page1.length - 1]!.effective_date);
   });
+
+  it('reads again when the refreshed token is rejected once', async () => {
+    vi.useFakeTimers();
+    try {
+      const pages = [buildPage(0, 2), []];
+      let callIndex = 0;
+      const limit = vi
+        .fn()
+        .mockResolvedValueOnce({
+          data: null,
+          error: { code: 'PGRST303', message: 'JWT issued at future' },
+        })
+        .mockImplementation(async () => {
+          const data = pages[callIndex] ?? [];
+          callIndex += 1;
+          return { data, error: null };
+        });
+      const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+      chain.select = vi.fn(() => chain);
+      chain.eq = vi.fn(() => chain);
+      chain.order = vi.fn(() => chain);
+      chain.lt = vi.fn(() => chain);
+      chain.limit = limit;
+      supabaseFrom.mockReturnValue(chain);
+
+      const pending = getHeightEntries();
+      await vi.runAllTimersAsync();
+
+      await expect(pending).resolves.toHaveLength(2);
+      expect(limit).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

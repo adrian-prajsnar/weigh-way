@@ -3,6 +3,7 @@ import { WeightEntry } from '../types';
 import { getUserId } from './auth-user';
 import { supabase } from './client';
 import { fetchAllRows } from './fetch-all-rows';
+import { withTransientRetry } from './transient-retry';
 
 type WeightEntryRow = {
   entry_date: string;
@@ -21,7 +22,7 @@ function mapRow(row: WeightEntryRow): WeightEntry {
 }
 
 export async function getEntries(): Promise<WeightEntry[]> {
-  try {
+  return withTransientRetry(async () => {
     const userId = await getUserId();
     const rows = await fetchAllRows<WeightEntryRow>(async (limit, after) => {
       let query = supabase
@@ -44,9 +45,7 @@ export async function getEntries(): Promise<WeightEntry[]> {
     });
 
     return rows.map(mapRow);
-  } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
-  }
+  });
 }
 
 export async function saveEntry(date: string, weightKg: number): Promise<WeightEntry> {
