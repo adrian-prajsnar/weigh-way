@@ -3,7 +3,7 @@
     "name": "WeighWay",
     "slug": "weigh-way",
     "scheme": "weigh-way",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

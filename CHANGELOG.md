@@ -1,3 +1,18 @@
+## [1.6.2](https://github.com/adrian-prajsnar/weigh-way/compare/v1.6.1...v1.6.2) (2026-11-10)
+
+
+### Bug Fixes
+
+* **sync:** retry data reads after a cold-start session refresh ([02b0882](https://github.com/adrian-prajsnar/weigh-way/commit/02b088211bc5acbb0474dbe21f7f439c6fadcdce))
+* **website:** align Polish legal pages with English source ([f83b4ca](https://github.com/adrian-prajsnar/weigh-way/commit/f83b4ca95a0a1627985adbc6f426e4813ac88756))
+* **website:** align site copy and legal pages with current app ([8a6732d](https://github.com/adrian-prajsnar/weigh-way/commit/8a6732d0c20c34161ca502f33fc41122f312445c))
+* **website:** correct release notes for 1.2.0 to 1.6.0 ([8f0f416](https://github.com/adrian-prajsnar/weigh-way/commit/8f0f416458a93548434073c7cac9224c4edd68b3))
+
+
+### Features
+
+* **website:** refresh app screenshots ([a99748b](https://github.com/adrian-prajsnar/weigh-way/commit/a99748b8894fe00d1b7e75b5d75f8598b7026314))
+
 ## [1.6.1](https://github.com/adrian-prajsnar/weigh-way/compare/v1.6.0...v1.6.1) (2026-11-05)
 
 
