@@ -42,11 +42,21 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const colors = useColors();
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingConfirm | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const [phraseInput, setPhraseInput] = useState('');
   const [secondaryActionsEnabled, setSecondaryActionsEnabled] = useState(false);
   const resolverRef = useRef<((value: boolean) => void) | null>(null);
+  const closingResultRef = useRef<boolean | null>(null);
   const idRef = useRef(0);
   const dialogFrameRef = useRef(null);
+
+  const finishClose = useCallback((result: boolean) => {
+    closingResultRef.current = null;
+    setPending(null);
+    setModalVisible(false);
+    resolverRef.current?.(result);
+    resolverRef.current = null;
+  }, []);
 
   useEffect(() => {
     setPhraseInput('');
@@ -85,27 +95,51 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     };
   }, [pending?.id, pending]);
 
-  const close = useCallback((result: boolean) => {
-    setPending(null);
-    resolverRef.current?.(result);
-    resolverRef.current = null;
-  }, []);
+  const close = useCallback(
+    (result: boolean) => {
+      if (Platform.OS === 'ios') {
+        // Keep the modal mounted until onDismiss; otherwise a follow-up native
+        // presentation (e.g. SFSafariViewController) stacks on a half-dismissed VC.
+        if (closingResultRef.current !== null) {
+          return;
+        }
+        closingResultRef.current = result;
+        setModalVisible(false);
+        return;
+      }
+      finishClose(result);
+    },
+    [finishClose],
+  );
+
+  const handleModalDismiss = useCallback(() => {
+    if (Platform.OS !== 'ios' || closingResultRef.current === null) {
+      return;
+    }
+    finishClose(closingResultRef.current);
+  }, [finishClose]);
 
   const confirm = useCallback((options: ConfirmOptions) => {
     return new Promise<boolean>((resolve) => {
-      resolverRef.current?.(false);
+      resolverRef.current?.(closingResultRef.current ?? false);
+      closingResultRef.current = null;
       idRef.current += 1;
       resolverRef.current = resolve;
       setPending({ ...options, id: idRef.current });
+      setModalVisible(true);
     });
   }, []);
 
   useEffect(
     () => () => {
-      resolverRef.current?.(false);
-      resolverRef.current = null;
+      if (closingResultRef.current !== null && Platform.OS === 'ios') {
+        finishClose(closingResultRef.current);
+      } else {
+        resolverRef.current?.(false);
+        resolverRef.current = null;
+      }
     },
-    [],
+    [finishClose],
   );
 
   const cancelLabel = pending?.cancelLabel ?? t('common.cancel');
@@ -119,11 +153,12 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
         {children}
         {pending ? (
           <Modal
-            visible
+            visible={modalVisible}
             transparent
             animationType="fade"
             statusBarTranslucent
             onRequestClose={() => close(false)}
+            onDismiss={handleModalDismiss}
           >
             <View
               style={styles.modalBackdropCentered}
