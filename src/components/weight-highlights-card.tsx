@@ -1,4 +1,4 @@
-import { ReactNode, useMemo } from 'react';
+import { ReactNode } from 'react';
 import { StyleProp, Text, TextStyle, View } from 'react-native';
 import { calculateBmi } from '../bmi';
 import { useBmiDetails } from '../context/bmi-details-context';
@@ -82,11 +82,9 @@ export function WeightHighlightsCard({
   const weightUnit = getWeightUnitLabel(units);
   const todayKey = useTodayKey();
 
-  const extremes = useMemo(() => getWeightExtremes(entries, birthDate), [entries, birthDate]);
-  const sinceBirthday = useMemo(
-    () => getChangeSinceLastBirthday(entries, birthDate, fromDateKey(todayKey)),
-    [entries, birthDate, todayKey],
-  );
+  // Not memoized: both results carry age labels translated for the active language.
+  const extremes = getWeightExtremes(entries, birthDate);
+  const sinceBirthday = getChangeSinceLastBirthday(entries, birthDate, fromDateKey(todayKey));
 
   if (!extremes) {
     return null;

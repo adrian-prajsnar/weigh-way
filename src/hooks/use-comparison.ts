@@ -186,8 +186,8 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     if (!isListReady || !isTrendMode(mode) || isInvalidRange) {
       return [];
     }
-    return getTrendRows(entries, mode, filterRange, birthDate);
-  }, [birthDate, entries, filterRange, isInvalidRange, isListReady, mode]);
+    return getTrendRows(entries, mode, filterRange, birthDate, t);
+  }, [birthDate, entries, filterRange, isInvalidRange, isListReady, mode, t]);
 
   const showTrendContent = !isLoading && isListReady && !isInvalidRange;
 
@@ -232,8 +232,8 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     if (mode !== 'custom' || !customRanges) {
       return null;
     }
-    return getComparison(entries, 'custom', customRanges, birthDate, customKind);
-  }, [birthDate, customKind, customRanges, entries, mode]);
+    return getComparison(entries, 'custom', customRanges, birthDate, customKind, t);
+  }, [birthDate, customKind, customRanges, entries, mode, t]);
 
   const customInvalid =
     mode === 'custom' &&

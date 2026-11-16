@@ -99,16 +99,15 @@ export function WeightEntryFormBody({
     [weightInput, units, locale, existingEntryWeightKg],
   );
 
-  const previewBmi = useMemo(() => {
-    if (!showBmi || parsedWeightKg === null || heightAtDate === null) {
-      return null;
-    }
-    return calculateBmi(parsedWeightKg, heightAtDate, {
-      date: selectedDateKey,
-      birthDate,
-      sex,
-    });
-  }, [parsedWeightKg, heightAtDate, showBmi, selectedDateKey, birthDate, sex]);
+  // Not memoized: the result carries a category label translated for the active language.
+  const previewBmi =
+    !showBmi || parsedWeightKg === null || heightAtDate === null
+      ? null
+      : calculateBmi(parsedWeightKg, heightAtDate, {
+          date: selectedDateKey,
+          birthDate,
+          sex,
+        });
 
   useEffect(() => {
     if (!initialDate && !dateTouchedRef.current && !weightInputTouchedRef.current) {
