@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { t } from '../i18n';
 
 const mocks = vi.hoisted(() => {
   const upsert = vi.fn().mockResolvedValue({ error: null });
@@ -50,6 +51,16 @@ describe('profile reads after a cold start', () => {
 });
 
 describe('partial profile writes', () => {
+  it.each([
+    { error: { code: '23514', message: 'constraint violation' }, network: false },
+    { error: { message: 'Network request failed' }, network: true },
+  ])('maps save errors: $error.message', async ({ error, network }) => {
+    upsert.mockResolvedValueOnce({ error });
+    await expect(saveUserProfile({ sex: 'female' })).rejects.toThrow(
+      t(network ? 'errors.noConnection' : 'profile.saveFailed'),
+    );
+  });
+
   it('does not send birth_date when changing sex', async () => {
     await saveUserProfile({ sex: 'female' });
     expect(upsert.mock.calls.at(-1)?.[0]).toMatchObject({ user_id: 'user-1', sex: 'female' });

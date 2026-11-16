@@ -61,7 +61,7 @@ export async function saveHeight(effectiveDate: string, heightCm: number): Promi
       throw error;
     }
   } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
+    throw toSupabaseErrorFromUnknown(error, 'profile.saveFailed');
   }
 }
 
@@ -78,7 +78,7 @@ export async function deleteHeight(effectiveDate: string): Promise<void> {
       throw error;
     }
   } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
+    throw toSupabaseErrorFromUnknown(error, 'profile.deleteHeightFailed');
   }
 }
 
@@ -97,6 +97,6 @@ export async function updateHeight(
     });
     if (error) throw error;
   } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
+    throw toSupabaseErrorFromUnknown(error, 'profile.saveFailed');
   }
 }

@@ -1,5 +1,6 @@
 import { isNetworkError } from '../auth-errors';
 import { t } from '../i18n';
+import type { TranslationKey } from '../i18n/translation-keys';
 import { reportSupabaseFailure } from '../report-error';
 import { FetchAllRowsLimitError } from './fetch-all-rows';
 
@@ -99,7 +100,10 @@ function reportMappedFailure(error: SupabaseRequestError): void {
   reportSupabaseFailure(code);
 }
 
-export function toSupabaseError(error: SupabaseRequestError | unknown): Error {
+export function toSupabaseError(
+  error: SupabaseRequestError | unknown,
+  fallback: TranslationKey = 'errors.couldNotLoadData',
+): Error {
   if (error instanceof FetchAllRowsLimitError) {
     reportMappedFailure({ message: 'fetch_all_rows_limit_exceeded', code: 'fetch_all_rows_limit' });
     return new Error(t('errors.dataTooLarge'));
@@ -113,23 +117,34 @@ export function toSupabaseError(error: SupabaseRequestError | unknown): Error {
   }
 
   if (requestError.message?.toLowerCase().includes('permission denied')) {
-    return new Error(__DEV__ ? t('errors.databasePermissionDev') : t('errors.databasePermission'));
+    return new Error(
+      t(
+        __DEV__
+          ? 'errors.databasePermissionDev'
+          : fallback === 'errors.couldNotLoadData'
+            ? 'errors.databasePermission'
+            : fallback,
+      ),
+    );
   }
 
   if (isSessionExpiredError(requestError)) {
     return new Error(t('errors.sessionExpired'));
   }
 
-  return new Error(t('errors.couldNotLoadData'));
+  return new Error(t(fallback));
 }
 
-export function toSupabaseErrorFromUnknown(error: unknown): Error {
+export function toSupabaseErrorFromUnknown(
+  error: unknown,
+  fallback: TranslationKey = 'errors.couldNotLoadData',
+): Error {
   if (error instanceof SignedOutError) {
     return error;
   }
 
   if (error instanceof FetchAllRowsLimitError) {
-    return toSupabaseError(error);
+    return toSupabaseError(error, fallback);
   }
 
   if (error instanceof Error) {
@@ -139,8 +154,8 @@ export function toSupabaseErrorFromUnknown(error: unknown): Error {
   }
 
   if (error && typeof error === 'object' && 'message' in error) {
-    return toSupabaseError(error as SupabaseRequestError);
+    return toSupabaseError(error as SupabaseRequestError, fallback);
   }
 
-  return new Error(t('errors.couldNotLoadData'));
+  return new Error(t(fallback));
 }

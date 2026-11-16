@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POSTGREST_PAGE_SIZE } from './fetch-all-rows';
+import { t } from '../i18n';
 
 const supabaseFrom = vi.hoisted(() => vi.fn());
+const supabaseRpc = vi.hoisted(() => vi.fn());
 const getUserId = vi.hoisted(() => vi.fn());
 
 vi.mock('./client', () => ({
   supabase: {
     from: supabaseFrom,
+    rpc: supabaseRpc,
   },
 }));
 
@@ -15,7 +18,7 @@ vi.mock('./auth-user', () => ({
 }));
 
 // eslint-disable-next-line import/first -- load after vi.mock
-import { getHeightEntries } from './height-sync';
+import { deleteHeight, getHeightEntries, saveHeight, updateHeight } from './height-sync';
 
 type HeightRow = {
   effective_date: string;
@@ -109,5 +112,31 @@ describe('getHeightEntries', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('height write error messages', () => {
+  it.each([
+    { error: { code: '23514', message: 'constraint violation' }, network: false },
+    { error: { message: 'Network request failed' }, network: true },
+  ])('maps save, update and delete errors: $error.message', async ({ error, network }) => {
+    getUserId.mockResolvedValue('user-1');
+    const result = { error };
+    const eq = vi.fn().mockReturnValueOnce({ eq: vi.fn().mockResolvedValue(result) });
+    supabaseFrom.mockReturnValue({
+      upsert: vi.fn().mockResolvedValue(result),
+      delete: vi.fn().mockReturnValue({ eq }),
+    });
+    supabaseRpc.mockResolvedValue(result);
+
+    await expect(saveHeight('2026-01-01', 175)).rejects.toThrow(
+      t(network ? 'errors.noConnection' : 'profile.saveFailed'),
+    );
+    await expect(updateHeight('2026-01-01', '2026-01-02', 176)).rejects.toThrow(
+      t(network ? 'errors.noConnection' : 'profile.saveFailed'),
+    );
+    await expect(deleteHeight('2026-01-01')).rejects.toThrow(
+      t(network ? 'errors.noConnection' : 'profile.deleteHeightFailed'),
+    );
   });
 });
