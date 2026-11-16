@@ -177,6 +177,7 @@ export function WeightEntryFormBody({
     if (existingEntryForDate !== undefined && existingEntryForDate.weightKg === weightKg) {
       weightInputTouchedRef.current = false;
       if (selectedDateKey === toDateKey(getTodayDate())) dateTouchedRef.current = false;
+      showSuccess(t('entryForm.saved'));
       onSaveSuccess?.();
       return;
     }
