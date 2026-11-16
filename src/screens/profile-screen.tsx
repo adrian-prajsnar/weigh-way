@@ -353,16 +353,16 @@ export function ProfileScreen({
     });
   };
 
-  const handleSexChange = (next: BiologicalSex | null) => {
-    void (async () => {
-      try {
-        await saveSexEntry(next);
-        showSuccess(t('profile.sexSaved'));
-      } catch (saveError) {
-        const message = saveError instanceof Error ? saveError.message : t('profile.saveFailed');
-        showError(message);
-      }
-    })();
+  const handleSexChange = async (next: BiologicalSex | null): Promise<boolean> => {
+    try {
+      await saveSexEntry(next);
+      showSuccess(t('profile.sexSaved'));
+      return true;
+    } catch (saveError) {
+      const message = saveError instanceof Error ? saveError.message : t('profile.saveFailed');
+      showError(message);
+      return false;
+    }
   };
 
   return (
