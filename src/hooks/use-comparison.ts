@@ -93,12 +93,6 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     setDateB(null);
   };
 
-  useEffect(() => {
-    if (!birthDate && mode === 'ageYear') {
-      setMode('day');
-    }
-  }, [birthDate, mode]);
-
   const applyDefaultRange = useCallback(
     (granularity: TrendGranularity) => {
       const next = getDefaultTrendDateRange(granularity, today, birthDate, earliestWeighInDate);
@@ -107,6 +101,14 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     },
     [birthDate, earliestWeighInDate, today],
   );
+
+  useEffect(() => {
+    if (!birthDate && mode === 'ageYear') {
+      applyDefaultRange('day');
+      beginListLoading();
+      setMode('day');
+    }
+  }, [applyDefaultRange, beginListLoading, birthDate, mode]);
 
   const fromKey = toDateKey(fromDate);
   const toKey = toDateKey(toDate);
