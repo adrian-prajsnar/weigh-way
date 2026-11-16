@@ -39,7 +39,7 @@ export async function getUserProfile(): Promise<UserProfileFields> {
       birthDate: row?.birth_date ?? null,
       sex: parseSex(row?.sex),
     };
-  });
+  }, 'errors.couldNotLoadProfile');
 }
 
 export async function saveUserProfile(profile: Partial<UserProfileFields>): Promise<void> {

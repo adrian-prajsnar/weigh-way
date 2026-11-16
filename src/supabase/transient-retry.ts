@@ -1,5 +1,6 @@
 import { isJwtExpiredError, isTransientLoadError, toSupabaseErrorFromUnknown } from './errors';
 import { supabase } from './client';
+import type { TranslationKey } from '../i18n/translation-keys';
 
 /** Waits before each retry; the read runs once more than there are delays. */
 const RETRY_DELAYS_MS = [400, 800, 1600];
@@ -16,14 +17,17 @@ function delay(ms: number): Promise<void> {
  * read still runs with the expired token. Those failures are one-off; retrying
  * the read avoids leaving Profile on "Could not load data".
  */
-export async function withTransientRetry<T>(operation: () => Promise<T>): Promise<T> {
+export async function withTransientRetry<T>(
+  operation: () => Promise<T>,
+  fallback: TranslationKey = 'errors.couldNotLoadData',
+): Promise<T> {
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await operation();
     } catch (error) {
       const delayMs = RETRY_DELAYS_MS[attempt];
       if (delayMs === undefined || !isTransientLoadError(error)) {
-        throw toSupabaseErrorFromUnknown(error);
+        throw toSupabaseErrorFromUnknown(error, fallback);
       }
 
       if (isJwtExpiredError(error)) {

@@ -45,7 +45,7 @@ export async function getEntries(): Promise<WeightEntry[]> {
     });
 
     return rows.map(mapRow);
-  });
+  }, 'errors.couldNotLoadEntries');
 }
 
 export async function saveEntry(date: string, weightKg: number): Promise<WeightEntry> {

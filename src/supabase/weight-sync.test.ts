@@ -112,7 +112,7 @@ describe('getEntries', () => {
     });
     supabaseFrom.mockReturnValue(chain);
 
-    await expect(getEntries()).rejects.toMatchObject({ message: t('errors.couldNotLoadData') });
+    await expect(getEntries()).rejects.toMatchObject({ message: t('errors.couldNotLoadEntries') });
   });
 });
 
@@ -124,6 +124,16 @@ describe('getEntries after a cold start', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('preserves the network message after exhausting retries', async () => {
+    vi.useFakeTimers();
+    const chain = mockWeightQuery([]);
+    chain.limit.mockResolvedValue({ data: null, error: { message: 'Network request failed' } });
+    const assertion = expect(getEntries()).rejects.toThrow(t('errors.noConnection'));
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(chain.limit).toHaveBeenCalledTimes(4);
   });
 
   it('reads again when the refreshed token is rejected once', async () => {

@@ -42,11 +42,13 @@ describe.each([toSupabaseError, toSupabaseErrorFromUnknown])('%s', (mapError) =>
     expect(mapError(error, 'entryForm.saveFailed').message).toBe(t('errors.databasePermissionDev'));
   });
 
-  it('uses the write fallback for production permissions while preserving read behavior', () => {
+  it('uses explicit fallbacks for production permissions and keeps the default permission message', () => {
     vi.stubGlobal('__DEV__', false);
     const error = { message: 'permission denied', code: '42501' };
     expect(mapError(error).message).toBe(t('errors.databasePermission'));
     expect(mapError(error, 'entryForm.saveFailed').message).toBe(t('entryForm.saveFailed'));
+    expect(mapError(error, 'errors.couldNotLoadEntries').message).toBe(t('errors.couldNotLoadEntries'));
+    expect(mapError(error, 'errors.couldNotLoadProfile').message).toBe(t('errors.couldNotLoadProfile'));
   });
 });
 

@@ -41,7 +41,7 @@ export async function getHeightEntries(): Promise<HeightEntry[]> {
     });
 
     return rows.map(mapRow);
-  });
+  }, 'errors.couldNotLoadProfile');
 }
 
 export async function saveHeight(effectiveDate: string, heightCm: number): Promise<void> {

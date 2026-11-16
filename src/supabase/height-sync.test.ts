@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { POSTGREST_PAGE_SIZE } from './fetch-all-rows';
 import { t } from '../i18n';
 
@@ -46,6 +46,28 @@ describe('getHeightEntries', () => {
   beforeEach(() => {
     getUserId.mockResolvedValue('user-1');
     supabaseFrom.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it.each([
+    { message: 'private database detail', key: 'errors.couldNotLoadProfile', attempts: 1 },
+    { message: 'Network request failed', key: 'errors.noConnection', attempts: 4 },
+  ] as const)('maps read failure: $message', async ({ message, key, attempts }) => {
+    vi.useFakeTimers();
+    const chain: Record<string, ReturnType<typeof vi.fn>> = {};
+    chain.select = vi.fn(() => chain);
+    chain.eq = vi.fn(() => chain);
+    chain.order = vi.fn(() => chain);
+    chain.limit = vi.fn().mockResolvedValue({ data: null, error: { message } });
+    supabaseFrom.mockReturnValue(chain);
+
+    const assertion = expect(getHeightEntries()).rejects.toThrow(t(key));
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(chain.limit).toHaveBeenCalledTimes(attempts);
   });
 
   it('loads height rows across keyset pages', async () => {

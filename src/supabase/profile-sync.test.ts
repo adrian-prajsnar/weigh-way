@@ -33,6 +33,18 @@ describe('profile reads after a cold start', () => {
     mocks.maybeSingle.mockReset();
   });
 
+  it.each([
+    { message: 'private database detail', key: 'errors.couldNotLoadProfile', attempts: 1 },
+    { message: 'Network request failed', key: 'errors.noConnection', attempts: 4 },
+  ] as const)('maps read failure: $message', async ({ message, key, attempts }) => {
+    vi.useFakeTimers();
+    mocks.maybeSingle.mockResolvedValue({ data: null, error: { message } });
+    const assertion = expect(getUserProfile()).rejects.toThrow(t(key));
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(mocks.maybeSingle).toHaveBeenCalledTimes(attempts);
+  });
+
   it('loads the profile when the refreshed token is rejected once', async () => {
     vi.useFakeTimers();
     mocks.maybeSingle
