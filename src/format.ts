@@ -325,10 +325,11 @@ function getTrendDefaultFrom(
       from = addMonths(to, -1);
       break;
     case 'week':
-      from = addYears(to, -TREND_WEEK_DEFAULT_YEARS);
+      from = getMondayWeekStart(addYears(to, -TREND_WEEK_DEFAULT_YEARS));
       break;
     case 'month':
       from = addYears(to, -TREND_MONTH_DEFAULT_YEARS);
+      from.setDate(1);
       break;
     case 'year':
     case 'ageYear':
