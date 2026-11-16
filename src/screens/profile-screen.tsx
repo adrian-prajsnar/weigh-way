@@ -290,7 +290,7 @@ export function ProfileScreen({
     });
   };
 
-  const entryCountLabel = t('history.entryCount', { count: entries.length });
+  const entryCountLabel = entriesLoaded ? t('history.entryCount', { count: entries.length }) : emDash;
   const demoMode = isDemoMode();
   const focusSection = route.params?.focusSection;
   const [shouldOpenBirthDatePicker, setShouldOpenBirthDatePicker] = useState(false);
