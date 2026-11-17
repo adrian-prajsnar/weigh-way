@@ -5,7 +5,7 @@ Your weight, your progress — a minimal mobile app for iOS and Android for logg
 ## Features
 
 - Sign in / sign up (required — no access without login)
-- Profile page — email, height history (effective dates), export weigh-ins (JSON + CSV on device), sign out, delete account
+- Profile page — email, height history (effective dates), export weigh-ins (choose JSON or CSV on device), sign out, delete account
 - Log one weight per day (editing the same date overwrites the previous value); metric or imperial units in Profile; BMI uses height at that date (or `"-"` if none)
 - Dashboard averages: this week, last week, this month, and more
 - Compare periods week/month/year or custom ranges
@@ -345,7 +345,7 @@ EAS Free includes 15 Android builds per month. Two production releases a week fi
 
 - Each user only sees their own entries (Supabase row-level security)
 - Friends or others need their own accounts — data is never shared
-- Profile can export weigh-ins on the device (JSON and a CSV of weigh-ins). That action does not upload the file.
+- Profile can export a JSON journal (weigh-ins, height history and profile details) or a CSV of weigh-ins in kilograms. Mobile opens one share sheet with the selected file; web downloads the selected file. Mobile exports remain in the OS-managed cache so the receiving app can read them; exports older than one day are removed when you next export. Export does not upload data automatically; the destination you choose controls where the file goes.
 - Production builds can report crashes when `EXPO_PUBLIC_SENTRY_DSN` is set in EAS. The report is the app version and an error code. Weigh-ins, height, BMI, and other health data are not included. Local dev and the website demo do not send reports.
 - **Sentry source maps (native builds):** `app.config.ts` sets `disableAutoUpload` when `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, and `SENTRY_PROJECT` are not all set, so local and CI Android/iOS builds do not fail on upload. When all three are present in an EAS environment (recommended: production only), native uploads run automatically. Set `SENTRY_ALLOW_FAILURE=true` in EAS if you want builds to succeed when upload fails. Set `SENTRY_DISABLE_AUTO_UPLOAD=true` to force skip even when credentials exist.
 - Never commit `.env` to git

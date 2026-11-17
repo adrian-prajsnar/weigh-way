@@ -296,6 +296,9 @@ const pl = {
     showBmiNoHeightHint: 'BMI nie będzie widoczne, dopóki nie dodasz wzrostu.',
     session: 'Bezpieczeństwo',
     exportJournal: 'Eksportuj swoje pomiary',
+    exportFormat: 'Format eksportu',
+    exportJsonHint: 'JSON zawiera pomiary masy ciała, historię wzrostu i dane profilu.',
+    exportCsvHint: 'CSV zawiera daty i masę ciała w kilogramach do użycia w arkuszu kalkulacyjnym.',
     exportReady: 'Eksport pomiarów gotowy.',
     exportFailed: 'Nie udało się wyeksportować pomiarów.',
     exportDataNotLoaded:

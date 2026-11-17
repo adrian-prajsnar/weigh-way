@@ -3,6 +3,34 @@ import { BiologicalSex, HeightEntry, WeightEntry } from './types';
 export const EXPORT_JSON_FILENAME = 'weigh-way-export.json';
 export const WEIGH_INS_CSV_FILENAME = 'weigh-way-weigh-ins.csv';
 
+export type JournalExportFormat = 'json' | 'csv';
+
+export type JournalExportFile = {
+  filename: string;
+  content: string;
+  mimeType: string;
+  uti: string;
+};
+
+export function buildJournalExportFile(
+  format: JournalExportFormat,
+  input: BuildJournalJsonInput,
+): JournalExportFile {
+  return format === 'json'
+    ? {
+        filename: EXPORT_JSON_FILENAME,
+        content: buildJournalJson(input),
+        mimeType: 'application/json',
+        uti: 'public.json',
+      }
+    : {
+        filename: WEIGH_INS_CSV_FILENAME,
+        content: buildWeighInsCsv(input.weightEntries),
+        mimeType: 'text/csv',
+        uti: 'public.comma-separated-values-text',
+      };
+}
+
 export type BuildJournalJsonInput = {
   weightEntries: WeightEntry[];
   heightEntries: HeightEntry[];
