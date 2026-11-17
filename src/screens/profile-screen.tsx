@@ -1,15 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  RefreshControl,
-  Share,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Platform, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
 import { ContentFrame } from '../components/content-frame';
@@ -39,12 +31,11 @@ import { BiologicalSex } from '../types';
 import { getTodayDate, toDateKey } from '../format';
 import { hasAnyHeight } from '../height';
 import {
-  buildJournalJson,
-  buildWeighInsCsv,
+  buildJournalExportFile,
   canExportJournalData,
-  EXPORT_JSON_FILENAME,
-  WEIGH_INS_CSV_FILENAME,
+  JournalExportFormat,
 } from '../journal-export';
+import { shareJournalExportFile } from '../share-journal-export-file';
 import { LanguagePreference } from '../storage/language-preference';
 import { ThemePreference } from '../storage/theme-preference';
 import { useAppStyles } from '../theme/styles';
@@ -145,6 +136,12 @@ export function ProfileScreen({
   const emDash = t('common.emDash');
   const appVersion = Constants.expoConfig?.version ?? emDash;
   const [isExporting, setIsExporting] = useState(false);
+  const exportInProgress = useRef(false);
+  const [exportFormat, setExportFormat] = useState<JournalExportFormat>('json');
+  const exportFormatOptions: SegmentedOption<JournalExportFormat>[] = [
+    { value: 'json', label: 'JSON' },
+    { value: 'csv', label: 'CSV' },
+  ];
   const canExport = canExportJournalData({
     weightEntriesError: entriesError,
     profileError: error,
@@ -206,13 +203,14 @@ export function ProfileScreen({
   };
 
   const handleExportJournal = () => {
-    if (isExporting) {
+    if (exportInProgress.current) {
       return;
     }
+    exportInProgress.current = true;
     void (async () => {
       setIsExporting(true);
-      await waitForExportUi();
       try {
+        await waitForExportUi();
         if (
           !canExportJournalData({
             weightEntriesError: entriesError,
@@ -225,38 +223,21 @@ export function ProfileScreen({
           return;
         }
 
-        const json = buildJournalJson({
+        const file = buildJournalExportFile(exportFormat, {
           weightEntries: entries,
           heightEntries,
           birthDate,
           sex,
           now: new Date(),
         });
-        const csv = buildWeighInsCsv(entries);
+        await shareJournalExportFile(file, t('profile.exportJournal'));
         if (Platform.OS === 'web') {
-          if (typeof document === 'undefined') {
-            throw new Error('document unavailable');
-          }
-          for (const [filename, content, mimeType] of [
-            [EXPORT_JSON_FILENAME, json, 'application/json'],
-            [WEIGH_INS_CSV_FILENAME, csv, 'text/csv'],
-          ] as const) {
-            const blob = new Blob([content], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = filename;
-            anchor.click();
-            URL.revokeObjectURL(url);
-          }
-        } else {
-          await Share.share({ message: json, title: EXPORT_JSON_FILENAME });
-          await Share.share({ message: csv, title: WEIGH_INS_CSV_FILENAME });
+          showSuccess(t('profile.exportReady'));
         }
-        showSuccess(t('profile.exportReady'));
       } catch {
         showError(t('profile.exportFailed'));
       } finally {
+        exportInProgress.current = false;
         setIsExporting(false);
       }
     })();
@@ -481,19 +462,16 @@ export function ProfileScreen({
               </View>
             </AppCard>
 
-            <AppCard title={t('profile.session')} delay={180}>
-              {demoMode ? <Text style={styles.settingHint}>{t('demo.sessionHint')}</Text> : null}
-              <Pressable
-                style={({ pressed }) => [
-                  styles.secondaryButton,
-                  demoMode && styles.buttonDisabled,
-                  pressed && !demoMode && styles.buttonPressed,
-                ]}
-                onPress={handleSignOut}
-                disabled={demoMode}
-              >
-                <Text style={styles.secondaryButtonText}>{t('profile.signOut')}</Text>
-              </Pressable>
+            <AppCard title={t('profile.exportJournal')} delay={180}>
+              <Text style={styles.settingLabel}>{t('profile.exportFormat')}</Text>
+              <SegmentedControl
+                options={exportFormatOptions}
+                value={exportFormat}
+                onChange={setExportFormat}
+              />
+              <Text style={styles.settingHint}>
+                {t(exportFormat === 'json' ? 'profile.exportJsonHint' : 'profile.exportCsvHint')}
+              </Text>
               <Pressable
                 style={({ pressed }) => [
                   styles.secondaryButton,
@@ -508,6 +486,21 @@ export function ProfileScreen({
                 ) : (
                   <Text style={styles.secondaryButtonText}>{t('profile.exportJournal')}</Text>
                 )}
+              </Pressable>
+            </AppCard>
+
+            <AppCard title={t('profile.session')} delay={180}>
+              {demoMode ? <Text style={styles.settingHint}>{t('demo.sessionHint')}</Text> : null}
+              <Pressable
+                style={({ pressed }) => [
+                  styles.secondaryButton,
+                  demoMode && styles.buttonDisabled,
+                  pressed && !demoMode && styles.buttonPressed,
+                ]}
+                onPress={handleSignOut}
+                disabled={demoMode}
+              >
+                <Text style={styles.secondaryButtonText}>{t('profile.signOut')}</Text>
               </Pressable>
               <Pressable
                 style={({ pressed }) => [
