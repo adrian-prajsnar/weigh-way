@@ -1,6 +1,6 @@
 {
   "name": "weigh-way",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "main": "index.ts",
   "engines": {
     "node": ">=22"

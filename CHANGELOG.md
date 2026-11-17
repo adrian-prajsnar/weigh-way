@@ -1,3 +1,10 @@
+## [1.6.4](https://github.com/adrian-prajsnar/weigh-way/compare/v1.6.3...v1.6.4) (2026-11-17)
+
+
+### Bug Fixes
+
+* **export:** share journal files in the selected format ([2be160b](https://github.com/adrian-prajsnar/weigh-way/commit/2be160b7fedc91313240a48851b3c730a9a39d9d))
+
 ## [1.6.3](https://github.com/adrian-prajsnar/weigh-way/compare/v1.6.2...v1.6.3) (2026-11-17)
 
 
