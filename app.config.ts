@@ -66,11 +66,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ],
     ios: {
       ...config.ios,
-      buildNumber: '10',
+      buildNumber: '11',
     },
     android: {
       ...config.android,
-      versionCode: 10,
+      versionCode: 11,
       intentFilters: [
         {
           action: 'VIEW',

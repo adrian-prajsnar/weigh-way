@@ -1,3 +1,20 @@
+## [1.6.3](https://github.com/adrian-prajsnar/weigh-way/compare/v1.6.2...v1.6.3) (2026-11-17)
+
+
+### Bug Fixes
+
+* **auth:** report an existing account on duplicate sign-up ([839fb71](https://github.com/adrian-prajsnar/weigh-way/commit/839fb71dabd5458ad46265c2336a850056fa861f))
+* **compare:** reset the range when age-year mode becomes unavailable ([a8cee2f](https://github.com/adrian-prajsnar/weigh-way/commit/a8cee2ffbe710a7208f088c7cac662da12f5b2cd))
+* **compare:** start default week and month ranges on a period boundary ([4211af3](https://github.com/adrian-prajsnar/weigh-way/commit/4211af3a2dfc85f3960b8c848fc2f7540cdfeb01))
+* **entry:** confirm saving an unchanged weight ([ea285f3](https://github.com/adrian-prajsnar/weigh-way/commit/ea285f37766001ef7bb2f69047e6bbcaaa34fa7f))
+* **entry:** stop the edit dialog refocusing on background refreshes ([af142c3](https://github.com/adrian-prajsnar/weigh-way/commit/af142c3a507894a525028d86323cc358cbfdbedb))
+* **i18n:** refresh cached labels after a language switch ([8e7ae0b](https://github.com/adrian-prajsnar/weigh-way/commit/8e7ae0b11574fc388affcfbc09abca8d30a32ab2))
+* **ios:** wait for confirm modal dismiss before resolving ([23a203c](https://github.com/adrian-prajsnar/weigh-way/commit/23a203c12f17323a168a1e80f63ad5b3a22cbe17))
+* **profile:** hide the weigh-in count until entries load ([ad1e35d](https://github.com/adrian-prajsnar/weigh-way/commit/ad1e35d5b9f7239ca912ca7059665a61a7a58e36)), closes [wei#in](https://github.com/wei/issues/in)
+* **profile:** revert the sex control when saving fails ([35c2ca5](https://github.com/adrian-prajsnar/weigh-way/commit/35c2ca53515512df13efaf651ef4be84cf8fae7b))
+* **sync:** show save and delete errors instead of a load message ([f601131](https://github.com/adrian-prajsnar/weigh-way/commit/f6011313464176f31ff2c694cdbbd9eb557a0cc9))
+* **sync:** show specific messages when weigh-ins or profile fail to load ([014b934](https://github.com/adrian-prajsnar/weigh-way/commit/014b93405b2c7935888072edb31e74985c414887)), closes [wei#ins](https://github.com/wei/issues/ins)
+
 ## [1.6.2](https://github.com/adrian-prajsnar/weigh-way/compare/v1.6.1...v1.6.2) (2026-11-10)
 
 
