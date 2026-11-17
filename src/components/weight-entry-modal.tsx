@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useMemo } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { SlideInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +31,7 @@ export function WeightEntryModal({
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const initialDate = useMemo(() => (date ? fromDateKey(date) : undefined), [date]);
 
   if (!visible || !date) {
     return null;
@@ -68,7 +70,7 @@ export function WeightEntryModal({
               key={date}
               entries={entries}
               isDataLoading={isDataLoading}
-              initialDate={fromDateKey(date)}
+              initialDate={initialDate}
               onSaveSuccess={onClose}
               autoFocusWeight
               dateReadOnly

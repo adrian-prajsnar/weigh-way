@@ -20,7 +20,7 @@ type AboutYouSectionProps = {
   minimumBirthDate: Date;
   maximumBirthDate: Date;
   sex: BiologicalSex | null;
-  onSexChange: (sex: BiologicalSex | null) => void;
+  onSexChange: (sex: BiologicalSex | null) => Promise<boolean>;
   heightEntries: HeightEntry[];
   onOpenHeightHistory: () => void;
 };

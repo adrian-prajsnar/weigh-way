@@ -10,7 +10,7 @@ import {
   getTodayDate,
   toDateKey,
 } from './format';
-import { t } from './i18n';
+import { t, TranslateOptions, TranslationKey } from './i18n';
 import {
   ChartRange,
   ComparisonMode,
@@ -25,6 +25,9 @@ import {
   WeightSeries,
   WeightStats,
 } from './types';
+
+/** Passed by React callers so cached labels follow the active language. */
+type Translate = (scope: TranslationKey, options?: TranslateOptions) => string;
 
 const CHART_RANGE_DAYS: Record<ChartRange, number> = {
   '30d': 30,
@@ -319,8 +322,9 @@ function clampTrendFilterToBirth(
 function getTrendRowTitle(
   granularity: TrendGranularity,
   range: DateRange,
-  birthDate?: string | null,
-  labelRange?: DateRange,
+  birthDate: string | null | undefined,
+  labelRange: DateRange | undefined,
+  translate: Translate,
 ): { title: string; subtitle?: string } {
   switch (granularity) {
     case 'day':
@@ -337,7 +341,7 @@ function getTrendRowTitle(
       }
       const age = getAgeOnDate(birthDate, range.end);
       return {
-        title: age ? t('age.years', { count: age.years }) : t('common.emDash'),
+        title: age ? translate('age.years', { count: age.years }) : translate('common.emDash'),
         subtitle: formatDateRange(labelRange ?? range),
       };
     }
@@ -360,6 +364,7 @@ export function getTrendRows(
   granularity: TrendGranularity,
   filter: DateRange,
   birthDate?: string | null,
+  translate: Translate = t,
 ): TrendRow[] {
   const effectiveFilter = clampTrendFilterToBirth(filter, granularity, birthDate);
   const buckets = generateTrendBuckets(granularity, effectiveFilter, birthDate);
@@ -378,7 +383,13 @@ export function getTrendRows(
             count: 1,
           }
         : { average: null, min: null, max: null, count: 0 };
-      const { title, subtitle } = getTrendRowTitle(granularity, range, birthDate, labelRange);
+      const { title, subtitle } = getTrendRowTitle(
+        granularity,
+        range,
+        birthDate,
+        labelRange,
+        translate,
+      );
       return {
         key: `${granularity}-${range.start}-${range.end}`,
         title,
@@ -393,7 +404,13 @@ export function getTrendRows(
     const bucketEntries = assignEntriesToBuckets(entries, buckets);
     rows = buckets.map(({ range, labelRange }, index) => {
       const stats = buildStatsFromEntries(bucketEntries[index]);
-      const { title, subtitle } = getTrendRowTitle(granularity, range, birthDate, labelRange);
+      const { title, subtitle } = getTrendRowTitle(
+        granularity,
+        range,
+        birthDate,
+        labelRange,
+        translate,
+      );
       return {
         key: `${granularity}-${range.start}-${range.end}`,
         title,
@@ -430,6 +447,7 @@ export function getComparison(
   customRanges?: { rangeA: DateRange; rangeB: DateRange },
   birthDate?: string | null,
   customKind: 'period' | 'dates' = 'period',
+  translate: Translate = t,
 ): PeriodComparison | null {
   if (mode !== 'custom') {
     return null;
@@ -447,8 +465,8 @@ export function getComparison(
 
   const rangeA = customRanges.rangeA;
   const rangeB = customRanges.rangeB;
-  const labelA = customKind === 'dates' ? formatDateLabel(rangeA.start) : t('periods.rangeA');
-  const labelB = customKind === 'dates' ? formatDateLabel(rangeB.start) : t('periods.rangeB');
+  const labelA = customKind === 'dates' ? formatDateLabel(rangeA.start) : translate('periods.rangeA');
+  const labelB = customKind === 'dates' ? formatDateLabel(rangeB.start) : translate('periods.rangeB');
 
   const statsA = getStatsForRange(entries, rangeA);
   const statsB = getStatsForRange(entries, rangeB);

@@ -1,3 +1,4 @@
+import type { Session, User } from '@supabase/supabase-js';
 import { t } from './i18n';
 import type { AuthLinkErrorContext } from './storage/auth-pending-flow';
 import { isLocalSupabaseEnvUrl } from './supabase/local-supabase-env';
@@ -45,6 +46,16 @@ export function isEmailNotConfirmedError(error: unknown): boolean {
 function isInvalidCredentialsError(error: unknown): boolean {
   const message = getErrorMessage(error);
   return message.includes('invalid login credentials') || message.includes('invalid credentials');
+}
+
+export function isObfuscatedSignUpResponse({
+  user,
+  session,
+}: {
+  user: Pick<User, 'identities'> | null;
+  session: Session | null;
+}): boolean {
+  return Boolean(user && !session && Array.isArray(user.identities) && user.identities.length === 0);
 }
 
 function isUserAlreadyRegisteredError(error: unknown): boolean {

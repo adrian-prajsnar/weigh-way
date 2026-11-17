@@ -11,6 +11,7 @@ import {
   formatDecimal,
   formatWeightValue,
   fromDateKey,
+  getDefaultTrendDateRange,
   getHistoryDateRangeFieldHighlight,
   getTrendDateRangeFieldHighlight,
   parseWeightInput,
@@ -86,6 +87,36 @@ describe('validateHistoryDateRange', () => {
     expect(
       validateHistoryDateRange(fromDateKey('2024-09-01'), fromDateKey('2024-09-20'), today),
     ).toBe('futureDate');
+  });
+});
+
+describe('getDefaultTrendDateRange', () => {
+  const today = fromDateKey('2026-11-16');
+
+  it('starts the Weeks default on the Monday of the containing week', () => {
+    const range = getDefaultTrendDateRange('week', today);
+    expect(toDateKey(range.from)).toBe('2025-11-10');
+    expect(range.from.getDay()).toBe(1);
+    expect(validateTrendDateRange(range.from, range.to, 'week', today)).toBeNull();
+  });
+
+  it('starts the Months default on the first day of the containing month', () => {
+    const range = getDefaultTrendDateRange('month', today);
+    expect(toDateKey(range.from)).toBe('2021-11-01');
+    expect(range.from.getDate()).toBe(1);
+    expect(validateTrendDateRange(range.from, range.to, 'month', today)).toBeNull();
+  });
+
+  it.each(['week', 'month'] as const)('keeps the birth-date floor for %s', (mode) => {
+    const range = getDefaultTrendDateRange(mode, today, '2026-01-14', '2020-01-01');
+    expect(toDateKey(range.from)).toBe('2026-01-14');
+    expect(validateTrendDateRange(range.from, range.to, mode, today, '2026-01-14')).toBeNull();
+  });
+
+  it.each(['week', 'month'] as const)('keeps the earliest-weigh-in floor for %s', (mode) => {
+    const range = getDefaultTrendDateRange(mode, today, '1990-01-01', '2026-03-18');
+    expect(toDateKey(range.from)).toBe('2026-03-18');
+    expect(validateTrendDateRange(range.from, range.to, mode, today, '1990-01-01')).toBeNull();
   });
 });
 

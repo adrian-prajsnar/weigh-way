@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { t } from '../i18n';
 
 const mocks = vi.hoisted(() => {
   const upsert = vi.fn().mockResolvedValue({ error: null });
@@ -32,6 +33,18 @@ describe('profile reads after a cold start', () => {
     mocks.maybeSingle.mockReset();
   });
 
+  it.each([
+    { message: 'private database detail', key: 'errors.couldNotLoadProfile', attempts: 1 },
+    { message: 'Network request failed', key: 'errors.noConnection', attempts: 4 },
+  ] as const)('maps read failure: $message', async ({ message, key, attempts }) => {
+    vi.useFakeTimers();
+    mocks.maybeSingle.mockResolvedValue({ data: null, error: { message } });
+    const assertion = expect(getUserProfile()).rejects.toThrow(t(key));
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(mocks.maybeSingle).toHaveBeenCalledTimes(attempts);
+  });
+
   it('loads the profile when the refreshed token is rejected once', async () => {
     vi.useFakeTimers();
     mocks.maybeSingle
@@ -50,6 +63,16 @@ describe('profile reads after a cold start', () => {
 });
 
 describe('partial profile writes', () => {
+  it.each([
+    { error: { code: '23514', message: 'constraint violation' }, network: false },
+    { error: { message: 'Network request failed' }, network: true },
+  ])('maps save errors: $error.message', async ({ error, network }) => {
+    upsert.mockResolvedValueOnce({ error });
+    await expect(saveUserProfile({ sex: 'female' })).rejects.toThrow(
+      t(network ? 'errors.noConnection' : 'profile.saveFailed'),
+    );
+  });
+
   it('does not send birth_date when changing sex', async () => {
     await saveUserProfile({ sex: 'female' });
     expect(upsert.mock.calls.at(-1)?.[0]).toMatchObject({ user_id: 'user-1', sex: 'female' });

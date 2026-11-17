@@ -48,19 +48,16 @@ export function HeroWeightCard({ entries, isLoading, isBusy = false }: HeroWeigh
   const { latest, change } = useMemo(() => getLatestChange(entries), [entries]);
   const series = useMemo(() => getChartSeries(entries, range), [entries, range]);
 
-  const bmi = useMemo(() => {
-    if (!latest) {
-      return null;
-    }
-    const heightCm = getHeightAtDate(heightEntries, latest.date);
-    return heightCm === null
-      ? null
-      : calculateBmi(latest.weightKg, heightCm, {
+  // Not memoized: the result carries a category label translated for the active language.
+  const latestHeightCm = latest ? getHeightAtDate(heightEntries, latest.date) : null;
+  const bmi =
+    latest && latestHeightCm !== null
+      ? calculateBmi(latest.weightKg, latestHeightCm, {
           date: latest.date,
           birthDate,
           sex,
-        });
-  }, [heightEntries, latest, birthDate, sex]);
+        })
+      : null;
 
   if (isLoading) {
     return (

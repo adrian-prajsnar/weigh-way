@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { t } from '../i18n';
+import { FetchAllRowsLimitError } from './fetch-all-rows';
 
 const refreshSession = vi.hoisted(() => vi.fn().mockResolvedValue({ error: null }));
 
@@ -53,6 +54,54 @@ describe('withTransientRetry', () => {
       .mockRejectedValue({ message: 'private database detail', code: '42501' });
 
     await expect(withTransientRetry(operation)).rejects.toThrow(t('errors.couldNotLoadData'));
+    expect(operation).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['errors.couldNotLoadEntries', 'errors.couldNotLoadProfile'] as const)(
+    'uses the supplied read fallback %s for generic failures',
+    async (fallback) => {
+      const operation = vi.fn().mockRejectedValue(new Error('private database detail'));
+      await expect(withTransientRetry(operation, fallback)).rejects.toThrow(t(fallback));
+      expect(operation).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('defaults generic failures to the data load message', async () => {
+    await expect(
+      withTransientRetry(vi.fn().mockRejectedValue(new Error('private database detail'))),
+    ).rejects.toThrow(t('errors.couldNotLoadData'));
+  });
+
+  it('preserves network errors after all retries with a read fallback', async () => {
+    vi.useFakeTimers();
+    const operation = vi.fn().mockRejectedValue(new Error('Network request failed'));
+    const assertion = expect(
+      withTransientRetry(operation, 'errors.couldNotLoadEntries'),
+    ).rejects.toThrow(t('errors.noConnection'));
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(operation).toHaveBeenCalledTimes(4);
+    expect(refreshSession).not.toHaveBeenCalled();
+  });
+
+  it('preserves expired-session errors after all retries with a read fallback', async () => {
+    vi.useFakeTimers();
+    const operation = vi.fn().mockRejectedValue({ code: 'PGRST301', message: 'JWT expired' });
+    const assertion = expect(
+      withTransientRetry(operation, 'errors.couldNotLoadProfile'),
+    ).rejects.toThrow(t('errors.sessionExpired'));
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(operation).toHaveBeenCalledTimes(4);
+    expect(refreshSession).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    { error: new SignedOutError(), key: 'errors.mustBeSignedIn' },
+    { error: new FetchAllRowsLimitError(), key: 'errors.dataTooLarge' },
+  ] as const)('preserves $key with a read fallback', async ({ error, key }) => {
+    const operation = vi.fn().mockRejectedValue(error);
+    await expect(withTransientRetry(operation, 'errors.couldNotLoadProfile')).rejects.toThrow(t(key));
     expect(operation).toHaveBeenCalledTimes(1);
   });
 

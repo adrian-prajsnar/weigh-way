@@ -45,7 +45,7 @@ export async function getEntries(): Promise<WeightEntry[]> {
     });
 
     return rows.map(mapRow);
-  });
+  }, 'errors.couldNotLoadEntries');
 }
 
 export async function saveEntry(date: string, weightKg: number): Promise<WeightEntry> {
@@ -69,7 +69,7 @@ export async function saveEntry(date: string, weightKg: number): Promise<WeightE
     }
     return mapRow(data as WeightEntryRow);
   } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
+    throw toSupabaseErrorFromUnknown(error, 'entryForm.saveFailed');
   }
 }
 
@@ -86,6 +86,6 @@ export async function deleteEntry(date: string): Promise<void> {
       throw error;
     }
   } catch (error) {
-    throw toSupabaseErrorFromUnknown(error);
+    throw toSupabaseErrorFromUnknown(error, 'history.deleteFailed');
   }
 }

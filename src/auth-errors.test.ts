@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createDemoSession } from './demo/demo-session';
 import {
   formatAuthLinkError,
   formatSignInError,
@@ -8,7 +9,39 @@ import {
   formatUpdatePasswordError,
   isEmailNotConfirmedError,
   isNetworkError,
+  isObfuscatedSignUpResponse,
 } from './auth-errors';
+
+describe('isObfuscatedSignUpResponse', () => {
+  it('detects an empty identities array without a session', () => {
+    expect(isObfuscatedSignUpResponse({ user: { identities: [] }, session: null })).toBe(true);
+  });
+
+  it('accepts a user with an identity', () => {
+    expect(
+      isObfuscatedSignUpResponse({
+        user: {
+          identities: [{ id: 'user-1', user_id: 'user-1', identity_id: 'identity-1', provider: 'email' }],
+        },
+        session: null,
+      }),
+    ).toBe(false);
+  });
+
+  it.each([{}, { identities: undefined }])('accepts missing identities: %j', (user) => {
+    expect(isObfuscatedSignUpResponse({ user, session: null })).toBe(false);
+  });
+
+  it('accepts an authenticated session even with empty identities', () => {
+    expect(
+      isObfuscatedSignUpResponse({ user: { identities: [] }, session: createDemoSession() }),
+    ).toBe(false);
+  });
+
+  it('does not treat a missing user as an existing account', () => {
+    expect(isObfuscatedSignUpResponse({ user: null, session: null })).toBe(false);
+  });
+});
 
 describe('isNetworkError', () => {
   it('detects common network failure messages', () => {

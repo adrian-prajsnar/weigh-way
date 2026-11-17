@@ -17,7 +17,7 @@ vi.mock('./auth-user', () => ({
 }));
 
 // eslint-disable-next-line import/first -- load after vi.mock
-import { getEntries, saveEntry } from './weight-sync';
+import { deleteEntry, getEntries, saveEntry } from './weight-sync';
 
 type WeightRow = {
   entry_date: string;
@@ -112,7 +112,7 @@ describe('getEntries', () => {
     });
     supabaseFrom.mockReturnValue(chain);
 
-    await expect(getEntries()).rejects.toMatchObject({ message: t('errors.couldNotLoadData') });
+    await expect(getEntries()).rejects.toMatchObject({ message: t('errors.couldNotLoadEntries') });
   });
 });
 
@@ -124,6 +124,16 @@ describe('getEntries after a cold start', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it('preserves the network message after exhausting retries', async () => {
+    vi.useFakeTimers();
+    const chain = mockWeightQuery([]);
+    chain.limit.mockResolvedValue({ data: null, error: { message: 'Network request failed' } });
+    const assertion = expect(getEntries()).rejects.toThrow(t('errors.noConnection'));
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(chain.limit).toHaveBeenCalledTimes(4);
   });
 
   it('reads again when the refreshed token is rejected once', async () => {
@@ -155,7 +165,7 @@ describe('saveEntry errors', () => {
     const upsert = vi.fn().mockReturnValue({ select });
     supabaseFrom.mockReturnValue({ upsert });
     try {
-      await expect(saveEntry('2026-01-01', 70)).rejects.toThrow(t('errors.couldNotLoadData'));
+      await expect(saveEntry('2026-01-01', 70)).rejects.toThrow(t('entryForm.saveFailed'));
       expect(captureMessage).toHaveBeenCalledWith('supabase_failure', {
         tags: { supabase_code: '42501' },
       });
@@ -163,5 +173,29 @@ describe('saveEntry errors', () => {
     } finally {
       registerErrorReporter(null);
     }
+  });
+});
+
+describe('weight write error messages', () => {
+  it.each([
+    { error: { code: '23514', message: 'constraint violation' }, network: false },
+    { error: { message: 'Network request failed' }, network: true },
+  ])('maps save and delete errors: $error.message', async ({ error, network }) => {
+    getUserId.mockResolvedValue('user-1');
+    const result = { data: null, error };
+    const single = vi.fn().mockResolvedValue(result);
+    const select = vi.fn().mockReturnValue({ single });
+    const eq = vi.fn().mockReturnValueOnce({ eq: vi.fn().mockResolvedValue(result) });
+    supabaseFrom.mockReturnValue({
+      upsert: vi.fn().mockReturnValue({ select }),
+      delete: vi.fn().mockReturnValue({ eq }),
+    });
+
+    await expect(saveEntry('2026-01-01', 70)).rejects.toThrow(
+      t(network ? 'errors.noConnection' : 'entryForm.saveFailed'),
+    );
+    await expect(deleteEntry('2026-01-01')).rejects.toThrow(
+      t(network ? 'errors.noConnection' : 'history.deleteFailed'),
+    );
   });
 });

@@ -93,12 +93,6 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     setDateB(null);
   };
 
-  useEffect(() => {
-    if (!birthDate && mode === 'ageYear') {
-      setMode('day');
-    }
-  }, [birthDate, mode]);
-
   const applyDefaultRange = useCallback(
     (granularity: TrendGranularity) => {
       const next = getDefaultTrendDateRange(granularity, today, birthDate, earliestWeighInDate);
@@ -107,6 +101,14 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     },
     [birthDate, earliestWeighInDate, today],
   );
+
+  useEffect(() => {
+    if (!birthDate && mode === 'ageYear') {
+      applyDefaultRange('day');
+      beginListLoading();
+      setMode('day');
+    }
+  }, [applyDefaultRange, beginListLoading, birthDate, mode]);
 
   const fromKey = toDateKey(fromDate);
   const toKey = toDateKey(toDate);
@@ -184,8 +186,8 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     if (!isListReady || !isTrendMode(mode) || isInvalidRange) {
       return [];
     }
-    return getTrendRows(entries, mode, filterRange, birthDate);
-  }, [birthDate, entries, filterRange, isInvalidRange, isListReady, mode]);
+    return getTrendRows(entries, mode, filterRange, birthDate, t);
+  }, [birthDate, entries, filterRange, isInvalidRange, isListReady, mode, t]);
 
   const showTrendContent = !isLoading && isListReady && !isInvalidRange;
 
@@ -230,8 +232,8 @@ export function useComparison({ entries, isLoading, birthDate, t }: UseCompariso
     if (mode !== 'custom' || !customRanges) {
       return null;
     }
-    return getComparison(entries, 'custom', customRanges, birthDate, customKind);
-  }, [birthDate, customKind, customRanges, entries, mode]);
+    return getComparison(entries, 'custom', customRanges, birthDate, customKind, t);
+  }, [birthDate, customKind, customRanges, entries, mode, t]);
 
   const customInvalid =
     mode === 'custom' &&

@@ -20,7 +20,9 @@ import {
   formatSignUpError,
   formatUpdatePasswordError,
   isNetworkError,
+  isObfuscatedSignUpResponse,
 } from '../auth-errors';
+import { t } from '../i18n';
 import { isOAuthCallbackUrl } from '../auth-oauth-callback';
 import {
   clearAuthPendingFlows,
@@ -282,6 +284,10 @@ export function SupabaseAuthProvider({ children }: { children: ReactNode }) {
       });
       if (error) {
         throw new Error(formatSignUpError(error));
+      }
+
+      if (isObfuscatedSignUpResponse(data)) {
+        throw new Error(t('auth.emailAlreadyRegistered'));
       }
 
       const needsEmailConfirmation = Boolean(data.user && !data.session);
