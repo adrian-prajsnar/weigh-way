@@ -1,15 +1,9 @@
 import { mediaMaxWidthRem } from './css-length';
 import {
-  LANGUAGE_STORAGE_KEY,
-  SCROLL_STORAGE_KEY,
-  THEME_STORAGE_KEY,
-  localeHref,
-  normalizeLanguagePreference,
-  normalizeThemePreference,
   prefersDarkColorScheme,
-  resolveLanguagePreference,
+  readThemePreference,
   resolveThemePreference,
-  type LanguagePreference,
+  saveThemePreference,
   type ResolvedTheme,
   type ThemePreference,
 } from '../lib/site-preferences';
@@ -20,15 +14,7 @@ declare global {
   }
 }
 
-function readInitOptions(): { pageLocale: 'en' | 'pl'; baseUrl: string } {
-  const header = document.querySelector<HTMLElement>('.site-header');
-  const pageLocale = header?.dataset.pageLocale === 'pl' ? 'pl' : 'en';
-  const baseUrl = header?.dataset.baseUrl ?? '/';
-  return { pageLocale, baseUrl };
-}
-
 export function initSiteHeader(): void {
-  const { pageLocale, baseUrl } = readInitOptions();
   function markToggle(selector: string, attr: string, value: string): void {
     document.querySelectorAll(`${selector} button`).forEach((button) => {
       button.setAttribute('aria-pressed', button.getAttribute(attr) === value ? 'true' : 'false');
@@ -47,144 +33,19 @@ export function initSiteHeader(): void {
     return resolveThemePreference(preference, prefersDarkColorScheme());
   }
 
-  function getScreenshotIds(): string[] {
-    const ids: string[] = [];
-    document.querySelectorAll('[data-screenshot]').forEach((img) => {
-      const id = img.getAttribute('data-screenshot');
-      if (id && !ids.includes(id)) {
-        ids.push(id);
-      }
-    });
-    return ids;
-  }
-
-  function screenshotUrl(id: string, theme: ResolvedTheme): string {
-    const locale = document.documentElement.getAttribute('data-screenshot-locale') || 'en';
-    const base = baseUrl.replace(/\/$/, '');
-    return `${base}/screenshots/${id}-${theme}-${locale}.webp`;
-  }
-
-  function preloadScreenshot(id: string, theme: ResolvedTheme): Promise<void> {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.decoding = 'async';
-      img.onload = () => {
-        if (typeof img.decode === 'function') {
-          img.decode().then(resolve).catch(resolve);
-          return;
-        }
-        resolve();
-      };
-      img.onerror = () => {
-        resolve();
-      };
-      img.src = screenshotUrl(id, theme);
-    });
-  }
-
-  function preloadThemeScreenshots(theme: ResolvedTheme): Promise<void> {
-    const ids = getScreenshotIds();
-    if (!ids.length) {
-      return Promise.resolve();
-    }
-    return Promise.all(ids.map((id) => preloadScreenshot(id, theme))).then(() => undefined);
-  }
-
-  function decodeDomScreenshots(): Promise<void> {
-    const tasks: Promise<void>[] = [];
-    document.querySelectorAll('[data-screenshot]').forEach((img) => {
-      if (img instanceof HTMLImageElement && typeof img.decode === 'function') {
-        tasks.push(img.decode().catch(() => undefined));
-      }
-    });
-    return tasks.length ? Promise.all(tasks).then(() => undefined) : Promise.resolve();
-  }
-
-  function wait(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-      window.setTimeout(resolve, ms);
-    });
-  }
-
-  function fadeSplash(overlay: HTMLElement, from: number, to: number, duration: number): Promise<void> {
-    return overlay
-      .animate([{ opacity: from }, { opacity: to }], {
-        duration,
-        easing: 'cubic-bezier(0.22, 1, 0.28, 1)',
-        fill: 'forwards',
-      })
-      .finished.then(() => undefined);
-  }
-
-  function runDesktopFlashTransition(next: ResolvedTheme, commit: () => void): Promise<void> {
-    const overlay = document.querySelector<HTMLElement>('[data-theme-splash]');
-    if (!overlay) {
-      commit();
-      return Promise.resolve();
-    }
-
-    const assets = preloadThemeScreenshots(next);
-    overlay.setAttribute('data-mode', next);
-    overlay.classList.add('is-on');
-    overlay.classList.remove('is-ready');
-    document.documentElement.classList.add('theme-animating');
-
-    window.requestAnimationFrame(() => {
-      overlay.classList.add('is-ready');
-    });
-
-    return fadeSplash(overlay, 0, 1, 280)
-      .then(() => Promise.all([assets, wait(420)]))
-      .then(() => {
-        commit();
-        return decodeDomScreenshots();
-      })
-      .then(() => wait(520))
-      .then(() => fadeSplash(overlay, 1, 0, 380))
-      .finally(() => {
-        overlay.classList.remove('is-on', 'is-ready');
-        overlay.removeAttribute('data-mode');
-        document.documentElement.classList.remove('theme-animating');
-        preloadThemeScreenshots(next === 'dark' ? 'light' : 'dark');
-      });
-  }
-
-  let languagePref = normalizeLanguagePreference(localStorage.getItem(LANGUAGE_STORAGE_KEY));
-  let themePref = normalizeThemePreference(localStorage.getItem(THEME_STORAGE_KEY));
+  let themePref = readThemePreference();
   let resolvedTheme = getResolvedTheme(themePref);
 
-  function syncTheme(preference: ThemePreference, animate: boolean): void {
-    const nextResolved = getResolvedTheme(preference);
-
-    function commit(): void {
-      themePref = preference;
-      resolvedTheme = nextResolved;
-      localStorage.setItem(THEME_STORAGE_KEY, preference);
-      applyTheme(nextResolved);
-      markToggle('[data-theme-toggle]', 'data-theme', preference);
-      window.syncScreenshotImages?.();
-    }
-
-    if (!animate || nextResolved === resolvedTheme) {
-      commit();
-      preloadThemeScreenshots(nextResolved === 'dark' ? 'light' : 'dark');
-      return;
-    }
-
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) {
-      commit();
-      preloadThemeScreenshots(nextResolved === 'dark' ? 'light' : 'dark');
-      return;
-    }
-
-    void runDesktopFlashTransition(nextResolved, commit);
+  function syncTheme(preference: ThemePreference): void {
+    themePref = preference;
+    resolvedTheme = getResolvedTheme(preference);
+    applyTheme(resolvedTheme);
+    markToggle('[data-theme-toggle]', 'data-theme', preference);
+    window.syncScreenshotImages?.();
   }
 
-  markToggle('[data-language-toggle]', 'data-language', languagePref);
   markToggle('[data-theme-toggle]', 'data-theme', themePref);
   applyTheme(resolvedTheme);
-  preloadThemeScreenshots(resolvedTheme === 'dark' ? 'light' : 'dark');
 
   const colorSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
   const onColorSchemeChange = (): void => {
@@ -195,7 +56,7 @@ export function initSiteHeader(): void {
     if (nextResolved === resolvedTheme) {
       return;
     }
-    syncTheme('system', true);
+    syncTheme('system');
   };
 
   if (typeof colorSchemeQuery.addEventListener === 'function') {
@@ -203,32 +64,6 @@ export function initSiteHeader(): void {
   } else if (typeof colorSchemeQuery.addListener === 'function') {
     colorSchemeQuery.addListener(onColorSchemeChange);
   }
-
-  document.querySelectorAll('[data-language-toggle] button').forEach((button) => {
-    button.addEventListener('click', () => {
-      const next = button.getAttribute('data-language');
-      if (next !== 'pl' && next !== 'en' && next !== 'system') {
-        return;
-      }
-      const preference = next as LanguagePreference;
-      if (preference === languagePref) {
-        return;
-      }
-
-      languagePref = preference;
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, preference);
-      markToggle('[data-language-toggle]', 'data-language', preference);
-
-      const target = resolveLanguagePreference(preference, navigator.language);
-      if (target === pageLocale) {
-        return;
-      }
-
-      const href = localeHref(target, baseUrl, location.pathname);
-      sessionStorage.setItem(SCROLL_STORAGE_KEY, String(window.scrollY));
-      location.assign(href);
-    });
-  });
 
   document.querySelectorAll('[data-theme-toggle] button').forEach((button) => {
     button.addEventListener('click', () => {
@@ -239,7 +74,8 @@ export function initSiteHeader(): void {
       if (next === themePref) {
         return;
       }
-      syncTheme(next as ThemePreference, true);
+      syncTheme(next);
+      saveThemePreference(next);
     });
   });
 
@@ -258,6 +94,8 @@ export function initSiteHeader(): void {
     } else {
       mobileMenu.removeAttribute('aria-hidden');
     }
+    // Closing animates the panel out after it has left the keyboard order.
+    mobileMenu.inert = menuMq.matches && !open;
   }
 
   let closeTimer: number | undefined;
@@ -313,6 +151,7 @@ export function initSiteHeader(): void {
       return;
     }
 
+    if (menuMq.matches && mobileMenu?.contains(document.activeElement)) menuToggle.focus();
     header.classList.remove('is-open');
     document.documentElement.classList.remove('menu-open');
 
@@ -359,49 +198,35 @@ export function initSiteHeader(): void {
     });
   });
 
-  header?.querySelectorAll('.brand').forEach((link) => {
-    link.addEventListener('click', (event) => {
-      if (!(event instanceof MouseEvent)) {
-        return;
-      }
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey ||
-        event.altKey
-      ) {
-        return;
-      }
-      event.preventDefault();
-      if (header.classList.contains('is-open')) {
-        setMenuOpen(false, true);
-      }
-      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
-    });
-  });
-
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
+    if (event.key === 'Escape' && header?.classList.contains('is-open')) {
       setMenuOpen(false);
     }
   });
 
+  document.addEventListener('focusin', (event) => {
+    if (header?.matches('.is-open, .is-closing') && event.target instanceof Node && !header.contains(event.target)) {
+      setMenuOpen(false, true);
+    }
+  });
+
+  function onMenuViewportChange(event: MediaQueryListEvent): void {
+    if (event.matches) {
+      if (mobileMenu?.contains(document.activeElement)) {
+        menuToggle?.focus();
+      }
+    } else {
+      if (document.activeElement === menuToggle) {
+        header?.querySelector<HTMLAnchorElement>('.brand')?.focus();
+      }
+      setMenuOpen(false, true);
+    }
+    syncMenuA11y(header?.classList.contains('is-open') ?? false);
+  }
+
   if (typeof menuMq.addEventListener === 'function') {
-    menuMq.addEventListener('change', (event) => {
-      if (!event.matches) {
-        setMenuOpen(false);
-      }
-      syncMenuA11y(header?.classList.contains('is-open') ?? false);
-    });
+    menuMq.addEventListener('change', onMenuViewportChange);
   } else if (typeof menuMq.addListener === 'function') {
-    menuMq.addListener((event) => {
-      if (!event.matches) {
-        setMenuOpen(false);
-      }
-      syncMenuA11y(header?.classList.contains('is-open') ?? false);
-    });
+    menuMq.addListener(onMenuViewportChange);
   }
 }

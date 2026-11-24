@@ -1,12 +1,16 @@
 ---
+import type { SiteLocale } from '../i18n';
+import { withBase } from '../lib/paths';
+
 type Props = {
   label: string;
+  locale: SiteLocale;
 };
 
-const { label } = Astro.props;
+const { label, locale } = Astro.props;
 ---
 
-<a class="btn btn-demo" href="#demo" data-demo-open>
+<a class="btn btn-demo" href={withBase(locale === 'pl' ? '/demo/pl/' : '/demo/?lang=en')} data-demo-open>
   <span class="btn-demo__live" aria-hidden="true"></span>
   <span>{label}</span>
 </a>

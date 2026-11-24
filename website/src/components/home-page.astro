@@ -3,7 +3,8 @@ import DemoButton from './demo-button.astro';
 import PlatformDownloads from './platform-downloads.astro';
 import { getMessages, type SiteLocale } from '../i18n';
 import { getLatestRelease } from '../lib/releases';
-import { absoluteUrl } from '../lib/paths';
+import { screenshotPath } from '../lib/screenshots';
+import { absoluteUrl, withBase } from '../lib/paths';
 
 type Props = { locale: SiteLocale };
 const { locale } = Astro.props;
@@ -87,7 +88,7 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           unavailableAndroid={t.home.downloadUnavailableAndroid}
           unavailableIos={t.home.downloadUnavailableIos}
         />
-        <DemoButton label={t.home.openDemo} />
+        <DemoButton label={t.home.openDemo} locale={locale} />
         {
           latest && (
             <span class="version-chip version-chip--live">
@@ -104,6 +105,7 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           <img
             class="app-screen-shot screen-shot-image"
             data-screenshot="home"
+            src={withBase(screenshotPath('home', locale, 'light'))}
             alt={homeScreen?.title ?? 'Home'}
             loading="eager"
             decoding="async"
@@ -213,6 +215,7 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
               <img
                 class="app-screen-shot screen-shot-image"
                 data-screenshot={screen.id}
+                src={withBase(screenshotPath(screen.id, locale, 'light'))}
                 alt={screen.title}
                 loading="lazy"
                 decoding="async"
@@ -284,7 +287,8 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
               <button
                 type="button"
                 class="faq-trigger"
-                aria-expanded="false"
+                aria-expanded="true"
+                disabled
                 id={`faq-trigger-${index}`}
                 aria-controls={`faq-panel-${index}`}
               >
@@ -332,7 +336,7 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           unavailableAndroid={t.home.downloadUnavailableAndroid}
           unavailableIos={t.home.downloadUnavailableIos}
         />
-        <DemoButton label={t.home.openDemo} />
+        <DemoButton label={t.home.openDemo} locale={locale} />
       </div>
     </div>
   </div>
@@ -347,8 +351,8 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
     document.querySelectorAll('[data-hero-slider]').forEach(function (slider) {
       var viewport = slider.querySelector('.hero-slider-viewport');
       var track = slider.querySelector('.hero-slider-track');
-      var prevBtn = slider.querySelector('[data-hero-slider-prev]');
-      var nextBtn = slider.querySelector('[data-hero-slider-next]');
+      var prevBtn = slider.querySelector<HTMLButtonElement>('[data-hero-slider-prev]');
+      var nextBtn = slider.querySelector<HTMLButtonElement>('[data-hero-slider-next]');
       if (!viewport || !track || !prevBtn || !nextBtn) return;
 
       var index = 0;
@@ -360,7 +364,8 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
       var swipeThreshold = 48;
       var media = window.matchMedia(mediaMaxWidthRem(860));
 
-      var copySlide = track.querySelector('.hero-copy');
+      var copySlide = track.querySelector<HTMLElement>('.hero-copy');
+      var previewSlide = track.querySelector<HTMLElement>('.hero-visual');
       var resizeObserver = null;
 
       function syncViewportHeight() {
@@ -377,13 +382,15 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           shadowSpread = spreadValue ? parseCssLengthToPx(spreadValue) : 48;
         }
         slider.style.setProperty('--hero-slider-height', pxToRemCSSValue(height));
-        viewport.style.height = pxToRemCSSValue(height + shadowSpread);
+        var activeHeight = index === 1 && previewSlide ? previewSlide.offsetHeight : height;
+        viewport.style.height = pxToRemCSSValue(activeHeight + shadowSpread);
       }
 
       function startHeightObserver() {
         if (!copySlide || resizeObserver) return;
         resizeObserver = new ResizeObserver(syncViewportHeight);
         resizeObserver.observe(copySlide);
+        if (previewSlide) resizeObserver.observe(previewSlide);
       }
 
       function stopHeightObserver() {
@@ -414,6 +421,12 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
 
       function updateSlider() {
         if (!media.matches) {
+          if (copySlide) copySlide.inert = false;
+          if (previewSlide) previewSlide.inert = false;
+          if (document.activeElement === prevBtn || document.activeElement === nextBtn) {
+            copySlide?.querySelector<HTMLElement>('[data-demo-open]')?.focus();
+          }
+          slider.removeAttribute('data-slider-ready');
           index = 0;
           dragOffset = 0;
           isDragging = false;
@@ -427,11 +440,21 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           return;
         }
 
+        slider.setAttribute('data-slider-ready', '');
         startHeightObserver();
         syncViewportHeight();
         setTrackPosition(0, true);
-        prevBtn.hidden = index === 0;
-        nextBtn.hidden = index === 1;
+        var activeArrow = index === 0 ? nextBtn : prevBtn;
+        var inactiveArrow = index === 0 ? prevBtn : nextBtn;
+        var inactiveSlide = index === 0 ? previewSlide : copySlide;
+        activeArrow.hidden = false;
+        if (document.activeElement === inactiveArrow || inactiveSlide?.contains(document.activeElement)) {
+          activeArrow.focus({ preventScroll: true });
+          activeArrow.scrollIntoView({ block: index === 1 ? 'end' : 'nearest', behavior: 'instant' });
+        }
+        inactiveArrow.hidden = true;
+        if (copySlide) copySlide.inert = index !== 0;
+        if (previewSlide) previewSlide.inert = index !== 1;
       }
 
       function onTouchMove(event) {
@@ -461,6 +484,7 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
 
         if (!media.matches || !isDragging) return;
 
+        var previousIndex = index;
         if (isHorizontalSwipe) {
           var touch = event.changedTouches[0];
           var deltaX = touch ? touch.clientX - touchStartX : dragOffset;
@@ -479,16 +503,26 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
         isHorizontalSwipe = false;
         dragOffset = 0;
         updateSlider();
+
+        if (index !== previousIndex && index === 1 && previewSlide) {
+          var headerBottom = document.querySelector('.site-header')?.getBoundingClientRect().bottom ?? 0;
+          // Swiping from lower in the intro can leave the shorter preview above the viewport.
+          if (previewSlide.getBoundingClientRect().bottom <= Math.max(0, headerBottom)) {
+            prevBtn.scrollIntoView({ block: 'end', behavior: 'instant' });
+          }
+        }
       }
 
       prevBtn.addEventListener('click', function () {
         if (!media.matches || index === 0) return;
+        prevBtn.focus({ preventScroll: true });
         index = 0;
         updateSlider();
       });
 
       nextBtn.addEventListener('click', function () {
         if (!media.matches || index === 1) return;
+        nextBtn.focus({ preventScroll: true });
         index = 1;
         updateSlider();
       });
@@ -524,8 +558,11 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
       var items = list.querySelectorAll('.faq-item');
 
       items.forEach(function (item) {
-        var trigger = item.querySelector('.faq-trigger');
+        item.querySelector('.faq-panel')?.setAttribute('hidden', '');
+        var trigger = item.querySelector<HTMLButtonElement>('.faq-trigger');
         if (!trigger) return;
+        trigger.disabled = false;
+        trigger.setAttribute('aria-expanded', 'false');
 
         trigger.addEventListener('click', function () {
           var isOpen = item.classList.contains('is-open');
@@ -533,17 +570,20 @@ const homeScreen = t.home.screens.find((screen) => screen.id === 'home');
           items.forEach(function (other) {
             if (other === item) return;
             other.classList.remove('is-open');
+            other.querySelector('.faq-panel')?.setAttribute('hidden', '');
             var otherTrigger = other.querySelector('.faq-trigger');
             if (otherTrigger) otherTrigger.setAttribute('aria-expanded', 'false');
           });
 
           if (isOpen) {
             item.classList.remove('is-open');
+            item.querySelector('.faq-panel')?.setAttribute('hidden', '');
             trigger.setAttribute('aria-expanded', 'false');
             return;
           }
 
           item.classList.add('is-open');
+          item.querySelector('.faq-panel')?.removeAttribute('hidden');
           trigger.setAttribute('aria-expanded', 'true');
         });
       });

@@ -96,7 +96,7 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
     <div class="legal-sections legal-document">
       {
         sections.map((section) => (
-          <section id={section.id} class="legal-section" data-legal-section>
+          <section id={section.id} tabindex="-1" class="legal-section" data-legal-section>
             <header class="legal-section-head">
               {section.index ? (
                 <span class="legal-index" aria-hidden="true">
@@ -138,19 +138,14 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
 
   (function () {
     var sections = document.querySelectorAll('[data-legal-section]');
-    var links = document.querySelectorAll('[data-toc-target]');
-    var list = document.querySelector('.legal-toc-list');
+    var links = document.querySelectorAll<HTMLAnchorElement>('[data-toc-target]');
+    const list = document.querySelector('.legal-toc-list');
     var slider = document.querySelector('.legal-toc-slider');
     var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var sliderQuery = window.matchMedia(mediaMaxWidthRem(980));
 
     function isSliderMode() {
       return sliderQuery.matches;
-    }
-
-    function clearSelection() {
-      var selection = window.getSelection();
-      if (selection && !selection.isCollapsed) selection.removeAllRanges();
     }
 
     function updateFogEdges() {
@@ -170,79 +165,16 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
 
     if (list) {
       list.addEventListener('scroll', updateFogEdges, { passive: true });
+      list.addEventListener('focusin', scrollActiveIntoView);
       window.addEventListener('resize', updateFogEdges);
       updateFogEdges();
 
-      var dragPointerId = null;
-      var dragStartX = 0;
-      var dragStartScroll = 0;
-      var dragMoved = false;
-      var suppressClick = false;
-
-      list.addEventListener('selectstart', function (event) {
-        if (isSliderMode()) event.preventDefault();
-      });
-
-      list.addEventListener('dragstart', function (event) {
-        if (isSliderMode()) event.preventDefault();
-      });
-
-      list.addEventListener(
-        'touchstart',
-        function () {
-          if (isSliderMode()) clearSelection();
-        },
-        { passive: true },
-      );
-
-      list.addEventListener('pointerdown', function (event) {
-        if (!isSliderMode() || event.button !== 0) return;
-        clearSelection();
-        dragPointerId = event.pointerId;
-        dragStartX = event.clientX;
-        dragStartScroll = list.scrollLeft;
-        dragMoved = false;
-      });
-
-      list.addEventListener('pointermove', function (event) {
-        if (dragPointerId !== event.pointerId) return;
-        var delta = event.clientX - dragStartX;
-        if (!dragMoved && Math.abs(delta) < 8) return;
-        if (!dragMoved) {
-          dragMoved = true;
-          clearSelection();
-          list.classList.add('is-dragging');
-          list.setPointerCapture(event.pointerId);
-        }
-        event.preventDefault();
-        list.scrollLeft = dragStartScroll - delta;
-      });
-
-      function endDrag(event) {
-        if (dragPointerId !== event.pointerId) return;
-        suppressClick = dragMoved;
-        dragPointerId = null;
-        dragMoved = false;
-        list.classList.remove('is-dragging');
-        if (list.hasPointerCapture(event.pointerId)) {
-          list.releasePointerCapture(event.pointerId);
-        }
+      // Font loading and text-spacing overrides can shift a link that already has focus.
+      const observer = new ResizeObserver(() => {
+        if (list.contains(document.activeElement)) scrollActiveIntoView();
         updateFogEdges();
-      }
-
-      list.addEventListener('pointerup', endDrag);
-      list.addEventListener('pointercancel', endDrag);
-
-      list.addEventListener(
-        'click',
-        function (event) {
-          if (!suppressClick) return;
-          suppressClick = false;
-          event.preventDefault();
-          event.stopPropagation();
-        },
-        true,
-      );
+      });
+      for (const item of list.children) observer.observe(item);
     }
 
     if (!sections.length || !links.length) return;
@@ -250,8 +182,25 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
     var activeId = '';
     var navLockUntil = 0;
     var scrollSyncPending = false;
-    var siteHeader = document.querySelector('.site-header');
-    var legalToc = document.querySelector('.legal-toc');
+    var lastFragmentJump: { hash: string; scrollPosition: number } | undefined;
+    var siteHeader = document.querySelector<HTMLElement>('.site-header');
+    var legalToc = document.querySelector<HTMLElement>('.legal-toc');
+
+    function syncStickyScrollPadding() {
+      var headerHeight =
+        siteHeader && getComputedStyle(siteHeader).position === 'sticky' ? siteHeader.offsetHeight : 0;
+      var tocHeight =
+        isSliderMode() && legalToc && getComputedStyle(legalToc).position === 'sticky'
+          ? legalToc.offsetHeight
+          : 0;
+      document.documentElement.style.setProperty('--legal-sticky-height', headerHeight + tocHeight + 'px');
+    }
+
+    // Keyboard focus must scroll clear of both sticky bars, including when the contents links wrap.
+    var stickyObserver = new ResizeObserver(syncStickyScrollPadding);
+    if (siteHeader) stickyObserver.observe(siteHeader, { box: 'border-box' });
+    if (legalToc) stickyObserver.observe(legalToc, { box: 'border-box' });
+    syncStickyScrollPadding();
 
     function getStickyInset() {
       var inset = 0;
@@ -260,7 +209,7 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
         inset = Math.max(inset, siteHeader.getBoundingClientRect().bottom);
       }
 
-      if (isSliderMode() && legalToc) {
+      if (isSliderMode() && legalToc && getComputedStyle(legalToc).position === 'sticky') {
         var tocRect = legalToc.getBoundingClientRect();
         var headerBottom = siteHeader ? siteHeader.getBoundingClientRect().bottom : 0;
         if (tocRect.top <= headerBottom + 8) {
@@ -302,7 +251,7 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
       if (!list || !isSliderMode()) return;
 
       requestAnimationFrame(function () {
-        var active = list.querySelector('.legal-toc-link.is-active');
+        var active = list.querySelector('.legal-toc-link:focus') || list.querySelector('.legal-toc-link.is-active');
         if (!active) return;
 
         var listRect = list.getBoundingClientRect();
@@ -341,60 +290,71 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
       setActive(resolveActiveSection());
     }
 
-    function lockNav(ms) {
-      navLockUntil = Date.now() + ms;
-    }
-
-    function scrollSectionToSpy(id) {
+    function navigateToSection(
+      id: string,
+      { updateHash = false, focus = false } = {},
+    ) {
       var section = document.getElementById(id);
-      if (!section) return;
+      if (!section?.matches('[data-legal-section]')) return false;
 
-      var target = section.querySelector('.legal-section-head') || section;
-      var line = getSpyLine();
-      var rect = target.getBoundingClientRect();
-      var maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      var targetY = Math.max(0, Math.min(window.scrollY + rect.top - line, maxScroll));
-
-      window.scrollTo({
-        top: targetY,
-        behavior: reduce ? 'auto' : 'smooth',
-      });
-    }
-
-    function navigateToSection(id, updateHash) {
-      if (!document.getElementById(id)) return false;
-
-      lockNav(reduce ? 120 : 1200);
+      navLockUntil = Date.now() + 120;
       setActive(id, true);
-      if (updateHash && location.hash !== '#' + id) {
-        history.pushState(null, '', '#' + id);
-      }
-      scrollSectionToSpy(id);
+      if (updateHash && location.hash !== '#' + id) history.pushState(null, '', '#' + id);
+      if (focus) section.focus({ preventScroll: true });
+      section.scrollIntoView({ block: 'start', behavior: 'instant' });
+      lastFragmentJump = { hash: '#' + id, scrollPosition: window.scrollY };
       return true;
     }
 
-    function activateFromHash() {
+    function activateFromHash(focus = false) {
       var id = location.hash ? location.hash.slice(1) : '';
       if (!id) return false;
-      return navigateToSection(id, false);
+      return navigateToSection(id, { focus });
     }
 
     function initActive() {
-      if (!activateFromHash() && sections[0]) {
+      if (!activateFromHash()) {
         setActive(sections[0].id);
       }
     }
 
+    // The font stylesheet can start loading after fragment navigation changes the scroll position.
+    document.fonts.addEventListener('loadingdone', () => {
+      const jump = lastFragmentJump;
+      if (jump && location.hash === jump.hash && Math.abs(window.scrollY - jump.scrollPosition) <= 2) {
+        activateFromHash();
+      }
+    });
+
     links.forEach(function (link) {
       link.addEventListener('click', function (event) {
+        if (
+          event.defaultPrevented || event.button !== 0 ||
+          event.metaKey || event.ctrlKey || event.shiftKey || event.altKey
+        ) {
+          return;
+        }
         var id = link.getAttribute('data-toc-target');
         if (!id) return;
         event.preventDefault();
-        navigateToSection(id, true);
+        navigateToSection(id, { updateHash: true, focus: true });
       });
     });
 
-    window.addEventListener('hashchange', activateFromHash);
+    window.addEventListener('hashchange', function () {
+      if (activateFromHash(true) || location.hash) return;
+
+      // Back to the original URL can otherwise leave focus in an off-screen section.
+      const focusedSection = document.activeElement?.closest('[data-legal-section]');
+      const link = Array.from(links).find((item) => item.dataset.tocTarget === focusedSection?.id);
+      if (link) {
+        link.focus({ preventScroll: true });
+        const rect = link.getBoundingClientRect();
+        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+          link.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+        }
+      }
+    });
 
     window.addEventListener(
       'scroll',
@@ -418,6 +378,7 @@ const otherLabel = page === 'privacy' ? t.footer.termsOfService : t.footer.priva
     }
 
     window.addEventListener('resize', function () {
+      syncStickyScrollPadding();
       if (activeId) scrollActiveIntoView();
       syncActiveFromScroll();
     });

@@ -4,7 +4,7 @@ import DemoModal from '../components/demo-modal.astro';
 import { getMessages, localePath, type SiteLocale, type SitePage } from '../i18n';
 import { withBase, absoluteUrl } from '../lib/paths';
 import { buildDownloadPlatformBootstrapScript } from '../lib/download-platform';
-import { buildLanguageRedirectScript, buildThemeBootstrapScript } from '../lib/site-preferences';
+import { buildThemeBootstrapScript } from '../lib/site-preferences';
 import { buildScreenshotBootstrapScript } from '../lib/screenshot-sync';
 
 type Props = {
@@ -19,6 +19,11 @@ const t = getMessages(locale);
 const canonical = absoluteUrl(localePath(locale, page));
 const enUrl = absoluteUrl(localePath('en', page));
 const plUrl = absoluteUrl(localePath('pl', page));
+const ogLocales: Record<SiteLocale, string> = { en: 'en_US', pl: 'pl_PL' };
+const ogAlternateLocale = ogLocales[locale === 'en' ? 'pl' : 'en'];
+const shareImage = absoluteUrl(`/og-image-${locale}.png`);
+const fontStylesheet =
+  'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap';
 ---
 
 <!doctype html>
@@ -35,45 +40,31 @@ const plUrl = absoluteUrl(localePath('pl', page));
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={t.brand} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={absoluteUrl('/app-icon.png')} />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:locale" content={ogLocales[locale]} />
+    <meta property="og:locale:alternate" content={ogAlternateLocale} />
+    <meta property="og:image" content={shareImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={t.meta.shareImageAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={shareImage} />
+    <meta name="twitter:image:alt" content={t.meta.shareImageAlt} />
     <link rel="icon" href={withBase('/favicon.png')} />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <link href={fontStylesheet} rel="stylesheet" media="print" onload="this.media='all'" />
+    <noscript><link href={fontStylesheet} rel="stylesheet" /></noscript>
     <script is:inline set:html={buildThemeBootstrapScript()} />
     <script is:inline set:html={buildScreenshotBootstrapScript(import.meta.env.BASE_URL)} />
     <script is:inline set:html={buildDownloadPlatformBootstrapScript()} />
-    <script
-      is:inline
-      set:html={buildLanguageRedirectScript(locale, import.meta.env.BASE_URL)}
-    />
   </head>
   <body>
-    <script is:inline>
-      (function () {
-        var key = 'weigh-way-site/preserve-scroll';
-        var raw = sessionStorage.getItem(key);
-        if (raw === null) return;
-        sessionStorage.removeItem(key);
-        var y = parseInt(raw, 10);
-        if (!isFinite(y) || y < 0) return;
-        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
-        function restore() {
-          window.scrollTo(0, y);
-        }
-        restore();
-        document.addEventListener('DOMContentLoaded', restore);
-        window.addEventListener('load', restore);
-        window.addEventListener('pageshow', function (event) {
-          if (event.persisted) restore();
-        });
-      })();
-    </script>
+    <a class="skip-link" href="#content">{t.nav.skipToContent}</a>
     <div class="page-fx" aria-hidden="true">
       <div class="page-fx-grid"></div>
     </div>
@@ -85,8 +76,19 @@ const plUrl = absoluteUrl(localePath('pl', page));
 
       (function () {
         var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        var header = document.querySelector('.site-header');
+        var header = document.querySelector<HTMLElement>('.site-header');
         var progress = document.querySelector('.scroll-progress');
+
+        if (header) {
+          const syncHeaderHeight = () => {
+            document.documentElement.style.setProperty(
+              '--measured-header-height',
+              `${header.getBoundingClientRect().height}px`,
+            );
+          };
+          new ResizeObserver(syncHeaderHeight).observe(header, { box: 'border-box' });
+          syncHeaderHeight();
+        }
 
         var scrollTicking = false;
 
@@ -160,7 +162,8 @@ const plUrl = absoluteUrl(localePath('pl', page));
           try {
             var target = new URL(href, location.href);
             if (target.origin !== location.origin) return false;
-            return normalizePathname(target.pathname) === normalizePathname(location.pathname);
+            return normalizePathname(target.pathname) === normalizePathname(location.pathname) &&
+              target.search === location.search;
           } catch (error) {
             return false;
           }
@@ -179,10 +182,12 @@ const plUrl = absoluteUrl(localePath('pl', page));
           ) {
             return;
           }
-          if (link.target && link.target !== '_self') return;
+          if (link.hash || (link.target && link.target !== '_self')) return;
           if (!isSamePageLink(link)) return;
           event.preventDefault();
-          window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+          if (location.hash) history.pushState(null, '', link.href);
+          document.getElementById('content')?.focus({ preventScroll: true });
+          window.scrollTo({ top: 0, behavior: 'instant' });
         });
 
         if (reduceMotion) return;

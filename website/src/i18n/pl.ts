@@ -2,24 +2,27 @@ import type { SiteMessages } from './en';
 
 const pl: SiteMessages = {
   meta: {
-    title: 'WeighWay',
+    title: 'Prosty i darmowy dziennik wagi | WeighWay',
     description:
       'Twoja waga, Twój progres. Bezpłatna aplikacja mobilna — codzienne ważenie, BMI na podstawie historii wzrostu i przejrzyste porównania w czasie, z synchronizacją w chmurze po polsku i angielsku.',
-    releasesTitle: 'Aktualizacje — WeighWay',
+    releasesTitle: 'Aktualizacje i lista zmian — aplikacja WeighWay',
     releasesDescription:
       'Najnowsze wersje, informacje o zmianach widoczne dla użytkownika oraz pliki do pobrania aplikacji mobilnej.',
-    privacyTitle: 'Polityka prywatności — WeighWay',
+    privacyTitle: 'Polityka prywatności — dziennik wagi WeighWay',
     privacyDescription:
       'Jak WeighWay zbiera, wykorzystuje, przechowuje i usuwa dane konta, wagi oraz wzrostu.',
-    termsTitle: 'Regulamin — WeighWay',
+    termsTitle: 'Regulamin — dziennik wagi WeighWay',
     termsDescription:
       'Warunki korzystania z aplikacji mobilnej WeighWay oraz tej strony internetowej.',
-    geeksTitle: 'Od kuchni — WeighWay',
+    geeksTitle: 'Jak powstał WeighWay — technologie i architektura',
     geeksDescription:
       'Jak zbudowano WeighWay: model danych, zasady klasyfikacji BMI, kontrola dostępu do rekordów i proces publikowania nowych wersji.',
+    shareImageAlt:
+      'WeighWay — prosty i darmowy dziennik wagi na ekranie telefonu z ostatnim pomiarem i wykresem z 30 dni.',
   },
   brand: 'WeighWay',
   nav: {
+    skipToContent: 'Przejdź do treści',
     home: 'Strona główna',
     releases: 'Aktualizacje',
     menu: 'Otwórz menu',
@@ -27,7 +30,6 @@ const pl: SiteMessages = {
   },
   language: {
     label: 'Język',
-    system: 'Systemowy',
     english: 'English',
     polish: 'Polski',
   },
@@ -232,7 +234,7 @@ const pl: SiteMessages = {
       {
         title: '2. Jakie dane przetwarzamy',
         body:
-          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące kategorie danych.\n\n### Dane konta\n\nMogą one obejmować:\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nJeżeli logujesz się przez Google, Google udostępnia naszemu dostawcy usługi uwierzytelniania Twój adres e-mail i podstawowe dane konta, takie jak imię i nazwisko, aby umożliwić utworzenie konta i logowanie.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nInformacje o wadze i wzroście oraz informacje z nich wywodzone, takie jak BMI, mogą stanowić dane dotyczące zdrowia w rozumieniu obowiązujących przepisów o ochronie danych osobowych, w zależności od kontekstu ich przetwarzania. Stosujemy odpowiednie zabezpieczenia tych danych.\n\n### Preferencje urządzenia i strony internetowej\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może przechowywać podobne ustawienia, takie jak wybrany język lub motyw, w pamięci przeglądarki. Preferencje te służą wyłącznie zapewnieniu żądanych funkcji i zapamiętaniu Twoich ustawień.\n\n### Raporty błędów\n\nWersja produkcyjna może wysłać raport o awarii albo błędzie synchronizacji. Raport zawiera wersję aplikacji, rodzaj błędu, na przykład kod błędu bazy danych, oraz szczegóły techniczne potrzebne do jego zdiagnozowania, takie jak model urządzenia, wersja systemu operacyjnego i miejsce w aplikacji, w którym wystąpił błąd. Nie zawiera wagi, wzrostu, BMI, daty urodzenia, płci ani innych danych pomiarowych. Wersje deweloperskie i podgląd aplikacji na tej stronie nie wysyłają takich raportów.',
+          'W zależności od sposobu korzystania z Usługi możemy przetwarzać następujące kategorie danych.\n\n### Dane konta\n\nMogą one obejmować:\n\n• adres e-mail;\n• identyfikator użytkownika;\n• dane niezbędne do uwierzytelniania i obsługi konta.\n\nJeżeli logujesz się przez Google, Google udostępnia naszemu dostawcy usługi uwierzytelniania Twój adres e-mail i podstawowe dane konta, takie jak imię i nazwisko, aby umożliwić utworzenie konta i logowanie.\n\nHasła są obsługiwane przez dostawcę usługi uwierzytelniania. Nie przechowujemy haseł w postaci jawnej.\n\n### Dane wprowadzane do aplikacji\n\nMożesz dobrowolnie wprowadzać do aplikacji:\n\n• pomiary wagi;\n• historię wzrostu;\n• datę urodzenia;\n• płeć;\n• inne informacje zawarte w ustawieniach profilu, jeśli aplikacja umożliwia ich podanie.\n\nInformacje o wadze i wzroście oraz informacje z nich wywodzone, takie jak BMI, mogą stanowić dane dotyczące zdrowia w rozumieniu obowiązujących przepisów o ochronie danych osobowych, w zależności od kontekstu ich przetwarzania. Stosujemy odpowiednie zabezpieczenia tych danych.\n\n### Preferencje urządzenia i strony internetowej\n\nUstawienia takie jak język, jednostki oraz motyw mogą być przechowywane lokalnie na urządzeniu.\n\nNiniejsza strona internetowa może zapisywać wybrany motyw w pamięci przeglądarki. Ustawienie to służy wyłącznie zapamiętaniu wyglądu strony.\n\n### Raporty błędów\n\nWersja produkcyjna może wysłać raport o awarii albo błędzie synchronizacji. Raport zawiera wersję aplikacji, rodzaj błędu, na przykład kod błędu bazy danych, oraz szczegóły techniczne potrzebne do jego zdiagnozowania, takie jak model urządzenia, wersja systemu operacyjnego i miejsce w aplikacji, w którym wystąpił błąd. Nie zawiera wagi, wzrostu, BMI, daty urodzenia, płci ani innych danych pomiarowych. Wersje deweloperskie i podgląd aplikacji na tej stronie nie wysyłają takich raportów.',
       },
       {
         title: '3. W jakich celach wykorzystujemy dane',
@@ -287,7 +289,7 @@ const pl: SiteMessages = {
       {
         title: '13. Pliki cookies i pamięć przeglądarki',
         body:
-          'Niniejsza strona może korzystać z pamięci lokalnej przeglądarki (local storage) lub podobnych mechanizmów w celu zapamiętania ustawień użytkownika, takich jak język lub motyw.\n\nNie wykorzystujemy tych mechanizmów do śledzenia użytkowników w celach reklamowych ani do tworzenia profili reklamowych.\n\nJeżeli wprowadzimy dodatkowe pliki cookies lub technologie śledzące wymagające zgody na podstawie obowiązującego prawa, niniejsza Polityka prywatności i odpowiednie mechanizmy uzyskiwania zgody zostaną zaktualizowane przed zastosowaniem tych technologii.',
+          'Niniejsza strona może korzystać z pamięci lokalnej przeglądarki (local storage) lub podobnych mechanizmów w celu zapamiętania wybranego motywu.\n\nNie wykorzystujemy tych mechanizmów do śledzenia użytkowników w celach reklamowych ani do tworzenia profili reklamowych.\n\nJeżeli wprowadzimy dodatkowe pliki cookies lub technologie śledzące wymagające zgody na podstawie obowiązującego prawa, niniejsza Polityka prywatności i odpowiednie mechanizmy uzyskiwania zgody zostaną zaktualizowane przed zastosowaniem tych technologii.',
       },
       {
         title: '14. Zmiany Polityki prywatności',

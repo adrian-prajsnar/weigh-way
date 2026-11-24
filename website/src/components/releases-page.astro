@@ -111,7 +111,8 @@ function formatDate(value: string) {
                   <button
                     type="button"
                     class="release-toggle"
-                    aria-expanded="false"
+                    aria-expanded="true"
+                    disabled
                     id={triggerId}
                     aria-controls={panelId}
                   >
@@ -173,6 +174,7 @@ function formatDate(value: string) {
       function setExpanded(item, open) {
         var toggle = item.querySelector('.release-toggle');
         item.classList.toggle('is-open', open);
+        item.querySelector('.release-panel')?.toggleAttribute('hidden', !open);
         if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       }
 
@@ -188,8 +190,10 @@ function formatDate(value: string) {
       }
 
       items.forEach(function (item) {
+        closeItem(item);
         var toggle = item.querySelector('.release-toggle');
         if (!toggle) return;
+        toggle.disabled = false;
 
         toggle.addEventListener('click', function () {
           if (item.classList.contains('is-open')) {

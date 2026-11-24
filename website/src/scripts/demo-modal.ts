@@ -21,8 +21,8 @@ export function getDemoModalLoadingState(loading: boolean): DemoModalLoadingStat
   };
 }
 
-function getModal(): HTMLElement | null {
-  return document.querySelector<HTMLElement>(`[${MODAL_ATTR}]`);
+function getModal(): HTMLDialogElement | null {
+  return document.querySelector<HTMLDialogElement>(`[${MODAL_ATTR}]`);
 }
 
 function getIframe(modal: HTMLElement): HTMLIFrameElement | null {
@@ -92,10 +92,12 @@ export function initDemoModal(): void {
   const statusBarClock = createDemoStatusBarClock(modalEl);
 
   const iframe = getIframe(modal);
-  let previousOverflow = '';
+  let opener: HTMLElement | null = null;
   let iframeLoaded = false;
 
   function handleIframeLoad(): void {
+    // React Native Web text fields stop keydown before it can reach the document.
+    iframe?.contentDocument?.addEventListener('keydown', handleFrameKeydown, { capture: true });
     iframeLoaded = true;
     setDemoModalLoading(modalEl, false);
   }
@@ -105,12 +107,11 @@ export function initDemoModal(): void {
       return;
     }
 
-    iframe.addEventListener('load', handleIframeLoad, { once: true });
     iframe.src = resolvedDemoUrl;
   }
 
-  function openModal(): void {
-    if (!iframe) {
+  function openModal(trigger?: HTMLElement): void {
+    if (!iframe || modalEl.open) {
       return;
     }
 
@@ -120,11 +121,9 @@ export function initDemoModal(): void {
       setDemoModalLoading(modalEl, true);
     }
 
-    modalEl.hidden = false;
+    opener = trigger ?? document.querySelector<HTMLElement>(`[${OPEN_ATTR}]`);
+    modalEl.showModal();
     document.body.classList.add('demo-modal-open');
-    previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    modalEl.querySelector<HTMLElement>('.demo-modal__dialog')?.focus();
 
     if (location.hash !== '#demo') {
       history.pushState(null, '', '#demo');
@@ -133,16 +132,35 @@ export function initDemoModal(): void {
     statusBarClock.start();
   }
 
-  function closeModal(): void {
+  function finishClose(): void {
     statusBarClock.stop();
-    modalEl.hidden = true;
     document.body.classList.remove('demo-modal-open');
-    document.body.style.overflow = previousOverflow;
+    const fragment = document.getElementById(location.hash.slice(1));
+    const returnTarget = fragment?.matches('main [tabindex]') ? fragment : opener;
+    (returnTarget ?? document.getElementById('content'))?.focus({ preventScroll: true });
+    opener = null;
 
     if (location.hash === '#demo') {
       history.replaceState(null, '', location.pathname + location.search);
     }
   }
+
+  function handleFrameKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && !event.isComposing && !event.defaultPrevented && modalEl.open) {
+      // React Native Web dismisses its own dialogs on keyup.
+      if (iframe?.contentDocument?.querySelector('[role="dialog"][aria-modal="true"], dialog[open]')) {
+        return;
+      }
+      event.preventDefault();
+      modalEl.close();
+    }
+  }
+
+  document.querySelectorAll(`[${OPEN_ATTR}]`).forEach((trigger) => {
+    trigger.setAttribute('aria-haspopup', 'dialog');
+  });
+  iframe?.addEventListener('load', handleIframeLoad);
+  modalEl.addEventListener('close', finishClose);
 
   document.addEventListener('click', (event) => {
     const target = event.target;
@@ -150,21 +168,19 @@ export function initDemoModal(): void {
       return;
     }
 
-    if (target.closest(`[${OPEN_ATTR}]`)) {
+    const trigger = target.closest<HTMLElement>(`[${OPEN_ATTR}]`);
+    if (
+      trigger && !event.defaultPrevented && event.button === 0 &&
+      !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey
+    ) {
       event.preventDefault();
-      openModal();
+      openModal(trigger);
       return;
     }
 
     if (target.closest(`[${CLOSE_ATTR}]`)) {
       event.preventDefault();
-      closeModal();
-    }
-  });
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !modal.hidden) {
-      closeModal();
+      modalEl.close();
     }
   });
 
@@ -178,8 +194,8 @@ export function initDemoModal(): void {
       return;
     }
 
-    if (!modal.hidden) {
-      closeModal();
+    if (modalEl.open) {
+      modalEl.close();
     }
   });
 }

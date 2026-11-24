@@ -1,3 +1,5 @@
+import type { ScreenshotId } from '../lib/screenshots';
+
 export type SiteLocale = 'en' | 'pl';
 
 export type SiteMessages = {
@@ -12,9 +14,11 @@ export type SiteMessages = {
     termsDescription: string;
     geeksTitle: string;
     geeksDescription: string;
+    shareImageAlt: string;
   };
   brand: string;
   nav: {
+    skipToContent: string;
     home: string;
     releases: string;
     menu: string;
@@ -22,7 +26,6 @@ export type SiteMessages = {
   };
   language: {
     label: string;
-    system: string;
     english: string;
     polish: string;
   };
@@ -67,7 +70,7 @@ export type SiteMessages = {
     audience: { title: string; body: string }[];
     screensTitle: string;
     screensSubtitle: string;
-    screens: { id: string; title: string; body: string }[];
+    screens: { id: ScreenshotId; title: string; body: string }[];
     howTitle: string;
     howSubtitle: string;
     steps: { title: string; body: string }[];
@@ -157,24 +160,27 @@ export type SiteMessages = {
 
 const en: SiteMessages = {
   meta: {
-    title: 'WeighWay',
+    title: 'Free & Simple Weight Tracker | WeighWay',
     description:
       'Your weight, your progress. A free mobile app — daily weigh-ins, BMI from your height history, and clear comparisons over time, with cloud sync in English and Polish.',
-    releasesTitle: 'Releases — WeighWay',
+    releasesTitle: 'WeighWay Releases & Changelog — Weight Tracker App',
     releasesDescription:
       'Latest versions, user-facing release notes, and mobile app downloads.',
-    privacyTitle: 'Privacy Policy — WeighWay',
+    privacyTitle: 'Privacy Policy — WeighWay Weight Tracker',
     privacyDescription:
       'How WeighWay collects, uses, stores, and deletes your account, weight, and height data.',
-    termsTitle: 'Terms of Service — WeighWay',
+    termsTitle: 'Terms of Service — WeighWay Weight Tracker',
     termsDescription:
       'Terms and conditions for using the WeighWay mobile app and this website.',
-    geeksTitle: 'For Geeks — WeighWay',
+    geeksTitle: 'How WeighWay Is Built — Tech Stack & Architecture',
     geeksDescription:
       'How WeighWay is built: the data model, BMI rules, row-level security, and the release pipeline.',
+    shareImageAlt:
+      'WeighWay — free & simple weight tracker, shown on a phone with the latest weight and a 30-day trend chart.',
   },
   brand: 'WeighWay',
   nav: {
+    skipToContent: 'Skip to main content',
     home: 'Home',
     releases: 'Releases',
     menu: 'Open menu',
@@ -182,7 +188,6 @@ const en: SiteMessages = {
   },
   language: {
     label: 'Language',
-    system: 'System',
     english: 'English',
     polish: 'Polski',
   },
@@ -382,7 +387,7 @@ const en: SiteMessages = {
       {
         title: '2. What data we process',
         body:
-          'Depending on how you use the Service, we may process the following categories of data.\n\n### Account data\n\nThis may include:\n\n• your email address;\n• your user ID;\n• information required to authenticate and manage your account.\n\nIf you sign in with Google, Google shares your email address and basic account details, such as your name, with our authentication provider so that your account can be created and you can sign in.\n\nPasswords are handled by our authentication provider. We do not store passwords in plain text.\n\n### Data you enter into the app\n\nYou may voluntarily enter:\n\n• weight measurements;\n• height history;\n• date of birth;\n• sex;\n• other information included in your profile, where the app allows you to provide it.\n\nWeight and height information, as well as information derived from it, such as BMI, may constitute data concerning health under applicable data protection laws depending on the context in which they are processed. We treat such data with appropriate safeguards.\n\n### Device and website preferences\n\nPreferences such as language, units and theme may be stored locally on your device.\n\nThis website may store similar display preferences, such as language and theme, in your browser. These preferences are used solely to provide the requested functionality and remember your settings.\n\n### Error reports\n\nA production build can send a crash or sync-error report. The report includes the app version, the kind of error, such as a database error code, and technical details needed to diagnose it, such as the device model, operating system version, and where in the app the error happened. It does not include weight, height, BMI, birth date, sex, or any other measurement data. Development builds and the app preview on this website do not send these reports.',
+          'Depending on how you use the Service, we may process the following categories of data.\n\n### Account data\n\nThis may include:\n\n• your email address;\n• your user ID;\n• information required to authenticate and manage your account.\n\nIf you sign in with Google, Google shares your email address and basic account details, such as your name, with our authentication provider so that your account can be created and you can sign in.\n\nPasswords are handled by our authentication provider. We do not store passwords in plain text.\n\n### Data you enter into the app\n\nYou may voluntarily enter:\n\n• weight measurements;\n• height history;\n• date of birth;\n• sex;\n• other information included in your profile, where the app allows you to provide it.\n\nWeight and height information, as well as information derived from it, such as BMI, may constitute data concerning health under applicable data protection laws depending on the context in which they are processed. We treat such data with appropriate safeguards.\n\n### Device and website preferences\n\nPreferences such as language, units and theme may be stored locally on your device.\n\nThis website may store your theme preference in your browser to remember your display settings.\n\n### Error reports\n\nA production build can send a crash or sync-error report. The report includes the app version, the kind of error, such as a database error code, and technical details needed to diagnose it, such as the device model, operating system version, and where in the app the error happened. It does not include weight, height, BMI, birth date, sex, or any other measurement data. Development builds and the app preview on this website do not send these reports.',
       },
       {
         title: '3. How we use your data',
@@ -437,7 +442,7 @@ const en: SiteMessages = {
       {
         title: '13. Cookies and browser storage',
         body:
-          'This website may use browser local storage or similar technologies to remember user preferences such as language or theme.\n\nWe do not use these mechanisms for advertising tracking or advertising profiling.\n\nIf we introduce additional cookies or tracking technologies that require consent under applicable law, this Privacy Policy and the relevant consent mechanisms will be updated before those technologies are used.',
+          'This website may use browser local storage or similar technologies to remember your theme preference.\n\nWe do not use these mechanisms for advertising tracking or advertising profiling.\n\nIf we introduce additional cookies or tracking technologies that require consent under applicable law, this Privacy Policy and the relevant consent mechanisms will be updated before those technologies are used.',
       },
       {
         title: '14. Changes to this Privacy Policy',

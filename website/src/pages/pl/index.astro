@@ -11,7 +11,7 @@ const t = getMessages(locale);
 
 <BaseLayout locale={locale} page="home" title={t.meta.title} description={t.meta.description}>
   <SiteHeader locale={locale} page="home" />
-  <main id="content">
+  <main id="content" tabindex="-1">
     <HomePage locale={locale} />
   </main>
   <SiteFooter locale={locale} />

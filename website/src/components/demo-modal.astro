@@ -5,12 +5,12 @@ import { withBase } from '../lib/paths';
 type Props = { locale: SiteLocale };
 const { locale } = Astro.props;
 const t = getMessages(locale);
-const demoUrl = withBase(`/demo/?embed=1&lang=${locale}`);
+const demoUrl = withBase(locale === 'pl' ? '/demo/pl/?embed=1' : '/demo/?embed=1&lang=en');
 ---
 
-<div class="demo-modal" data-demo-modal data-demo-url={demoUrl} hidden>
-  <button class="demo-modal__backdrop" type="button" data-demo-close aria-label={t.demoModal.close}></button>
-  <button class="demo-modal__close" type="button" data-demo-close aria-label={t.demoModal.close}>
+<dialog class="demo-modal" data-demo-modal data-demo-url={demoUrl} aria-label={t.demoModal.title}>
+  <div class="demo-modal__backdrop" data-demo-close aria-hidden="true"></div>
+  <button class="demo-modal__close" type="button" data-demo-close aria-label={t.demoModal.close} autofocus>
     <svg
       width="24"
       height="24"
@@ -28,10 +28,6 @@ const demoUrl = withBase(`/demo/?embed=1&lang=${locale}`);
   </button>
   <div
     class="demo-modal__dialog"
-    role="dialog"
-    aria-modal="true"
-    aria-label={t.demoModal.title}
-    tabindex="-1"
     data-demo-dialog
   >
     <div class="app-screen-frame demo-modal__phone">
@@ -105,7 +101,7 @@ const demoUrl = withBase(`/demo/?embed=1&lang=${locale}`);
       <span class="phone-home" aria-hidden="true"></span>
     </div>
   </div>
-</div>
+</dialog>
 
 <script>
   import { initDemoModal } from '../scripts/demo-modal';
