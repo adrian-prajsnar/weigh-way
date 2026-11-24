@@ -138,6 +138,7 @@ describe('ConfirmProvider', () => {
     );
 
     const phraseInput = await screen.findByPlaceholderText('DELETE');
+    expect(screen.getByRole('textbox', { name: 'Confirmation phrase' })).toBe(phraseInput);
     const cancelButton = screen.getByRole('button', { name: 'Cancel' });
 
     phraseInput.focus();

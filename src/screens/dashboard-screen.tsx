@@ -1,5 +1,5 @@
 import { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Platform, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
@@ -36,6 +36,8 @@ import { webFocusTarget } from '../theme/web-focus-target';
 type Props = BottomTabScreenProps<RootTabParamList, 'Dashboard'>;
 
 export function DashboardScreen({ navigation }: Props) {
+  const titleRef = useRef<ComponentRef<typeof View>>(null);
+  const viewAllRef = useRef<ComponentRef<typeof Pressable>>(null);
   const styles = useAppStyles();
   const { t } = useTranslation();
   const { entries, isLoading, isRefreshing, deletingDate, error, removeEntry, refreshEntries } =
@@ -60,27 +62,22 @@ export function DashboardScreen({ navigation }: Props) {
     setEditingDate(date);
   };
 
-  const handleDelete = (date: string) => {
+  const handleDelete = async (date: string) => {
     const dateLabel = formatDateLabel(date);
-    void confirm({
+    const confirmed = await confirm({
       title: t('history.deleteEntry'),
       message: t('history.deleteConfirm', { date: dateLabel }),
       confirmLabel: t('common.delete'),
       destructive: true,
-    }).then((confirmed) => {
-      if (!confirmed) {
-        return;
-      }
-      void (async () => {
-        try {
-          await removeEntry(date);
-          showSuccess(t('history.deleted', { date: dateLabel }));
-        } catch (error) {
-          const message = error instanceof Error ? error.message : t('history.deleteFailed');
-          showError(message);
-        }
-      })();
     });
+    if (!confirmed) return;
+    try {
+      await removeEntry(date);
+      showSuccess(t('history.deleted', { date: dateLabel }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t('history.deleteFailed');
+      showError(message);
+    }
   };
 
   const range = useMemo(
@@ -113,6 +110,7 @@ export function DashboardScreen({ navigation }: Props) {
     <View style={styles.screen}>
       <ContentFrame>
         <ScreenHeader
+          titleRef={titleRef}
           title={t('dashboard.title')}
           subtitle={t('dashboard.subtitle')}
           scrollY={scrollY}
@@ -131,12 +129,13 @@ export function DashboardScreen({ navigation }: Props) {
             )
           }
         >
-          {error && !isLoading ? (
-            <ErrorCard
-              message={error}
-              onRetry={() => void refreshEntries().catch(() => undefined)}
-            />
-          ) : null}
+          <ErrorCard
+            message={error}
+            isLoading={isLoading}
+            isRefreshing={isRefreshing}
+            recoveryFocusRef={titleRef}
+            onRetry={() => refreshEntries().catch(() => undefined)}
+          />
 
           {showProfileBanner ? (
             <DismissibleInfoBanner
@@ -175,7 +174,9 @@ export function DashboardScreen({ navigation }: Props) {
             delay={180}
             right={
               <Pressable
+                ref={viewAllRef}
                 onPress={() => navigation.navigate('History')}
+                accessibilityRole="button"
                 hitSlop={8}
                 {...webFocusTarget('text-button')}
               >
@@ -190,6 +191,7 @@ export function DashboardScreen({ navigation }: Props) {
                 entries={recentEntries}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                deleteFocusFallback={viewAllRef}
                 deletingDate={deletingDate}
                 emptyMessage={t('dashboard.emptyRecent')}
               />

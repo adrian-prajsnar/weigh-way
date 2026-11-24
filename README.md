@@ -301,6 +301,10 @@ The public site lives in [`website/`](website/) and deploys to GitHub Pages on e
 
 `https://adrian-prajsnar.github.io/weigh-way/`
 
+Submit `https://adrian-prajsnar.github.io/weigh-way/sitemap-index.xml` in the site's Google
+Search Console property. The project publishes under `/weigh-way/`, and Google reads
+`robots.txt` at the hostname root.
+
 Local preview:
 
 ```bash

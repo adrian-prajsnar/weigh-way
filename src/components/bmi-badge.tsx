@@ -65,36 +65,44 @@ export function BmiBadge({
       ? t('bmi.badgeInteractive', { category: bmi.label, value: formattedValue })
       : t('bmi.label', { value: formattedValue });
   const iconSize = compact ? 12 : 13;
+  const badgeStyle = [
+    styles.bmiBadge,
+    onPress ? styles.bmiBadgeInteractive : null,
+    compact && styles.bmiBadgeCompact,
+    centered ? styles.bmiBadgeCentered : null,
+    { backgroundColor: badgeTheme.backgroundColor },
+  ];
+  const badgeText = (
+    <Text
+      style={[
+        styles.bmiBadgeText,
+        compact && styles.bmiBadgeTextCompact,
+        { color: badgeTheme.textColor },
+      ]}
+    >
+      {label}
+    </Text>
+  );
+
+  if (!onPress) {
+    return (
+      <View style={badgeStyle} accessibilityRole="text" accessibilityLabel={label}>
+        {badgeText}
+      </View>
+    );
+  }
 
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
-      style={({ pressed }) => [
-        styles.bmiBadge,
-        onPress ? styles.bmiBadgeInteractive : null,
-        compact && styles.bmiBadgeCompact,
-        centered ? styles.bmiBadgeCentered : null,
-        { backgroundColor: badgeTheme.backgroundColor },
-        pressed && onPress ? styles.buttonPressed : null,
-      ]}
-      accessibilityRole={onPress ? 'button' : 'text'}
-      accessibilityLabel={onPress ? `${label}. ${t('bmi.openDetailsA11y')}` : label}
+      style={({ pressed }) => [...badgeStyle, pressed && styles.buttonPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}. ${t('bmi.openDetailsA11y')}`}
     >
-      <Text
-        style={[
-          styles.bmiBadgeText,
-          compact && styles.bmiBadgeTextCompact,
-          { color: badgeTheme.textColor },
-        ]}
-      >
-        {label}
-      </Text>
-      {onPress ? (
-        <View style={[styles.bmiBadgeChevron, compact && styles.bmiBadgeChevronCompact]}>
-          <Ionicons name="chevron-forward" size={iconSize} color={badgeTheme.textColor} />
-        </View>
-      ) : null}
+      {badgeText}
+      <View style={[styles.bmiBadgeChevron, compact && styles.bmiBadgeChevronCompact]}>
+        <Ionicons name="chevron-forward" size={iconSize} color={badgeTheme.textColor} />
+      </View>
     </Pressable>
   );
 }

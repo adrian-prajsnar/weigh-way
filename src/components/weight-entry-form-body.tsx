@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import type { TextInputInstance } from 'react-native';
 import { calculateBmi } from '../bmi';
@@ -37,6 +37,7 @@ import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { spacing } from '../theme/tokens';
 import { useWebStepperPress } from '../theme/use-web-stepper-press';
+import { revealWebFocus } from '../theme/web-focus-target';
 import { useWeightEntryPrefill } from './use-weight-entry-prefill';
 
 type WeightEntryFormBodyProps = {
@@ -75,8 +76,15 @@ export function WeightEntryFormBody({
   const [isSaving, setIsSaving] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [weightValidationMessage, setWeightValidationMessage] = useState<string | null>(null);
+  const weightErrorId = useId();
   const [isConfirmingReplace, setIsConfirmingReplace] = useState(false);
   const weightInputRef = useRef<TextInputInstance>(null);
+
+  useLayoutEffect(() => {
+    if (Platform.OS === 'web' && weightValidationMessage) {
+      weightInputRef.current?.focus();
+    }
+  }, [weightValidationMessage]);
 
   const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
   const existingEntryForDate = useMemo(
@@ -125,11 +133,16 @@ export function WeightEntryFormBody({
     if (!autoFocusWeight) {
       return;
     }
+    if (Platform.OS === 'web') {
+      const frame = requestAnimationFrame(() => weightInputRef.current?.focus());
+      return () => cancelAnimationFrame(frame);
+    }
     const timer = setTimeout(() => weightInputRef.current?.focus(), 300);
     return () => clearTimeout(timer);
   }, [autoFocusWeight, initialDate]);
 
-  const isDisabled = isSaving || isConfirmingReplace || isDataLoading || isProfileLoading;
+  const isLoading = isDataLoading || isProfileLoading;
+  const isDisabled = isSaving || isConfirmingReplace || isLoading;
 
   const adjustWeight = (direction: -1 | 1) => {
     if (Platform.OS === 'web') {
@@ -146,13 +159,14 @@ export function WeightEntryFormBody({
       units === 'imperial' ? lbToKg(WEIGHT_STEP_LB) * direction : WEIGHT_STEP_KG * direction;
     weightInputTouchedRef.current = true;
     setWeightInput(formatWeightValue(Math.round((current + deltaKg) * 100) / 100, units, locale));
+    setWeightValidationMessage(null);
   };
 
   const decreaseWeightStepper = useWebStepperPress(() => adjustWeight(-1));
   const increaseWeightStepper = useWebStepperPress(() => adjustWeight(1));
 
   const handleSave = async () => {
-    if (isSaving || isConfirmingReplace) {
+    if (isDisabled) {
       return;
     }
 
@@ -167,7 +181,11 @@ export function WeightEntryFormBody({
         ? getWeightRangeMessage(units, locale)
         : t('entryForm.invalidWeight');
       setWeightValidationMessage(message);
-      showError(message);
+      if (Platform.OS !== 'web') {
+        showError(message);
+      } else if (weightValidationMessage === message) {
+        weightInputRef.current?.focus();
+      }
       return;
     }
 
@@ -224,6 +242,13 @@ export function WeightEntryFormBody({
     }
   };
 
+  const saveLabel = t('entryForm.saveEntry');
+  const saveContent = isSaving ? (
+    <ActivityIndicator color={colors.onAccent} />
+  ) : (
+    <Text style={styles.primaryButtonText}>{saveLabel}</Text>
+  );
+
   return (
     <View style={{ gap: spacing.md }}>
       <DateField
@@ -269,13 +294,24 @@ export function WeightEntryFormBody({
                     setWeightValidationMessage(null);
                   }
                 }}
-                onFocus={() => setIsFocused(true)}
+                onFocus={(event) => {
+                  setIsFocused(true);
+                  revealWebFocus(event.currentTarget);
+                }}
                 onBlur={() => setIsFocused(false)}
                 keyboardType="decimal-pad"
+                accessibilityLabel={`${t('entryForm.weight')} (${getWeightUnitLabel(units)})`}
                 placeholder={weightPlaceholder}
                 placeholderTextColor={colors.textSubtle}
                 editable={!isDisabled}
-                {...(Platform.OS === 'web' ? { dataSet: { wwFieldInput: 'true' } } : {})}
+                accessibilityHint={weightValidationMessage ?? undefined}
+                {...(Platform.OS === 'web'
+                  ? {
+                      dataSet: { wwFieldInput: 'true' },
+                      'aria-invalid': weightValidationMessage ? true : undefined,
+                      'aria-describedby': weightValidationMessage ? weightErrorId : undefined,
+                    }
+                  : {})}
               />
               <Text style={styles.weightInputUnit}>{getWeightUnitLabel(units)}</Text>
             </View>
@@ -292,7 +328,9 @@ export function WeightEntryFormBody({
             </Pressable>
           </View>
           {weightValidationMessage ? (
-            <Text style={styles.fieldErrorText}>{weightValidationMessage}</Text>
+            <Text nativeID={weightErrorId} style={styles.fieldErrorText}>
+              {weightValidationMessage}
+            </Text>
           ) : null}
         </View>
 
@@ -314,21 +352,35 @@ export function WeightEntryFormBody({
           </View>
         ) : null}
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.primaryButton,
-            isDisabled && styles.buttonDisabled,
-            pressed && styles.buttonPressed,
-          ]}
-          onPress={() => void handleSave()}
-          disabled={isDisabled}
-        >
-          {isSaving ? (
-            <ActivityIndicator color={colors.onAccent} />
-          ) : (
-            <Text style={styles.primaryButtonText}>{t('entryForm.saveEntry')}</Text>
-          )}
-        </Pressable>
+        {Platform.OS === 'web' ? (
+          <button
+            type="button"
+            style={{ ...styles.primaryButtonWeb, ...(isDisabled && styles.buttonDisabled) }}
+            data-ww-press-feedback="true"
+            disabled={isLoading}
+            aria-label={saveLabel}
+            aria-disabled={isDisabled}
+            aria-busy={isSaving}
+            onClick={() => void handleSave()}
+          >
+            {saveContent}
+          </button>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [
+              styles.primaryButton,
+              isDisabled && styles.buttonDisabled,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={() => void handleSave()}
+            disabled={isDisabled}
+            accessibilityRole="button"
+            accessibilityLabel={saveLabel}
+            aria-busy={isSaving}
+          >
+            {saveContent}
+          </Pressable>
+        )}
       </View>
     </View>
   );

@@ -5,11 +5,28 @@ import { StyleContext, cardSurface, floatingSurface, tabularNums } from './helpe
 
 /** `100dvh` follows mobile browser chrome; RN types only allow px or percent here. */
 const FULL_DYNAMIC_VIEWPORT_HEIGHT = '100dvh' as unknown as ViewStyle['minHeight'];
+const MIN_TOAST_CONTENT_HEIGHT = 'min(100%, 20rem)' as unknown as ViewStyle['minHeight'];
 
 export function createOverlayStyles({ colors, scheme }: StyleContext) {
   return {
     toastRoot: {
       flex: 1,
+      ...(Platform.OS === 'web' ? { overflow: 'auto' as ViewStyle['overflow'] } : null),
+    },
+    toastContent: {
+      flex: 1,
+      // Keep the screen usable when the message and navigation cannot fit in one viewport.
+      minHeight: MIN_TOAST_CONTENT_HEIGHT,
+    },
+    // Off-screen text that stays in the accessibility tree (live regions, extra context).
+    visuallyHidden: {
+      position: 'absolute',
+      width: 1,
+      height: 1,
+      margin: -1,
+      padding: 0,
+      borderWidth: 0,
+      overflow: 'hidden',
     },
 
     overlayRoot: {
@@ -17,7 +34,9 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     },
     modalBackdropCentered: {
       flex: 1,
-      ...(Platform.OS === 'web' ? { minHeight: FULL_DYNAMIC_VIEWPORT_HEIGHT } : null),
+      ...(Platform.OS === 'web'
+        ? { height: FULL_DYNAMIC_VIEWPORT_HEIGHT, paddingVertical: spacing.sm }
+        : null),
       backgroundColor: scheme === 'dark' ? 'rgba(0, 0, 0, 0.62)' : 'rgba(15, 23, 42, 0.42)',
       justifyContent: 'center',
       alignItems: 'center',
@@ -30,7 +49,8 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
       ...(Platform.OS === 'web'
         ? {
             padding: WEB_FOCUS_RING_OUTER_SPREAD,
-            overflow: 'visible',
+            maxHeight: '100%',
+            overflow: 'auto' as ViewStyle['overflow'],
           }
         : null),
     },
@@ -47,6 +67,7 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
             overflow: 'visible',
             margin: -WEB_FOCUS_RING_OUTER_SPREAD,
             padding: spacing.xl + WEB_FOCUS_RING_OUTER_SPREAD,
+            flexShrink: 1,
           }
         : null),
     },
@@ -60,6 +81,17 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
       color: colors.textMuted,
       lineHeight: 22,
       fontFamily: fontFamily.regular,
+    },
+    confirmDialogScroll: {
+      flexGrow: 0,
+      flexShrink: 1,
+      minHeight: 40,
+      marginHorizontal: -spacing.xs,
+    },
+    confirmDialogScrollContent: {
+      paddingHorizontal: spacing.xs,
+      paddingVertical: spacing.xs,
+      gap: spacing.md,
     },
     confirmDialogActions: {
       flexDirection: 'row',
@@ -108,7 +140,8 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
       ...(Platform.OS === 'web'
         ? {
             marginTop: spacing.sm,
-            marginHorizontal: spacing.sm,
+            marginLeft: spacing.sm,
+            marginRight: spacing.sm,
           }
         : null),
     },
@@ -144,6 +177,14 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     datePickerSheetConfirm: {
       marginTop: spacing.xs,
     },
+    bmiDetailsScroll: {
+      flexGrow: 0,
+      flexShrink: 1,
+      minHeight: 0,
+    },
+    bmiDetailsContent: {
+      gap: spacing.md,
+    },
     datePickerContent: {
       flexGrow: 0,
       flexShrink: 1,
@@ -171,9 +212,59 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
     datePickerCalendarViewport: {
       overflow: 'hidden',
     },
+    // Web calendar header mirrors the react-native-calendars header layout.
+    calendarWebHeader: {
+      paddingHorizontal: 5,
+    },
+    calendarHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      marginTop: 6,
+    },
+    calendarHeaderArrow: {
+      display: 'flex',
+      backgroundColor: 'transparent',
+      borderWidth: 0,
+      padding: 0,
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: radius.md,
+    },
+    calendarHeaderArrowSpacer: {},
+    calendarHeaderTitle: {
+      margin: 10,
+      fontSize: 16,
+      color: colors.text,
+      fontFamily: fontFamily.semibold,
+    },
+    calendarHeaderWeekdays: {
+      marginTop: 7,
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+    },
+    calendarHeaderWeekday: {
+      width: 32,
+      marginTop: 2,
+      marginBottom: 7,
+      textAlign: 'center',
+      fontSize: 12,
+      color: colors.textMuted,
+      fontFamily: fontFamily.medium,
+    },
     dateRangeCalendarDay: {
       alignSelf: 'stretch',
       minHeight: 38,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    datePickerSingleDay: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -321,12 +412,11 @@ export function createOverlayStyles({ colors, scheme }: StyleContext) {
       fontFamily: fontFamily.semibold,
     },
     toastContainer: {
-      position: 'absolute',
-      left: 0,
-      right: 0,
       alignItems: 'center',
       paddingHorizontal: spacing.lg,
-      zIndex: 100,
+      ...(Platform.OS === 'web'
+        ? { paddingVertical: spacing.sm }
+        : { position: 'absolute', left: 0, right: 0, zIndex: 100 }),
     },
     toastCard: {
       width: '100%',

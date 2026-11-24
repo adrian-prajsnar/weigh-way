@@ -36,7 +36,7 @@ function readDemoLocale(): AppLocale | null {
   if (!isDemoMode() || typeof window === 'undefined') {
     return null;
   }
-  return getDemoLocaleFromUrl(window.location.search);
+  return getDemoLocaleFromUrl(window.location.search, window.location.pathname);
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }) {

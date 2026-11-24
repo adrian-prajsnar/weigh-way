@@ -28,6 +28,7 @@ export function EmailField({
     <View style={styles.passwordFieldGroup}>
       <Text style={styles.fieldLabel}>{t('auth.email')}</Text>
       <TextInput
+        accessibilityLabel={t('auth.email')}
         style={[
           styles.input,
           isFocused && styles.inputFocused,

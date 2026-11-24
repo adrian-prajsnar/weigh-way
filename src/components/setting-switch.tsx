@@ -1,76 +1,31 @@
-import { useEffect, useRef } from 'react';
-import { Platform, Pressable, PressableInstance, Switch, SwitchProps } from 'react-native';
+import { type ComponentRef, useEffect, useRef } from 'react';
+import { Platform, Switch, type SwitchProps, View } from 'react-native';
 import { webFocusTarget } from '../theme/web-focus-target';
 
-type SettingSwitchProps = SwitchProps;
-
-function bindWebSwitchKeys(
-  element: PressableInstance | null,
-  onToggle: () => void,
-): (() => void) | undefined {
-  if (Platform.OS !== 'web' || !element) {
-    return undefined;
-  }
-
-  const node = element as unknown as HTMLElement;
-  const onKeyDown = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return;
-    }
-
-    event.preventDefault();
-    onToggle();
-  };
-
-  node.addEventListener('keydown', onKeyDown);
-  return () => node.removeEventListener('keydown', onKeyDown);
-}
-
-/** Profile-style switch with web keyboard toggle (Enter + Space). */
-export function SettingSwitch({
-  value,
-  onValueChange,
-  disabled,
-  ...props
-}: SettingSwitchProps) {
-  const pressableRef = useRef<PressableInstance>(null);
-
-  const toggle = () => {
-    if (disabled || value === undefined || !onValueChange) {
-      return;
-    }
-
-    onValueChange(!value);
-  };
+export function SettingSwitch(props: SwitchProps) {
+  const switchRef = useRef<ComponentRef<typeof Switch>>(null);
 
   useEffect(() => {
-    return bindWebSwitchKeys(pressableRef.current, () => {
-      if (disabled || value === undefined || !onValueChange) {
-        return;
-      }
+    if (Platform.OS !== 'web' || !switchRef.current) return;
 
-      onValueChange(!value);
-    });
-  }, [disabled, value, onValueChange]);
+    // React Native Web forwards the ref to the checkbox, which handles Space itself.
+    const input = switchRef.current as unknown as HTMLInputElement;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      if (!event.repeat) input.click();
+    };
+    input.addEventListener('keydown', onKeyDown);
+    return () => input.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  if (Platform.OS !== 'web') {
+    return <Switch {...props} />;
+  }
 
   return (
-    <Pressable
-      ref={pressableRef}
-      onPress={toggle}
-      disabled={disabled}
-      accessibilityRole="switch"
-      accessibilityState={{ checked: value, disabled }}
-      {...webFocusTarget('switch')}
-    >
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        disabled={disabled}
-        accessible={false}
-        importantForAccessibility="no-hide-descendants"
-        pointerEvents="none"
-        {...props}
-      />
-    </Pressable>
+    <View {...webFocusTarget('switch')}>
+      <Switch {...props} ref={switchRef} />
+    </View>
   );
 }

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ComponentRef, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ComponentRef, ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -25,10 +25,13 @@ import { formatDateLabel, getTodayDate, toDateKey } from '../format';
 import { waitForPaint } from '../wait-for-paint';
 import { useSheetContainerStyle } from '../hooks/use-sheet-container-style';
 import { useAppWindowDimensions } from '../hooks/use-app-window-dimensions';
+import { useWebMonthSwipe } from '../hooks/use-web-month-swipe';
 import { ModalSheetDismissArea } from './modal-sheet-dismiss-area';
+import { toggleButtonA11y } from '../theme/selection-a11y';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { fontFamily, spacing } from '../theme/tokens';
+import { CalendarWebHeader } from './calendar-web-header';
 import { DateRangeCalendarDay } from './date-range-calendar-day';
 import { useDatePickerDraft } from './use-date-picker-draft';
 import {
@@ -57,6 +60,7 @@ type DatePickerSheetProps = {
 );
 
 const YEAR_ROW_HEIGHT = 48;
+const hideCalendarHeader = () => null;
 
 function parseDateKey(dateKey: string): Date {
   const [year, month, day] = dateKey.split('-').map(Number);
@@ -135,6 +139,7 @@ function PickerContent({ children, scrollable }: { children: ReactNode; scrollab
 }
 
 export function DatePickerSheet(props: DatePickerSheetProps) {
+  const titleId = useId();
   const { visible, title, minimumDate, maximumDate, onClose } = props;
   const styles = useAppStyles();
   const colors = useColors();
@@ -145,6 +150,8 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
   });
   const { t, locale } = useTranslation();
   const dateLocale = getDateLocale(locale);
+  const monthButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const yearButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
   const yearListRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const [yearListHeight, setYearListHeight] = useState(240);
   const isRange = props.mode === 'range';
@@ -164,14 +171,15 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
   const [isConfirming, setIsConfirming] = useState(false);
   const [monthDirection, setMonthDirection] = useState<'previous' | 'next'>('next');
   const reducedMotion = useReducedMotion();
+  // Web fades expose low-contrast text and leave outgoing dates available to keyboard focus.
+  const animateCalendarGrid = Platform.OS !== 'web' && !reducedMotion;
 
   useEffect(() => {
     if (!visible) setIsConfirming(false);
   }, [visible]);
 
-  useEffect(() => {
-    configureCalendarLocale(locale);
-  }, [locale]);
+  // Set before render (idempotent) so the first open already uses the app locale.
+  configureCalendarLocale(locale);
 
   const minDate = minimumDate ? toDateKey(minimumDate) : undefined;
   const maxDate = maximumDate ? toDateKey(maximumDate) : undefined;
@@ -356,7 +364,10 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
     );
   };
 
+  const webMonthSwipeHandlers = useWebMonthSwipe(handleMonthNavigation);
+
   const handleMonthSelect = (nextMonth: number) => {
+    if (Platform.OS === 'web') monthButtonRef.current?.focus();
     setMonthDirection(nextMonth < month ? 'previous' : 'next');
     const { day } = parseDateParts(selectedKey);
     setSelectedKey(clampDateKey(year, nextMonth, day, rangeMinDate, rangeMaxDate));
@@ -364,6 +375,7 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
   };
 
   const handleYearSelect = (nextYear: number) => {
+    if (Platform.OS === 'web') yearButtonRef.current?.focus();
     setMonthDirection(nextYear < year ? 'previous' : 'next');
     const { month: currentMonth, day } = parseDateParts(selectedKey);
     setSelectedKey(clampDateKey(nextYear, currentMonth, day, rangeMinDate, rangeMaxDate));
@@ -395,13 +407,15 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={Platform.OS === 'web' ? 'none' : 'slide'}
+      aria-labelledby={titleId}
       onRequestClose={isConfirming ? undefined : onClose}
     >
       <View style={styles.modalSheetBackdrop}>
         <ModalSheetDismissArea
           onPress={isConfirming ? undefined : onClose}
           disabled={isConfirming}
+          pointerOnlyOnWeb
         />
         <View
           style={[sheetContainerStyle, { maxHeight: windowHeight - insets.top }]}
@@ -409,7 +423,9 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
         >
           <PickerContent scrollable={panel !== 'year'}>
             <View style={styles.datePickerSheetHeader}>
-              <Text style={styles.datePickerSheetTitle}>{title ?? t('dateField.selectDate')}</Text>
+              <Text nativeID={titleId} style={styles.datePickerSheetTitle}>
+                {title ?? t('dateField.selectDate')}
+              </Text>
               <Pressable
                 style={({ pressed }) => [
                   styles.iconButton,
@@ -439,10 +455,7 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
                       onPress={() => handleEndpointPress(endpoint)}
                       disabled={endpoint === 'end' && !range.start}
                       accessibilityRole="button"
-                      accessibilityState={{
-                        selected: range.active === endpoint,
-                        disabled: endpoint === 'end' && !range.start,
-                      }}
+                      {...toggleButtonA11y(range.active === endpoint)}
                     >
                       <Text
                         style={[
@@ -480,6 +493,7 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
 
             <View style={styles.datePickerPeriodRow}>
               <Pressable
+                ref={monthButtonRef}
                 style={({ pressed }) => [
                   styles.datePickerPeriodButton,
                   panel === 'month' && styles.datePickerPeriodButtonActive,
@@ -487,7 +501,8 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
                 ]}
                 onPress={() => setPanel((current) => (current === 'month' ? 'day' : 'month'))}
                 accessibilityRole="button"
-                accessibilityLabel={t('dateField.selectMonth')}
+                accessibilityLabel={t('dateField.monthButton', { month: monthLabels[month - 1] })}
+                aria-expanded={panel === 'month'}
               >
                 <Text
                   style={[
@@ -505,6 +520,7 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
               </Pressable>
 
               <Pressable
+                ref={yearButtonRef}
                 style={({ pressed }) => [
                   styles.datePickerPeriodButton,
                   panel === 'year' && styles.datePickerPeriodButtonActive,
@@ -512,7 +528,8 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
                 ]}
                 onPress={() => setPanel((current) => (current === 'year' ? 'day' : 'year'))}
                 accessibilityRole="button"
-                accessibilityLabel={t('dateField.selectYear')}
+                accessibilityLabel={t('dateField.yearButton', { year })}
+                aria-expanded={panel === 'year'}
               >
                 <Text
                   style={[
@@ -548,6 +565,14 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
                         pressed && !disabled && styles.buttonPressed,
                       ]}
                       onPress={() => handleMonthSelect(monthNumber)}
+                      accessibilityRole="button"
+                      // Keep the visible abbreviation first so the spoken name matches it (WCAG 2.5.3).
+                      accessibilityLabel={
+                        monthShortLabels[monthIndex] === monthLabels[monthIndex]
+                          ? monthLabels[monthIndex]
+                          : `${monthShortLabels[monthIndex]} (${monthLabels[monthIndex]})`
+                      }
+                      {...toggleButtonA11y(selected)}
                     >
                       <Text
                         style={[
@@ -584,6 +609,8 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
                         pressed && styles.buttonPressed,
                       ]}
                       onPress={() => handleYearSelect(item)}
+                      accessibilityRole="button"
+                      {...toggleButtonA11y(selected)}
                     >
                       <Text
                         style={[
@@ -600,15 +627,27 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
             ) : null}
 
             {panel === 'day' ? (
-              <View style={styles.datePickerCalendarViewport}>
+              <View style={styles.datePickerCalendarViewport} {...webMonthSwipeHandlers}>
+                {/* Keep the keyboard controls mounted while the grid animates to the new month. */}
+                {Platform.OS === 'web' ? (
+                  <CalendarWebHeader
+                    year={year}
+                    month={month}
+                    firstDay={locale === 'pl' ? 1 : 0}
+                    hideArrows={!isRange}
+                    disableArrowLeft={previousMonthDisabled}
+                    disableArrowRight={nextMonthDisabled}
+                    onNavigate={handleMonthNavigation}
+                  />
+                ) : null}
                 <Animated.View
                   key={`${calendarKey}-${locale}-${colors.surface}`}
                   entering={
-                    reducedMotion
-                      ? undefined
-                      : (monthDirection === 'next' ? FadeInRight : FadeInLeft).duration(220)
+                    animateCalendarGrid
+                      ? (monthDirection === 'next' ? FadeInRight : FadeInLeft).duration(220)
+                      : undefined
                   }
-                  exiting={reducedMotion ? undefined : FadeOut.duration(120)}
+                  exiting={animateCalendarGrid ? FadeOut.duration(120) : undefined}
                 >
                   <Calendar
                     current={calendarKey}
@@ -616,10 +655,10 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
                     maxDate={rangeMaxDate}
                     onDayPress={handleDayPress}
                     markingType={isRange ? 'period' : undefined}
-                    dayComponent={isRange ? DateRangeCalendarDay : undefined}
+                    dayComponent={isRange || Platform.OS === 'web' ? DateRangeCalendarDay : undefined}
                     markedDates={isRange ? rangeMarkedDates : markedDates}
                     hideArrows={!isRange}
-                    enableSwipeMonths
+                    enableSwipeMonths={Platform.OS !== 'web'}
                     disableArrowLeft={previousMonthDisabled}
                     disableArrowRight={nextMonthDisabled}
                     onPressArrowLeft={() => handleMonthNavigation(-1)}
@@ -628,6 +667,7 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
                     hideExtraDays
                     firstDay={locale === 'pl' ? 1 : 0}
                     theme={calendarTheme}
+                    customHeader={Platform.OS === 'web' ? hideCalendarHeader : undefined}
                   />
                 </Animated.View>
               </View>
@@ -649,7 +689,7 @@ export function DatePickerSheet(props: DatePickerSheetProps) {
               disabled={cannotConfirm}
               accessibilityRole="button"
               accessibilityLabel={t(isRange ? 'dateRange.apply' : 'common.select')}
-              accessibilityState={{ busy: isConfirming, disabled: cannotConfirm }}
+              aria-busy={isConfirming}
             >
               {isConfirming ? (
                 <ActivityIndicator color={colors.onAccent} />

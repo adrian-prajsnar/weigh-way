@@ -4,6 +4,8 @@ const pl = {
     tagline: 'Twoja waga, Twój progres.',
   },
   common: {
+    confirmationPhrase: 'Fraza potwierdzająca',
+    confirmationDetails: 'Szczegóły potwierdzenia',
     cancel: 'Anuluj',
     delete: 'Usuń',
     retry: 'Spróbuj ponownie',
@@ -321,6 +323,11 @@ const pl = {
     copyright: '© %{year} Adrian Prajsnar DEV',
   },
   chart: {
+    trendSummary: 'Waga przy pierwszym pomiarze: %{first}. Waga przy ostatnim pomiarze: %{last}.',
+    singleWeighIn: 'Jeden pomiar z %{date}: %{weight}.',
+    showData: 'Pokaż pomiary z wykresu',
+    hideData: 'Ukryj pomiary z wykresu',
+    dataPoint: '%{date}: %{weight}',
     noDataTitle: 'Brak pomiarów w tym zakresie',
     noDataMessage: 'Zapisz wagę, aby zobaczyć trend.',
     rangeLabelMetric: '%{min} – %{max} kg',
@@ -346,8 +353,10 @@ const pl = {
   },
   dateField: {
     selectDate: 'Wybierz datę',
-    selectMonth: 'Wybierz miesiąc',
-    selectYear: 'Wybierz rok',
+    monthButton: '%{month}, wybierz miesiąc',
+    yearButton: '%{year}, wybierz rok',
+    previousMonth: 'Poprzedni miesiąc',
+    nextMonth: 'Następny miesiąc',
     decreaseDay: 'Poprzedni dzień',
     increaseDay: 'Następny dzień',
   },
@@ -364,6 +373,7 @@ const pl = {
   },
   errors: {
     couldNotLoadData: 'Nie udało się załadować danych',
+    retryFailed: 'Nadal nie można załadować danych.',
     dataTooLarge:
       'To konto ma więcej historii, niż aplikacja może teraz załadować. Skontaktuj się z pomocą, jeśli problem się powtarza.',
     couldNotLoadEntries: 'Nie udało się załadować pomiarów.',
@@ -404,6 +414,7 @@ const pl = {
     unclassifiedNeedBirthDate: 'Dodaj datę urodzenia, aby używać kategorii BMI zależnych od wieku.',
     periodAverageNote: 'Kategoria na podstawie wieku na końcu tego okresu.',
     detailsTitle: 'Szczegóły BMI',
+    scrollArea: 'Pomiary i interpretacja',
     periodAverageTitle: 'Średnie BMI',
     periodMinTitle: 'Najniższe BMI',
     periodMaxTitle: 'Najwyższe BMI',

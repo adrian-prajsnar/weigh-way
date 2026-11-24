@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { SlideInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +31,7 @@ export function WeightEntryModal({
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const titleId = useId();
   const initialDate = useMemo(() => (date ? fromDateKey(date) : undefined), [date]);
 
   if (!visible || !date) {
@@ -38,7 +39,13 @@ export function WeightEntryModal({
   }
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      aria-labelledby={titleId}
+      onRequestClose={onClose}
+    >
       <Animated.View
         entering={SlideInUp.duration(300)}
         style={[styles.modalSheetBackdrop, styles.weightEntryModalBackdrop]}
@@ -51,11 +58,14 @@ export function WeightEntryModal({
           ]}
         >
           <View style={styles.datePickerSheetHeader}>
-            <Text style={styles.datePickerSheetTitle}>{t('entryForm.editTitle')}</Text>
+            <Text nativeID={titleId} style={styles.datePickerSheetTitle}>
+              {t('entryForm.editTitle')}
+            </Text>
             <Pressable
               style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
               onPress={onClose}
               hitSlop={8}
+              accessibilityRole="button"
               accessibilityLabel={t('common.cancel')}
             >
               <Ionicons name="close" size={20} color={colors.textMuted} />
@@ -77,7 +87,7 @@ export function WeightEntryModal({
             />
           </ScrollView>
         </View>
-        <ModalSheetDismissArea onPress={onClose} />
+        <ModalSheetDismissArea onPress={onClose} pointerOnlyOnWeb />
       </Animated.View>
     </Modal>
   );

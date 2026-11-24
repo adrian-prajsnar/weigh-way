@@ -1,12 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { useEffect, useState, type ComponentRef, type Ref } from 'react';
+import { Platform, Pressable, Text, View, type GestureResponderEvent } from 'react-native';
 import { formatDateLabel, addDays, getTodayDate, toDateKey } from '../format';
 import { useTranslation } from '../i18n/language-context';
 import type { TranslationKey } from '../i18n/translation-keys';
 import { useAppStyles } from '../theme/styles';
 import { webFocusTarget } from '../theme/web-focus-target';
-import { useWebStepperPress } from '../theme/use-web-stepper-press';
 import { useColors } from '../theme/theme-context';
 import { DatePickerSheet } from './date-picker-sheet';
 
@@ -22,7 +21,8 @@ type DateFieldProps = {
   showDayStepper?: boolean;
   invalid?: boolean;
   clearLabelKey?: TranslationKey;
-  onClearPress?: () => void;
+  onClearPress?: (event: GestureResponderEvent) => void;
+  triggerRef?: Ref<ComponentRef<typeof Pressable>>;
 };
 
 export function DateField({
@@ -38,6 +38,7 @@ export function DateField({
   invalid = false,
   clearLabelKey = 'common.clear',
   onClearPress,
+  triggerRef,
 }: DateFieldProps) {
   const styles = useAppStyles();
   const colors = useColors();
@@ -71,9 +72,6 @@ export function DateField({
     onChange(next);
   };
 
-  const decreaseDayStepper = useWebStepperPress(() => adjustDay(-1));
-  const increaseDayStepper = useWebStepperPress(() => adjustDay(1));
-
   const dateLabel = value
     ? formatDateLabel(toDateKey(value))
     : optional
@@ -86,6 +84,7 @@ export function DateField({
     </View>
   ) : (
     <Pressable
+      ref={triggerRef}
       style={({ pressed }) => [
         styles.dateButton,
         invalid && styles.dateButtonInvalid,
@@ -93,6 +92,9 @@ export function DateField({
         pressed && styles.buttonPressed,
       ]}
       onPress={() => setShowPicker(true)}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${dateLabel}`}
+      aria-haspopup="dialog"
     >
       <View
         style={[
@@ -110,13 +112,70 @@ export function DateField({
     </Pressable>
   );
 
+  const renderDayStepper = (direction: -1 | 1) => {
+    const enabled = direction === -1 ? canDecreaseDay : canIncreaseDay;
+    const label = t(direction === -1 ? 'dateField.decreaseDay' : 'dateField.increaseDay');
+    const icon = (
+      <Ionicons name={direction === -1 ? 'remove' : 'add'} size={22} color={colors.textMuted} />
+    );
+
+    if (Platform.OS === 'web') {
+      return (
+        <button
+          type="button"
+          style={{
+            ...styles.stepperButton,
+            display: 'flex',
+            borderStyle: 'solid',
+            padding: 0,
+            ...(!enabled && styles.buttonDisabled),
+          }}
+          data-ww-stepper-button="true"
+          data-ww-press-feedback="true"
+          aria-label={label}
+          aria-disabled={!enabled}
+          onPointerDown={(event) => {
+            if (document.activeElement?.matches('[data-ww-field-input="true"]')) {
+              event.preventDefault();
+            }
+          }}
+          onClick={(event) => {
+            if (!enabled) return;
+            if (event.detail > 0 && !document.activeElement?.matches('[data-ww-field-input="true"]')) {
+              event.currentTarget.focus({ preventScroll: true });
+            }
+            adjustDay(direction);
+          }}
+        >
+          {icon}
+        </button>
+      );
+    }
+
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          styles.stepperButton,
+          !enabled && styles.buttonDisabled,
+          pressed && enabled && styles.buttonPressed,
+        ]}
+        disabled={!enabled}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        onPress={() => adjustDay(direction)}
+      >
+        {icon}
+      </Pressable>
+    );
+  };
+
   return (
     <View style={styles.rangeRow}>
       <View style={styles.filterFieldHeader}>
         <Text style={styles.fieldLabel}>{label}</Text>
         {optional && value && !readOnly ? (
           <Pressable
-            onPress={() => (onClearPress ? onClearPress() : onChange(null))}
+            onPress={(event) => (onClearPress ? onClearPress(event) : onChange(null))}
             hitSlop={8}
             accessibilityRole="button"
             accessibilityLabel={t(clearLabelKey)}
@@ -128,35 +187,9 @@ export function DateField({
       </View>
       {showDayStepper && value && !readOnly ? (
         <View style={styles.weightEntryRow}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.stepperButton,
-              !canDecreaseDay && styles.buttonDisabled,
-              pressed && canDecreaseDay && styles.buttonPressed,
-            ]}
-            disabled={!canDecreaseDay}
-            accessibilityRole="button"
-            accessibilityLabel={t('dateField.decreaseDay')}
-            {...decreaseDayStepper}
-            {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
-          >
-            <Ionicons name="remove" size={22} color={colors.textMuted} />
-          </Pressable>
+          {renderDayStepper(-1)}
           {dateButton}
-          <Pressable
-            style={({ pressed }) => [
-              styles.stepperButton,
-              !canIncreaseDay && styles.buttonDisabled,
-              pressed && canIncreaseDay && styles.buttonPressed,
-            ]}
-            disabled={!canIncreaseDay}
-            accessibilityRole="button"
-            accessibilityLabel={t('dateField.increaseDay')}
-            {...increaseDayStepper}
-            {...(Platform.OS === 'web' ? { dataSet: { wwStepperButton: 'true' } } : {})}
-          >
-            <Ionicons name="add" size={22} color={colors.textMuted} />
-          </Pressable>
+          {renderDayStepper(1)}
         </View>
       ) : (
         dateButton

@@ -14,6 +14,7 @@ describe('tab-bar-layout', () => {
   it('reserves viewport space above the floating tab bar', () => {
     expect(getTabBarViewportInset(0)).toBe(88);
     expect(getTabBarViewportInset(34)).toBe(122);
+    expect(getTabBarViewportInset(0, 86)).toBe(102);
   });
 
   it('pads scroll content when the tab bar inset is reserved in padding', () => {

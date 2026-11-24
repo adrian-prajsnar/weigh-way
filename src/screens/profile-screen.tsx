@@ -1,7 +1,17 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { useIsFocused } from '@react-navigation/native';
 import Constants from 'expo-constants';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, Pressable, RefreshControl, Text, View } from 'react-native';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  RefreshControl,
+  Text,
+  View,
+  type GestureResponderEvent,
+} from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
 import { ContentFrame } from '../components/content-frame';
@@ -21,7 +31,7 @@ import { useTabScreenScroll } from '../hooks/use-tab-screen-scroll';
 import { useScrollHeader } from '../hooks/use-scroll-header';
 import { useTranslation } from '../i18n/language-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ProfileStackParamList } from '../navigation/types';
+import { ProfileStackParamList, RootTabParamList } from '../navigation/types';
 import { getDateLocale } from '../i18n/resolve-locale';
 import { useUnits } from '../context/unit-context';
 import { UnitPreference } from '../storage/unit-preference';
@@ -96,6 +106,24 @@ export function ProfileScreen({
   navigation,
   route,
 }: NativeStackScreenProps<ProfileStackParamList, 'ProfileMain'>) {
+  const isFocused = useIsFocused();
+  const titleRef = useRef<ComponentRef<typeof View>>(null);
+  const heightHistoryButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const restoreHeightHistoryFocus = useRef(false);
+  useLayoutEffect(() => {
+    if (isFocused && restoreHeightHistoryFocus.current) {
+      restoreHeightHistoryFocus.current = false;
+      heightHistoryButtonRef.current?.focus();
+    }
+  }, [isFocused]);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const tabs = navigation.getParent<BottomTabNavigationProp<RootTabParamList>>();
+    return tabs?.addListener('tabPress', (event) => {
+      const profileTab = tabs.getState().routes.find((tab) => tab.name === 'Profile');
+      if (event.target === profileTab?.key) restoreHeightHistoryFocus.current = false;
+    });
+  }, [navigation]);
   const styles = useAppStyles();
   const colors = useColors();
   const {
@@ -275,6 +303,17 @@ export function ProfileScreen({
   const demoMode = isDemoMode();
   const focusSection = route.params?.focusSection;
   const [shouldOpenBirthDatePicker, setShouldOpenBirthDatePicker] = useState(false);
+  const birthDateTriggerRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const birthDateDeleteOpener = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const opener = birthDateDeleteOpener.current;
+    if (!opener) return;
+    if (!isFocused || birthDate === null) birthDateDeleteOpener.current = null;
+    if (isFocused && birthDate === null) {
+      const active = document.activeElement;
+      if (active === document.body || active === opener) birthDateTriggerRef.current?.focus();
+    }
+  }, [birthDate, isFocused]);
   const minimumBirthDate = useMemo(() => {
     const date = getTodayDate();
     date.setFullYear(date.getFullYear() - 120);
@@ -312,7 +351,9 @@ export function ProfileScreen({
     })();
   };
 
-  const handleBirthDateDelete = () => {
+  const handleBirthDateDelete = (event: GestureResponderEvent) => {
+    const target = event.currentTarget;
+    const opener = Platform.OS === 'web' && target instanceof HTMLElement ? target : null;
     void confirm({
       title: t('profile.deleteBirthDate'),
       message: t('profile.deleteBirthDateConfirm'),
@@ -323,10 +364,12 @@ export function ProfileScreen({
         return;
       }
       void (async () => {
+        birthDateDeleteOpener.current = opener;
         try {
           await saveBirthDateEntry(null);
           showSuccess(t('profile.birthDateRemoved'));
         } catch (saveError) {
+          birthDateDeleteOpener.current = null;
           const message = saveError instanceof Error ? saveError.message : t('profile.saveFailed');
           showError(message);
         }
@@ -351,6 +394,7 @@ export function ProfileScreen({
       <PreferenceTransition style={{ flex: 1 }}>
         <ContentFrame>
           <ScreenHeader
+            titleRef={titleRef}
             title={t('profile.title')}
             subtitle={user?.email ?? t('profile.subtitleFallback')}
             scrollY={scrollY}
@@ -366,9 +410,13 @@ export function ProfileScreen({
               )
             }
           >
-            {error && !isLoading ? (
-              <ErrorCard message={error} onRetry={() => void refreshProfile()} />
-            ) : null}
+            <ErrorCard
+              message={error}
+              isLoading={isLoading}
+              isRefreshing={isRefreshing}
+              recoveryFocusRef={titleRef}
+              onRetry={refreshProfile}
+            />
 
             <AppCard title={t('profile.account')} isBusy={isRefreshing}>
               {isLoading ? (
@@ -402,13 +450,18 @@ export function ProfileScreen({
                   birthDate={birthDate}
                   onBirthDateChange={handleBirthDateChange}
                   onBirthDateDelete={handleBirthDateDelete}
+                  birthDateTriggerRef={birthDateTriggerRef}
                   birthDateAutoOpen={shouldOpenBirthDatePicker}
                   minimumBirthDate={minimumBirthDate}
                   maximumBirthDate={getTodayDate()}
                   sex={sex}
                   onSexChange={handleSexChange}
                   heightEntries={heightEntries}
-                  onOpenHeightHistory={() => navigation.navigate('HeightHistory')}
+                  heightHistoryButtonRef={heightHistoryButtonRef}
+                  onOpenHeightHistory={() => {
+                    restoreHeightHistoryFocus.current = Platform.OS === 'web';
+                    navigation.navigate('HeightHistory');
+                  }}
                 />
               )}
             </AppCard>
@@ -416,6 +469,7 @@ export function ProfileScreen({
             <AppCard title={t('profile.appearance')} delay={120}>
               <Text style={styles.settingHint}>{t('profile.languageHint')}</Text>
               <SegmentedControl
+                groupLabel={t('profile.languageHint')}
                 options={languageOptions}
                 value={languagePreference}
                 onChange={(next) => void setLanguagePreference(next)}
@@ -425,6 +479,7 @@ export function ProfileScreen({
 
               <Text style={styles.settingHint}>{t('profile.themeHint')}</Text>
               <SegmentedControl
+                groupLabel={t('profile.themeHint')}
                 options={themeOptions}
                 value={preference}
                 onChange={(next) => void setPreference(next)}
@@ -434,6 +489,7 @@ export function ProfileScreen({
 
               <Text style={styles.settingHint}>{t('profile.unitsHint')}</Text>
               <SegmentedControl
+                groupLabel={t('profile.unitsHint')}
                 options={unitOptions}
                 value={unitPreference}
                 onChange={(next) => void setUnitPreference(next)}
@@ -452,6 +508,7 @@ export function ProfileScreen({
                   ) : null}
                 </View>
                 <SettingSwitch
+                  accessibilityLabel={t('profile.showBmi')}
                   value={showBmi}
                   onValueChange={(value) => {
                     void setShowBmi(value);
@@ -465,6 +522,7 @@ export function ProfileScreen({
             <AppCard title={t('profile.exportJournal')} delay={180}>
               <Text style={styles.settingLabel}>{t('profile.exportFormat')}</Text>
               <SegmentedControl
+                groupLabel={t('profile.exportFormat')}
                 options={exportFormatOptions}
                 value={exportFormat}
                 onChange={setExportFormat}
@@ -479,7 +537,10 @@ export function ProfileScreen({
                   pressed && !exportDisabled && styles.buttonPressed,
                 ]}
                 onPress={handleExportJournal}
-                disabled={exportDisabled}
+                accessibilityRole="button"
+                accessibilityLabel={t('profile.exportJournal')}
+                aria-busy={isExporting}
+                disabled={exportDisabled && !(Platform.OS === 'web' && isExporting)}
               >
                 {isExporting ? (
                   <ActivityIndicator color={colors.accent} />
@@ -498,6 +559,7 @@ export function ProfileScreen({
                   pressed && !demoMode && styles.buttonPressed,
                 ]}
                 onPress={handleSignOut}
+                accessibilityRole="button"
                 disabled={demoMode}
               >
                 <Text style={styles.secondaryButtonText}>{t('profile.signOut')}</Text>
@@ -509,6 +571,7 @@ export function ProfileScreen({
                   pressed && !demoMode && styles.buttonPressed,
                 ]}
                 onPress={handleDeleteAccount}
+                accessibilityRole="button"
                 disabled={demoMode}
               >
                 <Text style={styles.dangerButtonText}>{t('profile.deleteAccount')}</Text>

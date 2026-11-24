@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { LayoutChangeEvent, Pressable, Text, View } from 'react-native';
+import { LayoutChangeEvent, Platform, Pressable, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useAppStyles } from '../theme/styles';
+import { toggleButtonA11y } from '../theme/selection-a11y';
 import { webFocusTarget } from '../theme/web-focus-target';
 import { shouldRevertSelection } from './segmented-selection';
 
 const TRACK_PADDING = 4;
+const MIN_THREE_OPTION_TRACK_WIDTH = 260;
 
 export type SegmentedOption<T extends string> = {
   value: T;
@@ -13,12 +15,14 @@ export type SegmentedOption<T extends string> = {
 };
 
 type SegmentedControlProps<T extends string> = {
+  groupLabel?: string;
   options: SegmentedOption<T>[];
   value: T;
   onChange: (value: T) => void | Promise<boolean | void>;
 };
 
 export function SegmentedControl<T extends string>({
+  groupLabel,
   options,
   value,
   onChange,
@@ -53,20 +57,35 @@ export function SegmentedControl<T extends string>({
     transform: [{ translateX: withTiming(TRACK_PADDING + activeIndex * itemWidth, { duration: 220 }) }],
     opacity: itemWidth > 0 ? 1 : 0,
   }));
+  const stackOptions =
+    Platform.OS === 'web' &&
+    options.length > 2 &&
+    trackWidth > 0 &&
+    trackWidth < MIN_THREE_OPTION_TRACK_WIDTH;
 
   const handleLayout = (event: LayoutChangeEvent) => {
     setTrackWidth(event.nativeEvent.layout.width);
   };
 
   return (
-    <View style={styles.segmentedTrack} onLayout={handleLayout}>
-      <Animated.View style={[styles.segmentedIndicator, indicatorStyle]} />
+    <View
+      style={[styles.segmentedTrack, stackOptions && styles.segmentedTrackStacked]}
+      onLayout={handleLayout}
+      {...(Platform.OS === 'web' && groupLabel
+        ? { role: 'group' as const, 'aria-label': groupLabel }
+        : {})}
+    >
+      {!stackOptions ? <Animated.View style={[styles.segmentedIndicator, indicatorStyle]} /> : null}
       {options.map((option) => {
         const isActive = option.value === selected;
         return (
           <Pressable
             key={option.value}
-            style={styles.segmentedItem}
+            style={[
+              styles.segmentedItem,
+              stackOptions && styles.segmentedItemStacked,
+              stackOptions && isActive && styles.segmentedItemStackedActive,
+            ]}
             onPress={() => {
               if (option.value === selected) return;
               const currentChangeId = ++changeId.current;
@@ -85,13 +104,10 @@ export function SegmentedControl<T extends string>({
               }
             }}
             accessibilityRole="button"
-            accessibilityState={{ selected: isActive }}
+            {...toggleButtonA11y(isActive)}
             {...webFocusTarget('segmented-item')}
           >
-            <Text
-              style={[styles.segmentedLabel, isActive && styles.segmentedLabelActive]}
-              numberOfLines={1}
-            >
+            <Text style={[styles.segmentedLabel, isActive && styles.segmentedLabelActive]}>
               {option.label}
             </Text>
           </Pressable>

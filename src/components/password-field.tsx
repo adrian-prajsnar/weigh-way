@@ -49,6 +49,7 @@ export function PasswordField({
         {...(Platform.OS === 'web' ? { dataSet: { wwFieldGroup: 'true' } } : {})}
       >
         <TextInput
+          accessibilityLabel={label}
           style={styles.passwordInput}
           {...(Platform.OS === 'web' ? { dataSet: { wwFieldInput: 'true' } } : {})}
           value={value}

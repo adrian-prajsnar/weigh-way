@@ -1,13 +1,24 @@
 import {
   createContext,
+  type ComponentRef,
   ReactNode,
   useCallback,
   useContext,
   useEffect,
+  useId,
   useRef,
   useState,
 } from 'react';
-import { Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { getConfirmDialogPressableA11y } from './confirm-dialog-a11y';
 import {
   focusFirstConfirmDialogControl,
@@ -37,23 +48,48 @@ type PendingConfirm = ConfirmOptions & { id: number };
 
 const ConfirmContext = createContext<ConfirmContextValue | null>(null);
 
+function ConfirmDialogBody({ children }: { children: ReactNode }) {
+  const styles = useAppStyles();
+  const { t } = useTranslation();
+  const [viewportHeight, setViewportHeight] = useState(0);
+  const [contentHeight, setContentHeight] = useState(0);
+  const overflows = contentHeight > viewportHeight + 1;
+  // Keep the region role stable: React Native Web changes the DOM tag when it changes.
+  return (
+    <ScrollView
+      style={styles.confirmDialogScroll}
+      contentContainerStyle={styles.confirmDialogScrollContent}
+      onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+      onContentSizeChange={(_width, height) => setContentHeight(height)}
+      tabIndex={overflows ? 0 : -1}
+      role="region"
+      aria-label={t('common.confirmationDetails')}
+    >
+      {children}
+    </ScrollView>
+  );
+}
+
 export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const titleId = useId();
   const styles = useAppStyles();
   const colors = useColors();
   const { t } = useTranslation();
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [webModalShown, setWebModalShown] = useState(false);
   const [phraseInput, setPhraseInput] = useState('');
   const [secondaryActionsEnabled, setSecondaryActionsEnabled] = useState(false);
   const resolverRef = useRef<((value: boolean) => void) | null>(null);
   const closingResultRef = useRef<boolean | null>(null);
   const idRef = useRef(0);
-  const dialogFrameRef = useRef(null);
+  const [dialogFrame, setDialogFrame] = useState<ComponentRef<typeof View> | null>(null);
 
   const finishClose = useCallback((result: boolean) => {
     closingResultRef.current = null;
     setPending(null);
     setModalVisible(false);
+    setWebModalShown(false);
     resolverRef.current?.(result);
     resolverRef.current = null;
   }, []);
@@ -75,14 +111,14 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const frame = dialogFrameRef.current as unknown as HTMLElement | null;
+    const frame = dialogFrame as unknown as HTMLElement | null;
     if (!frame) {
       return;
     }
 
-    const focusTimer = requestAnimationFrame(() => {
-      focusFirstConfirmDialogControl(frame);
-    });
+    const focusTimer = webModalShown
+      ? requestAnimationFrame(() => focusFirstConfirmDialogControl(frame))
+      : null;
 
     const onKeyDown = (event: KeyboardEvent) => {
       handleConfirmDialogTabKey(frame, event, document.activeElement);
@@ -90,10 +126,10 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
     const unsubscribeKeydown = subscribeConfirmDialogKeydown(onKeyDown);
     return () => {
-      cancelAnimationFrame(focusTimer);
+      if (focusTimer !== null) cancelAnimationFrame(focusTimer);
       unsubscribeKeydown();
     };
-  }, [pending?.id, pending]);
+  }, [dialogFrame, pending, webModalShown]);
 
   const close = useCallback(
     (result: boolean) => {
@@ -146,6 +182,28 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   const confirmLabel = pending?.confirmLabel ?? t('common.confirm');
   const phraseRequired = Boolean(pending?.confirmationPhrase);
   const phraseMatches = !phraseRequired || phraseInput === pending?.confirmationPhrase;
+  const dialogBody = pending && (
+    <>
+      <Text style={styles.confirmDialogMessage}>{pending.message}</Text>
+      {pending.confirmationPhrase ? (
+        <View style={styles.passwordFieldGroup}>
+          {pending.confirmationPhraseHint ? (
+            <Text style={styles.fieldLabel}>{pending.confirmationPhraseHint}</Text>
+          ) : null}
+          <TextInput
+            accessibilityLabel={pending.confirmationPhraseHint ?? t('common.confirmationPhrase')}
+            style={styles.input}
+            value={phraseInput}
+            onChangeText={setPhraseInput}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            placeholder={pending.confirmationPhrase}
+            placeholderTextColor={colors.textSubtle}
+          />
+        </View>
+      ) : null}
+    </>
+  );
 
   return (
     <ConfirmContext.Provider value={{ confirm, isConfirming: pending !== null }}>
@@ -155,9 +213,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           <Modal
             visible={modalVisible}
             transparent
-            animationType="fade"
+            animationType={Platform.OS === 'web' ? 'none' : 'fade'}
+            aria-labelledby={titleId}
             statusBarTranslucent
             onRequestClose={() => close(false)}
+            onShow={Platform.OS === 'web' ? () => setWebModalShown(true) : undefined}
             onDismiss={handleModalDismiss}
           >
             <View
@@ -180,29 +240,19 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
                   : {})}
               />
               <View
-                ref={dialogFrameRef}
+                ref={Platform.OS === 'web' ? setDialogFrame : undefined}
                 style={styles.confirmDialogFrame}
                 {...(Platform.OS === 'web' ? { dataSet: { wwConfirmDialog: 'true' } } : {})}
               >
                 <View style={styles.confirmDialogCard}>
-                  <Text style={styles.confirmDialogTitle}>{pending.title}</Text>
-                  <Text style={styles.confirmDialogMessage}>{pending.message}</Text>
-                  {pending.confirmationPhrase ? (
-                    <View style={styles.passwordFieldGroup}>
-                      {pending.confirmationPhraseHint ? (
-                        <Text style={styles.fieldLabel}>{pending.confirmationPhraseHint}</Text>
-                      ) : null}
-                      <TextInput
-                        style={styles.input}
-                        value={phraseInput}
-                        onChangeText={setPhraseInput}
-                        autoCapitalize="characters"
-                        autoCorrect={false}
-                        placeholder={pending.confirmationPhrase}
-                        placeholderTextColor={colors.textSubtle}
-                      />
-                    </View>
-                  ) : null}
+                  <Text nativeID={titleId} style={styles.confirmDialogTitle}>
+                    {pending.title}
+                  </Text>
+                  {Platform.OS === 'web' ? (
+                    <ConfirmDialogBody key={pending.id}>{dialogBody}</ConfirmDialogBody>
+                  ) : (
+                    dialogBody
+                  )}
                   <View style={styles.confirmDialogActions}>
                     <Pressable
                       {...getConfirmDialogPressableA11y(cancelLabel)}

@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { memo, useMemo } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { memo, useMemo, useRef, type ComponentRef, type RefObject } from 'react';
+import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useSharedUserProfile } from '../context/user-profile-context';
 import { formatDateLabel, formatMonthLabel } from '../format';
+import { useRecordDeletionFocus } from '../hooks/use-record-deletion-focus';
 import { useTranslation } from '../i18n/language-context';
 import { groupEntriesByMonth } from '../stats';
 import { WeightEntry } from '../types';
@@ -15,7 +16,8 @@ import { WeightWithBmi } from './weight-with-bmi';
 type HistoryListProps = {
   entries: WeightEntry[];
   onEdit?: (date: string) => void;
-  onDelete?: (date: string) => void;
+  onDelete?: (date: string) => Promise<void>;
+  deleteFocusFallback: RefObject<ComponentRef<typeof Pressable> | null>;
   deletingDate?: string | null;
   emptyMessage?: string;
   grouped?: boolean;
@@ -25,6 +27,7 @@ export const HistoryList = memo(function HistoryList({
   entries,
   onEdit,
   onDelete,
+  deleteFocusFallback,
   deletingDate = null,
   emptyMessage,
   grouped = false,
@@ -39,6 +42,14 @@ export const HistoryList = memo(function HistoryList({
   const groups = useMemo(
     () => (grouped ? groupEntriesByMonth(entries) : [{ monthKey: 'all', entries }]),
     [entries, grouped],
+  );
+  const dates = useMemo(() => groups.flatMap((group) => group.entries.map(({ date }) => date)), [groups]);
+  const editButtons = useRef(new Map<string, ComponentRef<typeof Pressable>>());
+  const { deleteRecord, canEdit } = useRecordDeletionFocus(
+    dates,
+    deletingDate,
+    editButtons,
+    deleteFocusFallback,
   );
 
   if (entries.length === 0) {
@@ -69,8 +80,12 @@ export const HistoryList = memo(function HistoryList({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {onEdit ? (
             <Pressable
+              ref={(button) => {
+                if (button) editButtons.current.set(item.date, button);
+                else editButtons.current.delete(item.date);
+              }}
               onPress={() => onEdit(item.date)}
-              disabled={deletingDate !== null}
+              disabled={!canEdit}
               style={({ pressed }) => [
                 styles.historyDeleteButton,
                 pressed && styles.buttonPressed,
@@ -84,8 +99,11 @@ export const HistoryList = memo(function HistoryList({
           ) : null}
           {onDelete ? (
             <Pressable
-              onPress={() => onDelete(item.date)}
-              disabled={deletingDate !== null}
+              onPress={(event) => {
+                if (deletingDate === null) void deleteRecord(event.currentTarget, item.date, onDelete);
+              }}
+              disabled={deletingDate !== null && !(Platform.OS === 'web' && deletingDate === item.date)}
+              aria-busy={deletingDate === item.date}
               style={({ pressed }) => [
                 styles.historyDeleteButton,
                 pressed && styles.iconButtonDanger,

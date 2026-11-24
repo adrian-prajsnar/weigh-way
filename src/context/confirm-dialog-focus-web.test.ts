@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   handleConfirmDialogTabKey,
+  focusFirstConfirmDialogControl,
   listConfirmDialogFocusables,
   subscribeConfirmDialogKeydown,
 } from './confirm-dialog-focus-web';
@@ -48,6 +49,23 @@ describe('confirm-dialog-focus-web', () => {
     const backward = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true });
     handleConfirmDialogTabKey(root, backward, replace);
     expect(document.activeElement).toBe(cancel);
+  });
+
+  it('includes overflowing details in the tab cycle while opening on Cancel', () => {
+    const root = mountDialog();
+    const details = document.createElement('div');
+    details.setAttribute('role', 'region');
+    root.prepend(details);
+    details.tabIndex = -1;
+    expect(listConfirmDialogFocusables(root)).not.toContain(details);
+
+    details.tabIndex = 0;
+    focusFirstConfirmDialogControl(root);
+    expect(document.activeElement?.textContent).toBe('Cancel');
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true });
+    handleConfirmDialogTabKey(root, event, document.activeElement);
+    expect(document.activeElement).toBe(details);
   });
 
   it('wraps Shift+Tab from outside the dialog onto the last control', () => {

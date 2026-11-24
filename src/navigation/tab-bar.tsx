@@ -6,6 +6,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppWindowDimensions } from '../hooks/use-app-window-dimensions';
 import { getContentFrameWidth } from '../hooks/use-content-frame-width';
+import { currentPageA11y } from '../theme/selection-a11y';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
 import { spacing } from '../theme/tokens';
@@ -28,7 +29,9 @@ type TabLayout = {
   width: number;
 };
 
-export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export function AppTabBar({ state, descriptors, navigation, onHeightChange }: BottomTabBarProps & {
+  onHeightChange?: (height: number) => void;
+}) {
   const styles = useAppStyles();
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -79,7 +82,10 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
         left: tabBarLeft,
       }}
     >
-      <Animated.View style={[styles.tabBar, { position: 'relative', width: '100%' }]}>
+      <Animated.View
+        style={[styles.tabBar, { position: 'relative', width: '100%' }]}
+        onLayout={onHeightChange && ((event) => onHeightChange(event.nativeEvent.layout.height))}
+      >
       <Animated.View style={[styles.tabBarIndicator, indicatorStyle]} />
       {state.routes.map((route, index) => {
         const { options } = descriptors[route.key];
@@ -112,7 +118,7 @@ export function AppTabBar({ state, descriptors, navigation }: BottomTabBarProps)
               navigation.emit({ type: 'tabLongPress', target: route.key })
             }
             accessibilityRole="button"
-            accessibilityState={{ selected: isFocused }}
+            {...currentPageA11y(isFocused)}
             accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
           >
             <Ionicons

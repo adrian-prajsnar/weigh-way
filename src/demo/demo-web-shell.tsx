@@ -1,5 +1,6 @@
 import { ReactNode, useEffect } from 'react';
 import { Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useLanguage } from '../i18n/language-context';
 import { pxToRem } from '../theme/css-rem';
 import { DemoViewportProvider } from './demo-viewport-context';
 import { DEMO_PHONE_CORNER_RADIUS, getDemoFrameSize, shouldUseDemoPhoneFrame } from './demo-viewport';
@@ -72,40 +73,32 @@ function useDemoWebDocumentStyles(active: boolean, embedded: boolean) {
 export function DemoWebShell({ children }: { children: ReactNode }) {
   const demoWeb = Platform.OS === 'web' && isDemoMode();
   const embedded = demoWeb && isDemoEmbedded();
+  const { locale } = useLanguage();
   const window = useWindowDimensions();
   useDemoWebDocumentStyles(demoWeb, embedded);
+
+  useEffect(() => {
+    if (!demoWeb) return;
+    document.documentElement.lang = locale;
+  }, [demoWeb, locale]);
 
   if (!demoWeb) {
     return <>{children}</>;
   }
 
-  if (embedded) {
-    return (
-      <View style={styles.embeddedRoot}>
-        <DemoViewportProvider width={window.width} height={window.height}>
-          {children}
-        </DemoViewportProvider>
-      </View>
-    );
-  }
-
-  const usePhoneFrame = shouldUseDemoPhoneFrame(window.width);
-  const frame = getDemoFrameSize(window.width, window.height);
-
-  if (!usePhoneFrame) {
-    return (
-      <View style={styles.mobileRoot}>
-        <DemoViewportProvider width={window.width} height={window.height}>
-          {children}
-        </DemoViewportProvider>
-      </View>
-    );
-  }
+  const usePhoneFrame = !embedded && shouldUseDemoPhoneFrame(window.width);
+  const viewport = usePhoneFrame ? getDemoFrameSize(window.width, window.height) : window;
 
   return (
-    <View style={styles.canvas}>
-      <View style={[styles.phone, { width: frame.width, height: frame.height }]}>
-        <DemoViewportProvider width={frame.width} height={frame.height}>
+    <View style={[styles.root, usePhoneFrame && styles.canvas]}>
+      <View
+        style={
+          usePhoneFrame
+            ? [styles.phone, { width: viewport.width, height: viewport.height }]
+            : styles.root
+        }
+      >
+        <DemoViewportProvider width={viewport.width} height={viewport.height}>
           <View style={styles.app}>{children}</View>
         </DemoViewportProvider>
       </View>
@@ -114,11 +107,7 @@ export function DemoWebShell({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  embeddedRoot: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  mobileRoot: {
+  root: {
     flex: 1,
     overflow: 'hidden',
   },

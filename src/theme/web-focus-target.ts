@@ -16,3 +16,12 @@ export function webFocusTarget(target: WebFocusTarget): { dataSet?: Record<strin
 
   return { dataSet: { [DATASET_KEYS[target]]: 'true' } };
 }
+
+export function revealWebFocus(target: unknown): void {
+  if (Platform.OS !== 'web' || !(target instanceof HTMLElement)) return;
+  requestAnimationFrame(() => {
+    if (document.activeElement === target) {
+      target.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    }
+  });
+}

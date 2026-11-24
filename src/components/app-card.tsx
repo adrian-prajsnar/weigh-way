@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { StyleProp, Text, View, ViewStyle } from 'react-native';
+import { Platform, StyleProp, Text, View, ViewStyle } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { LoadingCardOverlay } from './loading-card-overlay';
 import { useAppCardEnterAnimation } from './use-app-card-enter-animation';
@@ -49,7 +49,15 @@ export function AppCard({
         {hasHeader ? (
           <View style={styles.cardHeaderRow}>
             <View style={{ flex: 1, gap: 2 }}>
-              {title ? <Text style={styles.cardTitle}>{title}</Text> : null}
+              {title ? (
+                <Text
+                  accessibilityRole="header"
+                  aria-level={Platform.OS === 'web' ? 2 : undefined}
+                  style={styles.cardTitle}
+                >
+                  {title}
+                </Text>
+              ) : null}
               {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
             </View>
             {right}

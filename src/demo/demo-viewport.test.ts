@@ -11,4 +11,8 @@ describe('demo viewport', () => {
     expect(getDemoFrameSize(1440, 900)).toEqual({ width: 390, height: 844 });
     expect(getDemoFrameSize(360, 780)).toEqual({ width: 320, height: 732 });
   });
+
+  it('fits the frame in a short desktop viewport', () => {
+    expect(getDemoFrameSize(1280, 300)).toEqual({ width: 390, height: 252 });
+  });
 });

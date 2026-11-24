@@ -4,6 +4,14 @@ import { webFocusRingBoxShadow } from '../web-focus-ring';
 import { StyleContext, cardSurface, floatingSurface, tabularNums } from './helpers';
 
 export function createFormStyles({ colors, scheme }: StyleContext) {
+  const primaryButton = {
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+  };
+
   return {
     fieldLabel: {
       fontSize: 13,
@@ -86,13 +94,18 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
     },
 
     primaryButton: {
-      backgroundColor: colors.accent,
-      borderRadius: radius.md,
+      ...primaryButton,
       paddingVertical: 15,
       paddingHorizontal: spacing.xl,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 52,
+    },
+    primaryButtonWeb: {
+      ...primaryButton,
+      display: 'flex',
+      border: 0,
+      paddingTop: 15,
+      paddingBottom: 15,
+      paddingLeft: spacing.xl,
+      paddingRight: spacing.xl,
     },
     primaryButtonText: {
       color: colors.onAccent,
@@ -145,6 +158,11 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
       paddingHorizontal: spacing.xl,
       paddingVertical: spacing.xs,
     },
+    presetWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: spacing.sm,
+    },
     presetButton: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -174,6 +192,9 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
       padding: 4,
       position: 'relative',
     },
+    segmentedTrackStacked: {
+      flexDirection: 'column',
+    },
     segmentedIndicator: {
       position: 'absolute',
       top: 4,
@@ -186,15 +207,31 @@ export function createFormStyles({ colors, scheme }: StyleContext) {
     },
     segmentedItem: {
       flex: 1,
+      minWidth: 0,
+      ...(Platform.OS === 'web' ? { minHeight: 24 } : null),
       alignItems: 'center',
       justifyContent: 'center',
       paddingVertical: spacing.sm + 1,
       borderRadius: radius.sm,
     },
+    segmentedItemStacked: {
+      flexGrow: 0,
+      flexShrink: 0,
+      flexBasis: 'auto',
+      borderWidth: 1,
+      borderColor: 'transparent',
+    },
+    segmentedItemStackedActive: {
+      backgroundColor: colors.surface,
+      borderColor: colors.borderStrong,
+    },
     segmentedLabel: {
       fontSize: 13,
       color: colors.textMuted,
       fontFamily: fontFamily.medium,
+      textAlign: 'center',
+      maxWidth: '100%',
+      ...(Platform.OS === 'web' ? { overflowWrap: 'anywhere', whiteSpace: 'normal' } : null),
     },
     segmentedLabelActive: {
       color: colors.text,

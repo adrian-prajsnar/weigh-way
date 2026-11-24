@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
-import { Pressable, ScrollView, Text } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { TranslationKey } from '../i18n/translation-keys';
 import { useTranslation } from '../i18n/language-context';
 import { DashboardPeriod } from '../types';
+import { toggleButtonA11y } from '../theme/selection-a11y';
 import { useAppStyles } from '../theme/styles';
+import { revealWebFocus } from '../theme/web-focus-target';
 
 const BASE_PERIODS: DashboardPeriod[] = [
   'thisWeek',
@@ -49,12 +51,17 @@ export function PeriodSelector({
     }));
   }, [showAgeYear, t]);
 
+  const Container = Platform.OS === 'web' ? View : ScrollView;
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.presetScroll}
-      contentContainerStyle={styles.presetScrollContent}
+    <Container
+      {...(Platform.OS === 'web'
+        ? { style: styles.presetWrap }
+        : {
+            horizontal: true,
+            showsHorizontalScrollIndicator: false,
+            style: styles.presetScroll,
+            contentContainerStyle: styles.presetScrollContent,
+          })}
     >
       {options.map((option) => {
         const isActive = selected === option.value;
@@ -67,8 +74,9 @@ export function PeriodSelector({
               pressed && styles.buttonPressed,
             ]}
             onPress={() => onSelect(option.value)}
+            onFocus={Platform.OS === 'web' ? (event) => revealWebFocus(event.currentTarget) : undefined}
             accessibilityRole="button"
-            accessibilityState={{ selected: isActive }}
+            {...toggleButtonA11y(isActive)}
           >
             <Text
               style={[styles.presetButtonText, isActive && styles.presetButtonTextActive]}
@@ -78,6 +86,6 @@ export function PeriodSelector({
           </Pressable>
         );
       })}
-    </ScrollView>
+    </Container>
   );
 }

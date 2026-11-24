@@ -6,6 +6,7 @@ const FOCUSABLE_SELECTOR =
   `${CONFIRM_DIALOG_SELECTOR} button, ` +
   `${CONFIRM_DIALOG_SELECTOR} input, ` +
   `${CONFIRM_DIALOG_SELECTOR} textarea, ` +
+  `${CONFIRM_DIALOG_SELECTOR} [role="region"][tabindex], ` +
   `${CONFIRM_DIALOG_SELECTOR} [role="button"]`;
 
 export function listConfirmDialogFocusables(root: ParentNode): HTMLElement[] {
@@ -22,8 +23,18 @@ export function listConfirmDialogFocusables(root: ParentNode): HTMLElement[] {
 }
 
 export function focusFirstConfirmDialogControl(root: ParentNode): void {
-  const [first] = listConfirmDialogFocusables(root);
-  first?.focus();
+  const first = listConfirmDialogFocusables(root).find(
+    (element) => element.getAttribute('role') !== 'region',
+  );
+  focusControl(first);
+}
+
+function focusControl(element: HTMLElement | undefined): void {
+  element?.focus();
+  // WebKit can leave a partially visible focused input behind the scroll boundary.
+  if (element?.matches('input, textarea')) {
+    element.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }
 }
 
 export function subscribeConfirmDialogKeydown(
@@ -53,7 +64,7 @@ export function handleConfirmDialogTabKey(
   if (currentIndex === -1) {
     event.preventDefault();
     if (event.shiftKey) {
-      focusables[focusables.length - 1]?.focus();
+      focusControl(focusables[focusables.length - 1]);
     } else {
       focusFirstConfirmDialogControl(root);
     }
@@ -65,5 +76,5 @@ export function handleConfirmDialogTabKey(
     : (currentIndex + 1) % focusables.length;
 
   event.preventDefault();
-  focusables[nextIndex]?.focus();
+  focusControl(focusables[nextIndex]);
 }

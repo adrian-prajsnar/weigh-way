@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useLayoutEffect, useRef, type ComponentRef } from 'react';
 import { Platform, Pressable, RefreshControl, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
@@ -22,6 +23,10 @@ import { useColors } from '../theme/theme-context';
 type Props = NativeStackScreenProps<ProfileStackParamList, 'HeightHistory'>;
 
 export function HeightHistoryScreen({ navigation }: Props) {
+  const titleRef = useRef<ComponentRef<typeof View>>(null);
+  useLayoutEffect(() => {
+    if (Platform.OS === 'web') titleRef.current?.focus();
+  }, []);
   const styles = useAppStyles();
   const colors = useColors();
   const { t } = useTranslation();
@@ -69,76 +74,84 @@ export function HeightHistoryScreen({ navigation }: Props) {
     }
   };
 
-  const handleDelete = (effectiveDate: string) => {
+  const handleDelete = async (effectiveDate: string) => {
     const dateLabel = formatDateLabel(effectiveDate);
-    void confirm({
+    const confirmed = await confirm({
       title: t('profile.deleteHeight'),
       message: t('profile.deleteHeightConfirm', { date: dateLabel }),
       confirmLabel: t('common.delete'),
       destructive: true,
-    }).then((confirmed) => {
-      if (!confirmed) {
-        return;
-      }
-      void (async () => {
-        try {
-          await removeHeightEntry(effectiveDate);
-          showSuccess(t('profile.heightDeleted', { date: dateLabel }));
-        } catch (deleteError) {
-          const message =
-            deleteError instanceof Error ? deleteError.message : t('profile.deleteHeightFailed');
-          showError(message);
-        }
-      })();
     });
+    if (!confirmed) return;
+    try {
+      await removeHeightEntry(effectiveDate);
+      showSuccess(t('profile.heightDeleted', { date: dateLabel }));
+    } catch (deleteError) {
+      const message =
+        deleteError instanceof Error ? deleteError.message : t('profile.deleteHeightFailed');
+      showError(message);
+    }
   };
+
+  const isWeb = Platform.OS === 'web';
+  const header = (
+    <ScreenHeader
+      titleRef={titleRef}
+      title={t('profile.heightHistoryTitle')}
+      subtitle={t('profile.heightHistorySubtitle')}
+      scrollY={scrollY}
+      leading={
+        <Pressable
+          onPress={() => navigation.goBack()}
+          style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.back')}
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.text} />
+        </Pressable>
+      }
+    />
+  );
 
   return (
     <View style={styles.screen}>
       <ContentFrame>
-        <ScreenHeader
-          title={t('profile.heightHistoryTitle')}
-          subtitle={t('profile.heightHistorySubtitle')}
-          scrollY={scrollY}
-          leading={
-            <Pressable
-              onPress={() => navigation.goBack()}
-              style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.back')}
-            >
-              <Ionicons name="chevron-back" size={22} color={colors.text} />
-            </Pressable>
-          }
-        />
+        {!isWeb ? header : null}
         <Animated.ScrollView
           style={scrollViewStyle}
-          contentContainerStyle={contentContainerStyle}
           onScroll={onScroll}
           scrollEventThrottle={16}
           refreshControl={
-            Platform.OS === 'web' ? undefined : (
+            isWeb ? undefined : (
               <RefreshControl refreshing={isRefreshing} onRefresh={() => void refreshProfile()} />
             )
           }
         >
-        {error && !isLoading ? (
-          <ErrorCard message={error} onRetry={() => void refreshProfile()} />
-        ) : null}
-
-        <AppCard isBusy={isRefreshing || isSaving}>
-          {!isLoading ? (
-            <HeightTimelineEditor
-              heightEntries={heightEntries}
-              isSaving={isSaving}
-              deletingEffectiveDate={deletingEffectiveDate}
-              onSave={handleSave}
-              onUpdate={handleUpdate}
-              onDelete={handleDelete}
-              onInvalidHeight={() => showError(getHeightRangeMessage(units))}
+          {/* The header and tab bar can use the entire viewport after text spacing is increased. */}
+          {isWeb ? header : null}
+          <View style={contentContainerStyle}>
+            <ErrorCard
+              message={error}
+              isLoading={isLoading}
+              isRefreshing={isRefreshing}
+              recoveryFocusRef={titleRef}
+              onRetry={refreshProfile}
             />
-          ) : null}
-        </AppCard>
+
+            <AppCard isBusy={isRefreshing || isSaving}>
+              {!isLoading ? (
+                <HeightTimelineEditor
+                  heightEntries={heightEntries}
+                  isSaving={isSaving}
+                  deletingEffectiveDate={deletingEffectiveDate}
+                  onSave={handleSave}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                  onInvalidHeight={() => showError(getHeightRangeMessage(units))}
+                />
+              ) : null}
+            </AppCard>
+          </View>
         </Animated.ScrollView>
       </ContentFrame>
     </View>

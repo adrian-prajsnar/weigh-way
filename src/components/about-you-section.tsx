@@ -1,5 +1,5 @@
-import { useMemo } from 'react';
-import { Text, View } from 'react-native';
+import { useMemo, type ComponentRef, type Ref } from 'react';
+import { Pressable, Text, View, type GestureResponderEvent } from 'react-native';
 import { DateField } from './date-field';
 import { SegmentedControl, SegmentedOption } from './segmented-control';
 import { SkeletonBlock } from './skeleton';
@@ -15,7 +15,8 @@ type SexControlValue = BiologicalSex | 'unset';
 type AboutYouSectionProps = {
   birthDate: string | null;
   onBirthDateChange: (date: Date | null) => void;
-  onBirthDateDelete: () => void;
+  onBirthDateDelete: (event: GestureResponderEvent) => void;
+  birthDateTriggerRef?: Ref<ComponentRef<typeof Pressable>>;
   birthDateAutoOpen?: boolean;
   minimumBirthDate: Date;
   maximumBirthDate: Date;
@@ -23,6 +24,7 @@ type AboutYouSectionProps = {
   onSexChange: (sex: BiologicalSex | null) => Promise<boolean>;
   heightEntries: HeightEntry[];
   onOpenHeightHistory: () => void;
+  heightHistoryButtonRef?: Ref<ComponentRef<typeof Pressable>>;
 };
 
 export function AboutYouSkeleton() {
@@ -50,6 +52,7 @@ export function AboutYouSection({
   birthDate,
   onBirthDateChange,
   onBirthDateDelete,
+  birthDateTriggerRef,
   birthDateAutoOpen = false,
   minimumBirthDate,
   maximumBirthDate,
@@ -57,6 +60,7 @@ export function AboutYouSection({
   onSexChange,
   heightEntries,
   onOpenHeightHistory,
+  heightHistoryButtonRef,
 }: AboutYouSectionProps) {
   const styles = useAppStyles();
   const { t } = useTranslation();
@@ -73,6 +77,7 @@ export function AboutYouSection({
   return (
     <View style={{ gap: spacing.lg }}>
       <DateField
+        triggerRef={birthDateTriggerRef}
         label={t('profile.birthDate')}
         value={birthDate ? fromDateKey(birthDate) : null}
         onChange={onBirthDateChange}
@@ -87,6 +92,7 @@ export function AboutYouSection({
       <View style={{ gap: spacing.sm }}>
         <Text style={styles.accountLabel}>{t('profile.sex')}</Text>
         <SegmentedControl
+          groupLabel={t('profile.sex')}
           options={sexOptions}
           value={sex ?? 'unset'}
           onChange={(next) => onSexChange(next === 'unset' ? null : next)}
@@ -95,7 +101,11 @@ export function AboutYouSection({
 
       <View style={{ gap: spacing.sm }}>
         <Text style={styles.accountLabel}>{t('profile.height')}</Text>
-        <HeightHistoryPreview heightEntries={heightEntries} onShowAll={onOpenHeightHistory} />
+        <HeightHistoryPreview
+          heightEntries={heightEntries}
+          onShowAll={onOpenHeightHistory}
+          showAllRef={heightHistoryButtonRef}
+        />
       </View>
     </View>
   );

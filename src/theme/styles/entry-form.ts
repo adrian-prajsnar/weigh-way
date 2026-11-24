@@ -33,6 +33,10 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
         ? {
             position: 'relative',
             zIndex: 0,
+            flexWrap: 'wrap',
+            alignContent: 'center',
+            paddingHorizontal: spacing.xs,
+            paddingVertical: spacing.xs,
           }
         : null),
     },
@@ -53,6 +57,15 @@ export function createEntryFormStyles({ colors, scheme }: StyleContext) {
       color: colors.text,
       fontFamily: fontFamily.bold,
       ...tabularNums,
+      ...(Platform.OS === 'web'
+        ? {
+            // Allow the unit to wrap before the input's intrinsic width pushes it outside the field.
+            flexBasis: 96,
+            minWidth: 0,
+            fontSize: 24,
+            paddingVertical: spacing.xs,
+          }
+        : null),
     },
     weightInputUnit: {
       fontSize: 16,

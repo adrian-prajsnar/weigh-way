@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ComponentRef, type Ref } from 'react';
+import { ActivityIndicator, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useIsFocused } from '@react-navigation/native';
 import { useUnits } from '../context/unit-context';
 import { getRecentHeightEntries, getSortedHeightEntries } from '../height';
 import {
   formatDateLabel,
   formatHeight,
   fromDateKey,
+  getHeightRangeMessage,
   heightToInputParts,
   toDateKey,
 } from '../format';
@@ -14,9 +16,10 @@ import { useTranslation } from '../i18n/language-context';
 import { HeightEntry } from '../types';
 import { UnitSystem } from '../units';
 import { useAppStyles } from '../theme/styles';
-import { webFocusTarget } from '../theme/web-focus-target';
+import { revealWebFocus, webFocusTarget } from '../theme/web-focus-target';
 import { useColors } from '../theme/theme-context';
 import { useConfirm } from '../context/confirm-context';
+import { useRecordDeletionFocus } from '../hooks/use-record-deletion-focus';
 import { useTodayKey } from '../hooks/use-today-key';
 import { hasHeightDateCollision, resolveHeightCmForSave } from './height-entry-input';
 import { DateField } from './date-field';
@@ -26,9 +29,10 @@ const PREVIEW_LIMIT = 1;
 type HeightHistoryPreviewProps = {
   heightEntries: HeightEntry[];
   onShowAll: () => void;
+  showAllRef?: Ref<ComponentRef<typeof Pressable>>;
 };
 
-export function HeightHistoryPreview({ heightEntries, onShowAll }: HeightHistoryPreviewProps) {
+export function HeightHistoryPreview({ heightEntries, onShowAll, showAllRef }: HeightHistoryPreviewProps) {
   const styles = useAppStyles();
   const { t } = useTranslation();
   const { units } = useUnits();
@@ -51,7 +55,13 @@ export function HeightHistoryPreview({ heightEntries, onShowAll }: HeightHistory
         <Text style={styles.settingHint}>{t('profile.heightTimelineEmptyHint')}</Text>
       )}
 
-      <Pressable onPress={onShowAll} hitSlop={8} {...webFocusTarget('text-button')}>
+      <Pressable
+        ref={showAllRef}
+        accessibilityRole="button"
+        onPress={onShowAll}
+        hitSlop={8}
+        {...webFocusTarget('text-button')}
+      >
         <Text style={styles.linkText}>{t('profile.manageHeightRecords')}</Text>
       </Pressable>
     </View>
@@ -68,9 +78,13 @@ type HeightTimelineEditorProps = {
     effectiveDate: string,
     heightCm: number,
   ) => Promise<void>;
-  onDelete?: (effectiveDate: string) => void;
+  onDelete?: (effectiveDate: string) => Promise<void>;
   onInvalidHeight: () => void;
 };
+
+type EditorFocusRequest =
+  | { area: 'form' }
+  | { area: 'list'; date: string | null; from?: Element | null };
 
 export function HeightTimelineEditor({
   heightEntries,
@@ -81,6 +95,7 @@ export function HeightTimelineEditor({
   onDelete,
   onInvalidHeight,
 }: HeightTimelineEditorProps) {
+  const heightErrorId = useId();
   const styles = useAppStyles();
   const colors = useColors();
   const { t } = useTranslation();
@@ -88,7 +103,14 @@ export function HeightTimelineEditor({
   const todayKey = useTodayKey();
   const today = useMemo(() => fromDateKey(todayKey), [todayKey]);
   const { confirm } = useConfirm();
+  const isFocused = useIsFocused();
   const savingRef = useRef(false);
+  const focusRequest = useRef<EditorFocusRequest | null>(null);
+  const addButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const cancelButtonRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const heightInputRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const focusInvalidHeight = useRef(false);
+  const editButtons = useRef(new Map<string, ComponentRef<typeof Pressable>>());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formMode, setFormMode] = useState<'add' | 'edit' | null>(null);
@@ -96,54 +118,105 @@ export function HeightTimelineEditor({
   const [effectiveDate, setEffectiveDate] = useState(today);
   const [heightPrimaryInput, setHeightPrimaryInput] = useState('');
   const [heightSecondaryInput, setHeightSecondaryInput] = useState('');
+  const [showHeightError, setShowHeightError] = useState(false);
   const prevUnitsRef = useRef<UnitSystem>(units);
 
-  const canDelete = onDelete !== undefined;
-
   const sortedEntries = useMemo(() => getSortedHeightEntries(heightEntries), [heightEntries]);
+  const dates = useMemo(() => sortedEntries.map(({ effectiveDate }) => effectiveDate), [sortedEntries]);
+  const { deleteRecord, canEdit } = useRecordDeletionFocus(
+    dates,
+    deletingEffectiveDate,
+    editButtons,
+    addButtonRef,
+  );
+
+  useLayoutEffect(() => {
+    const request = focusRequest.current;
+    if (!request) return;
+    if (!isFocused) {
+      focusRequest.current = null;
+      return;
+    }
+
+    if (request.area === 'form' && formMode) {
+      focusRequest.current = null;
+      cancelButtonRef.current?.focus();
+    } else if (request.area === 'list' && !formMode && !isSaving && !isSubmitting) {
+      focusRequest.current = null;
+      const active = document.activeElement;
+      if (request.from !== undefined && active !== request.from && active !== document.body) return;
+      const target = request.date ? editButtons.current.get(request.date) : undefined;
+      (target ?? addButtonRef.current)?.focus();
+    }
+  }, [formMode, isFocused, isSaving, isSubmitting]);
 
   const resetForm = () => {
     setFormMode(null);
     setEditingEffectiveDate(null);
     setHeightPrimaryInput('');
     setHeightSecondaryInput('');
+    setShowHeightError(false);
   };
 
   const startAdding = () => {
+    if (Platform.OS === 'web') focusRequest.current = { area: 'form' };
     setFormMode('add');
     setEditingEffectiveDate(null);
     setEffectiveDate(today);
     setHeightPrimaryInput('');
     setHeightSecondaryInput('');
+    setShowHeightError(false);
   };
 
   const startEditing = (entry: HeightEntry) => {
+    if (Platform.OS === 'web') focusRequest.current = { area: 'form' };
     setFormMode('edit');
     setEditingEffectiveDate(entry.effectiveDate);
     setEffectiveDate(fromDateKey(entry.effectiveDate));
     const parts = heightToInputParts(entry.heightCm, units);
     setHeightPrimaryInput(parts.primary);
     setHeightSecondaryInput(parts.secondary);
+    setShowHeightError(false);
   };
+
+  const storedHeightCm =
+    formMode === 'edit'
+      ? heightEntries.find((entry) => entry.effectiveDate === editingEffectiveDate)?.heightCm
+      : undefined;
+  const heightCm = resolveHeightCmForSave(
+    units,
+    heightPrimaryInput,
+    heightSecondaryInput,
+    storedHeightCm,
+  );
+  const heightError = showHeightError && heightCm === null ? getHeightRangeMessage(units) : undefined;
+  const heightErrorA11y =
+    Platform.OS === 'web' && heightError
+      ? { 'aria-invalid': true, 'aria-describedby': heightErrorId }
+      : undefined;
+
+  useLayoutEffect(() => {
+    if (!heightError || !focusInvalidHeight.current) return;
+    focusInvalidHeight.current = false;
+    if (isFocused) heightInputRef.current?.focus();
+  }, [heightError, isFocused]);
 
   const handleSave = async () => {
     if (savingRef.current || isSaving) return;
-    const storedHeightCm =
-      formMode === 'edit'
-        ? heightEntries.find((entry) => entry.effectiveDate === editingEffectiveDate)?.heightCm
-        : undefined;
-    const heightCm = resolveHeightCmForSave(
-      units,
-      heightPrimaryInput,
-      heightSecondaryInput,
-      storedHeightCm,
-    );
     if (heightCm === null) {
-      onInvalidHeight();
+      if (Platform.OS !== 'web') {
+        onInvalidHeight();
+      } else if (heightError) {
+        heightInputRef.current?.focus();
+      } else {
+        focusInvalidHeight.current = true;
+        setShowHeightError(true);
+      }
       return;
     }
 
     const effectiveDateKey = toDateKey(effectiveDate);
+    const from = Platform.OS === 'web' ? document.activeElement : undefined;
 
     savingRef.current = true;
     setIsSubmitting(true);
@@ -167,6 +240,9 @@ export function HeightTimelineEditor({
         await onUpdate(editingEffectiveDate, effectiveDateKey, heightCm);
       } else {
         await onSave(effectiveDateKey, heightCm);
+      }
+      if (Platform.OS === 'web') {
+        focusRequest.current = { area: 'list', date: effectiveDateKey, from };
       }
       resetForm();
     } catch {
@@ -230,8 +306,12 @@ export function HeightTimelineEditor({
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <Pressable
+                  ref={(button) => {
+                    if (button) editButtons.current.set(entry.effectiveDate, button);
+                    else editButtons.current.delete(entry.effectiveDate);
+                  }}
                   onPress={() => startEditing(entry)}
-                  disabled={isSaving || deletingEffectiveDate !== null || isFormOpen}
+                  disabled={isSaving || !canEdit || isFormOpen}
                   style={({ pressed }) => [
                     styles.historyDeleteButton,
                     pressed && styles.buttonPressed,
@@ -244,10 +324,20 @@ export function HeightTimelineEditor({
                 >
                   <Ionicons name="create-outline" size={19} color={colors.textMuted} />
                 </Pressable>
-                {canDelete ? (
+                {onDelete ? (
                   <Pressable
-                    onPress={() => onDelete?.(entry.effectiveDate)}
-                    disabled={deletingEffectiveDate !== null || isSaving || isFormOpen}
+                    onPress={(event) => {
+                      if (deletingEffectiveDate === null) {
+                        void deleteRecord(event.currentTarget, entry.effectiveDate, onDelete);
+                      }
+                    }}
+                    disabled={
+                      (deletingEffectiveDate !== null &&
+                        !(Platform.OS === 'web' && deletingEffectiveDate === entry.effectiveDate)) ||
+                      isSaving ||
+                      isFormOpen
+                    }
+                    aria-busy={deletingEffectiveDate === entry.effectiveDate}
                     style={({ pressed }) => [
                       styles.historyDeleteButton,
                       pressed && styles.iconButtonDanger,
@@ -274,7 +364,9 @@ export function HeightTimelineEditor({
       <View style={styles.filterFieldHeader}>
         {!isFormOpen ? (
           <Pressable
+            ref={addButtonRef}
             onPress={startAdding}
+            accessibilityRole="button"
             hitSlop={8}
             disabled={isSaving || isSubmitting}
             {...webFocusTarget('text-button')}
@@ -285,7 +377,14 @@ export function HeightTimelineEditor({
           </Pressable>
         ) : (
           <Pressable
-            onPress={resetForm}
+            ref={cancelButtonRef}
+            onPress={() => {
+              if (Platform.OS === 'web') {
+                focusRequest.current = { area: 'list', date: editingEffectiveDate };
+              }
+              resetForm();
+            }}
+            accessibilityRole="button"
             hitSlop={8}
             disabled={isSaving || isSubmitting}
             {...webFocusTarget('text-button')}
@@ -308,37 +407,56 @@ export function HeightTimelineEditor({
             maximumDate={today}
           />
 
-          <View style={styles.heightInputRow}>
-            <View style={styles.heightInputGroup}>
-              <Text style={styles.fieldLabel}>
-                {units === 'imperial' ? t('profile.feet') : t('profile.meters')}
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={heightPrimaryInput}
-                onChangeText={setHeightPrimaryInput}
-                keyboardType="number-pad"
-                placeholder={units === 'imperial' ? '5' : '1'}
-                placeholderTextColor={colors.textSubtle}
-                maxLength={2}
-                editable={!isSaving && !isSubmitting}
-              />
+          <View>
+            <View style={styles.heightInputRow}>
+              <View style={styles.heightInputGroup}>
+                <Text style={styles.fieldLabel}>
+                  {units === 'imperial' ? t('profile.feet') : t('profile.meters')}
+                </Text>
+                <TextInput
+                  ref={heightInputRef}
+                  style={styles.input}
+                  accessibilityLabel={`${t('profile.height')}, ${
+                    units === 'imperial' ? t('profile.feet') : t('profile.meters')
+                  }`}
+                  value={heightPrimaryInput}
+                  {...heightErrorA11y}
+                  onChangeText={setHeightPrimaryInput}
+                  onFocus={
+                    Platform.OS === 'web' ? (event) => revealWebFocus(event.currentTarget) : undefined
+                  }
+                  keyboardType="number-pad"
+                  placeholder={units === 'imperial' ? '5' : '1'}
+                  placeholderTextColor={colors.textSubtle}
+                  maxLength={2}
+                  editable={!isSaving && !isSubmitting}
+                />
+              </View>
+              <View style={styles.heightInputGroup}>
+                <Text style={styles.fieldLabel}>
+                  {units === 'imperial' ? t('profile.inches') : t('profile.centimeters')}
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  accessibilityLabel={`${t('profile.height')}, ${
+                    units === 'imperial' ? t('profile.inches') : t('profile.centimeters')
+                  }`}
+                  value={heightSecondaryInput}
+                  {...heightErrorA11y}
+                  onChangeText={setHeightSecondaryInput}
+                  keyboardType="number-pad"
+                  placeholder={units === 'imperial' ? '10' : '75'}
+                  placeholderTextColor={colors.textSubtle}
+                  maxLength={2}
+                  editable={!isSaving && !isSubmitting}
+                />
+              </View>
             </View>
-            <View style={styles.heightInputGroup}>
-              <Text style={styles.fieldLabel}>
-                {units === 'imperial' ? t('profile.inches') : t('profile.centimeters')}
+            {Platform.OS === 'web' ? (
+              <Text nativeID={heightErrorId} aria-live="polite" style={styles.fieldErrorText}>
+                {heightError}
               </Text>
-              <TextInput
-                style={styles.input}
-                value={heightSecondaryInput}
-                onChangeText={setHeightSecondaryInput}
-                keyboardType="number-pad"
-                placeholder={units === 'imperial' ? '10' : '75'}
-                placeholderTextColor={colors.textSubtle}
-                maxLength={2}
-                editable={!isSaving && !isSubmitting}
-              />
-            </View>
+            ) : null}
           </View>
 
           <Pressable
@@ -348,7 +466,10 @@ export function HeightTimelineEditor({
               pressed && styles.buttonPressed,
             ]}
             onPress={() => void handleSave()}
-            disabled={isSaving || isSubmitting}
+            accessibilityRole="button"
+            accessibilityLabel={formMode === 'edit' ? t('profile.updateHeight') : t('profile.saveHeight')}
+            aria-busy={isSaving || isSubmitting}
+            disabled={Platform.OS !== 'web' && (isSaving || isSubmitting)}
           >
             {isSaving ? (
               <ActivityIndicator color={colors.onAccent} />

@@ -4,6 +4,8 @@ export default {
     tagline: 'Your weight, your progress.',
   },
   common: {
+    confirmationPhrase: 'Confirmation phrase',
+    confirmationDetails: 'Confirmation details',
     cancel: 'Cancel',
     delete: 'Delete',
     retry: 'Retry',
@@ -327,6 +329,11 @@ export default {
     copyright: '© %{year} Adrian Prajsnar DEV',
   },
   chart: {
+    trendSummary: 'Weight at the first weigh-in: %{first}. Weight at the last weigh-in: %{last}.',
+    singleWeighIn: 'One weigh-in on %{date}: %{weight}.',
+    showData: 'Show weigh-ins for this chart',
+    hideData: 'Hide weigh-ins for this chart',
+    dataPoint: '%{date}: %{weight}',
     noDataTitle: 'No weigh-ins in this range',
     noDataMessage: 'Log a weight to see your trend.',
     rangeLabelMetric: '%{min} – %{max} kg',
@@ -350,13 +357,16 @@ export default {
   },
   dateField: {
     selectDate: 'Select date',
-    selectMonth: 'Select month',
-    selectYear: 'Select year',
+    monthButton: '%{month}, select month',
+    yearButton: '%{year}, select year',
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
     decreaseDay: 'Previous day',
     increaseDay: 'Next day',
   },
   errors: {
     couldNotLoadData: 'Could not load data',
+    retryFailed: 'Still unable to load data.',
     dataTooLarge:
       'This account has more history than the app can load right now. Contact support if this keeps happening.',
     couldNotLoadEntries: 'Could not load weigh-ins.',
@@ -397,6 +407,7 @@ export default {
     unclassifiedNeedBirthDate: 'Add a birth date to use age-aware BMI categories.',
     periodAverageNote: 'Category uses age at the end of this period.',
     detailsTitle: 'BMI details',
+    scrollArea: 'Measurements and interpretation',
     periodAverageTitle: 'Average BMI',
     periodMinTitle: 'Lowest BMI',
     periodMaxTitle: 'Highest BMI',

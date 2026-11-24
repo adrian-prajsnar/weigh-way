@@ -8,4 +8,11 @@ describe('getDemoLocaleFromUrl', () => {
     expect(getDemoLocaleFromUrl('?embed=1')).toBeNull();
     expect(getDemoLocaleFromUrl('?embed=1&lang=de')).toBeNull();
   });
+
+  it('defaults the Polish demo route to Polish and preserves explicit language choices', () => {
+    expect(getDemoLocaleFromUrl('', '/weigh-way/demo/pl/')).toBe('pl');
+    expect(getDemoLocaleFromUrl('?embed=1', '/weigh-way/demo/pl/index.html')).toBe('pl');
+    expect(getDemoLocaleFromUrl('?lang=en', '/weigh-way/demo/pl/')).toBe('en');
+    expect(getDemoLocaleFromUrl('', '/weigh-way/pl/')).toBeNull();
+  });
 });

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { LayoutChangeEvent, Text, View } from 'react-native';
+import { useId, useState } from 'react';
+import { LayoutChangeEvent, Pressable, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, {
   Circle,
@@ -8,13 +8,14 @@ import Svg, {
   Path,
   Stop,
 } from 'react-native-svg';
-import { formatChartWeightRange } from '../format';
+import { formatChartWeightRange, formatWeightLabel } from '../format';
 import { useUnits } from '../context/unit-context';
 import { useTranslation } from '../i18n/language-context';
 import { getDateLocale } from '../i18n/resolve-locale';
 import { dateKeyToDate } from '../stats';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
+import { webFocusTarget } from '../theme/web-focus-target';
 import { layoutWidth } from '../theme/tokens';
 import { WeightSeries } from '../types';
 import { EmptyState } from './empty-state';
@@ -53,6 +54,8 @@ export function WeightChart({ series, height = 160 }: WeightChartProps) {
   const { t, locale } = useTranslation();
   const { units } = useUnits();
   const [width, setWidth] = useState(0);
+  const [showData, setShowData] = useState(false);
+  const dataId = useId();
   const dateLocale = getDateLocale(locale);
 
   const formatAxisDate = (dateKey: string): string =>
@@ -86,8 +89,10 @@ export function WeightChart({ series, height = 160 }: WeightChartProps) {
   const yMin = series.min - padding;
   const yMax = series.max + padding;
 
-  const firstTime = dateKeyToDate(series.points[0].date).getTime();
-  const lastTime = dateKeyToDate(series.points[series.points.length - 1].date).getTime();
+  const firstEntry = series.points[0];
+  const lastEntry = series.points[series.points.length - 1];
+  const firstTime = dateKeyToDate(firstEntry.date).getTime();
+  const lastTime = dateKeyToDate(lastEntry.date).getTime();
   const timeSpan = lastTime - firstTime;
 
   const points: Point[] = series.points.map((entry, index) => {
@@ -115,7 +120,7 @@ export function WeightChart({ series, height = 160 }: WeightChartProps) {
     <Animated.View entering={FadeIn.duration(400)} style={{ gap: 8 }}>
       <View style={[styles.chartArea, { height: chartHeight }]} onLayout={handleLayout}>
         {width > 0 ? (
-          <Svg width={width} height={chartHeight}>
+          <Svg width={width} height={chartHeight} aria-hidden>
             <Defs>
               <LinearGradient id="weightChartFill" x1="0" y1="0" x2="0" y2="1">
                 <Stop offset="0" stopColor={colors.accent} stopOpacity={0.28} />
@@ -158,6 +163,47 @@ export function WeightChart({ series, height = 160 }: WeightChartProps) {
           {formatAxisDate(series.points[series.points.length - 1].date)}
         </Text>
       </View>
+      <Text style={styles.chartAxisLabel}>
+        {series.points.length === 1
+          ? t('chart.singleWeighIn', {
+              date: formatAxisDate(firstEntry.date),
+              weight: formatWeightLabel(firstEntry.weightKg, units, locale),
+            })
+          : t('chart.trendSummary', {
+              first: formatWeightLabel(firstEntry.weightKg, units, locale),
+              last: formatWeightLabel(lastEntry.weightKg, units, locale),
+            })}
+      </Text>
+      {series.points.length > 1 ? (
+        <>
+          <Pressable
+            accessibilityRole="button"
+            aria-expanded={showData}
+            aria-controls={dataId}
+            onPress={() => setShowData((shown) => !shown)}
+            {...webFocusTarget('text-button')}
+          >
+            <Text style={styles.linkText}>{t(showData ? 'chart.hideData' : 'chart.showData')}</Text>
+          </Pressable>
+          <View
+            nativeID={dataId}
+            role="list"
+            style={{ gap: 4, display: showData ? 'flex' : 'none' }}
+          >
+            {showData &&
+              series.points.map((entry) => (
+                <Text key={entry.date} role="listitem" style={styles.chartAxisLabel}>
+                  {t('chart.dataPoint', {
+                    date: dateKeyToDate(entry.date).toLocaleDateString(dateLocale, {
+                      dateStyle: 'medium',
+                    }),
+                    weight: formatWeightLabel(entry.weightKg, units, locale),
+                  })}
+                </Text>
+              ))}
+          </View>
+        </>
+      ) : null}
     </Animated.View>
   );
 }

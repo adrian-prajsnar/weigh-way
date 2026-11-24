@@ -46,6 +46,14 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
     [data-ww-stepper-button="true"] {
       touch-action: manipulation;
     }
+    [data-ww-press-feedback="true"]:not([aria-disabled="true"]):active {
+      opacity: 0.85;
+      transform: scale(0.985);
+    }
+    [role="region"]:focus-visible {
+      outline: 2px solid var(--ww-accent);
+      outline-offset: -2px;
+    }
 
     :root {
       --ww-accent: ${colors.accent};
@@ -113,8 +121,11 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
 
       [role="button"]:not([aria-disabled="true"]):not([data-ww-modal-dismiss="true"]):hover,
       div[tabindex="0"]:not([aria-disabled="true"]):not([data-ww-modal-dismiss="true"]):hover,
-      button:not(:disabled):not([data-ww-modal-dismiss="true"]):hover {
-        opacity: 0.9;
+      button:not(:disabled):not([aria-disabled="true"]):not([data-ww-modal-dismiss="true"]):hover {
+        /* An outline keeps the resting contrast; fading or tinting the button
+           dropped labels below 4.5:1 (WCAG 1.4.3). Accent keeps the ring itself
+           above 3:1 against the surface in both schemes. */
+        outline: ${pxToRem(2)} solid var(--ww-accent);
       }
 
       [role="button"]:focus:not(:focus-visible),
@@ -156,7 +167,7 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
         margin: ${pxToRem(-3)};
       }
 
-      [data-ww-switch="true"]:focus-within {
+      [data-ww-switch="true"]:has([role="switch"]:focus-visible) {
         position: relative;
         z-index: 1;
         box-shadow: var(--ww-focus-ring-switch);
@@ -196,10 +207,6 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
         inset: ${pxToRem(CONFIRM_OVERLAY_RING_INSET)};
         border-radius: ${pxToRem(DEMO_PHONE_CORNER_RADIUS - CONFIRM_OVERLAY_RING_INSET)};
         box-shadow: var(--ww-focus-ring-overlay);
-      }
-
-      [data-ww-confirm-dialog="true"] {
-        overflow: visible;
       }
 
       a:hover {
@@ -258,6 +265,14 @@ export function buildDemoWebDesktopCss(colors: Palette, embedded = false): strin
         box-shadow: none !important;
         border-color: var(--ww-accent);
         background-color: var(--ww-surface);
+      }
+    }
+
+    @media (forced-colors: active) {
+      /* Forced colors suppress the box shadows used for the usual focus rings. */
+      :is(a, button, input, textarea, select, [role="button"], [role="switch"], [role="region"], [tabindex="0"]):focus-visible {
+        outline: ${pxToRem(2)} solid Highlight;
+        outline-offset: ${pxToRem(-2)};
       }
     }
   `;

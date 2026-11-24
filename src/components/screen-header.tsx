@@ -1,5 +1,5 @@
-import { ReactNode } from 'react';
-import { Text, View } from 'react-native';
+import { ReactNode, type ComponentRef, type Ref } from 'react';
+import { Platform, Text, View } from 'react-native';
 import Animated, {
   interpolate,
   SharedValue,
@@ -13,13 +13,14 @@ import { spacing } from '../theme/tokens';
 
 type ScreenHeaderProps = {
   title: string;
+  titleRef?: Ref<ComponentRef<typeof View>>;
   subtitle: string;
   scrollY?: SharedValue<number>;
   leading?: ReactNode;
   right?: ReactNode;
 };
 
-export function ScreenHeader({ title, subtitle, scrollY, leading, right }: ScreenHeaderProps) {
+export function ScreenHeader({ title, titleRef, subtitle, scrollY, leading, right }: ScreenHeaderProps) {
   const styles = useAppStyles();
   const insets = useSafeAreaInsets();
   const { update } = useSharedAppUpdate();
@@ -38,7 +39,15 @@ export function ScreenHeader({ title, subtitle, scrollY, leading, right }: Scree
         <View style={styles.screenHeaderRow}>
           {leading ? <View style={{ marginRight: 8 }}>{leading}</View> : null}
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>{title}</Text>
+            {Platform.OS === 'web' && titleRef ? (
+              <View ref={titleRef} accessibilityRole="header" aria-level={1} tabIndex={-1}>
+                <Text style={styles.title}>{title}</Text>
+              </View>
+            ) : (
+              <Text accessibilityRole="header" aria-level={Platform.OS === 'web' ? 1 : undefined} style={styles.title}>
+                {title}
+              </Text>
+            )}
             <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
           {right}

@@ -1,5 +1,5 @@
 import { useIsFocused } from '@react-navigation/native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { ActivityIndicator, Platform, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
@@ -35,6 +35,9 @@ import { useColors } from '../theme/theme-context';
 import { waitForInteractions, waitForPaint } from '../wait-for-paint';
 
 export function HistoryScreen() {
+  const titleRef = useRef<ComponentRef<typeof View>>(null);
+  const dateRangeTriggerRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const focusRangeAfterReset = useRef(false);
   const styles = useAppStyles();
   const colors = useColors();
   const isFocused = useIsFocused();
@@ -60,27 +63,31 @@ export function HistoryScreen() {
     previousDefaultRange.current = defaultRange;
   }, [defaultRange]);
   const [isListReady, setIsListReady] = useState(false);
-  const hasActivatedListRef = useRef(false);
   const [isClearingFilter, setIsClearingFilter] = useState(false);
   const [editingDate, setEditingDate] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isFocused || hasActivatedListRef.current) {
+    if (!isFocused || isListReady) {
       return;
     }
 
-    hasActivatedListRef.current = true;
     const task = runWhenIdle(() => {
       setIsListReady(true);
     });
     return () => task.cancel();
-  }, [isFocused]);
+  }, [isFocused, isListReady]);
 
   const fromKey = toDateKey(fromDate);
   const toKey = toDateKey(toDate);
   const defaultFromKey = toDateKey(defaultRange.from);
   const defaultToKey = toDateKey(defaultRange.to);
   const isFilterCustom = fromKey !== defaultFromKey || toKey !== defaultToKey;
+  useLayoutEffect(() => {
+    if (!isFilterCustom && focusRangeAfterReset.current) {
+      focusRangeAfterReset.current = false;
+      dateRangeTriggerRef.current?.focus();
+    }
+  }, [isFilterCustom]);
   const rangeValidation = useMemo(
     () => validateHistoryDateRange(fromDate, toDate, today),
     [fromDate, toDate, today],
@@ -121,28 +128,22 @@ export function HistoryScreen() {
   }, []);
 
   const handleDelete = useCallback(
-    (date: string) => {
+    async (date: string) => {
       const dateLabel = formatDateLabel(date);
-      void confirm({
+      const confirmed = await confirm({
         title: t('history.deleteEntry'),
         message: t('history.deleteConfirm', { date: dateLabel }),
         confirmLabel: t('common.delete'),
         destructive: true,
-      }).then((confirmed) => {
-        if (!confirmed) {
-          return;
-        }
-        void (async () => {
-          try {
-            await removeEntry(date);
-            showSuccess(t('history.deleted', { date: dateLabel }));
-          } catch (deleteError) {
-            const message =
-              deleteError instanceof Error ? deleteError.message : t('history.deleteFailed');
-            showError(message);
-          }
-        })();
       });
+      if (!confirmed) return;
+      try {
+        await removeEntry(date);
+        showSuccess(t('history.deleted', { date: dateLabel }));
+      } catch (deleteError) {
+        const message = deleteError instanceof Error ? deleteError.message : t('history.deleteFailed');
+        showError(message);
+      }
     },
     [confirm, removeEntry, showError, showSuccess, t],
   );
@@ -151,9 +152,10 @@ export function HistoryScreen() {
     if (isClearingFilter) {
       return;
     }
+    focusRangeAfterReset.current = Platform.OS === 'web';
     void (async () => {
       setIsClearingFilter(true);
-      await waitForPaint();
+      if (Platform.OS !== 'web') await waitForPaint();
       setFromDate(defaultRange.from);
       setToDate(defaultRange.to);
       await waitForInteractions();
@@ -179,7 +181,7 @@ export function HistoryScreen() {
   return (
     <View style={styles.screen}>
       <ContentFrame>
-        <ScreenHeader title={t('history.title')} subtitle={subtitle} scrollY={scrollY} />
+        <ScreenHeader titleRef={titleRef} title={t('history.title')} subtitle={subtitle} scrollY={scrollY} />
 
         <Animated.ScrollView
           style={scrollViewStyle}
@@ -195,15 +197,17 @@ export function HistoryScreen() {
             )
           }
         >
-          {error && !isLoading ? (
-            <ErrorCard
-              message={error}
-              onRetry={() => void refreshEntries().catch(() => undefined)}
-            />
-          ) : null}
+          <ErrorCard
+            message={error}
+            isLoading={isLoading}
+            isRefreshing={isRefreshing}
+            recoveryFocusRef={titleRef}
+            onRetry={() => refreshEntries().catch(() => undefined)}
+          />
 
           <AppCard delay={0}>
             <DateRangeField
+              triggerRef={dateRangeTriggerRef}
               start={fromDate}
               end={toDate}
               onChange={handleRangeChange}
@@ -219,7 +223,7 @@ export function HistoryScreen() {
                   disabled={isClearingFilter}
                   hitSlop={8}
                   accessibilityRole="button"
-                  accessibilityState={{ busy: isClearingFilter }}
+                  aria-busy={isClearingFilter}
                   {...webFocusTarget('text-button')}
                 >
                   {isClearingFilter ? (
@@ -241,6 +245,7 @@ export function HistoryScreen() {
                 entries={filteredEntries}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                deleteFocusFallback={dateRangeTriggerRef}
                 deletingDate={deletingDate}
                 emptyMessage={emptyMessage}
                 grouped

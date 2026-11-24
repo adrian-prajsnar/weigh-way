@@ -15,7 +15,7 @@ export function shouldUseDemoPhoneFrame(windowWidth: number): boolean {
 
 export function getDemoFrameSize(windowWidth: number, windowHeight: number): DemoFrameSize {
   const maxWidth = Math.max(320, windowWidth - DEMO_FRAME_GAP * 2);
-  const maxHeight = Math.max(640, windowHeight - DEMO_FRAME_GAP * 2);
+  const maxHeight = Math.max(1, windowHeight - DEMO_FRAME_GAP * 2);
 
   return {
     width: Math.min(DEMO_PHONE_WIDTH, maxWidth),

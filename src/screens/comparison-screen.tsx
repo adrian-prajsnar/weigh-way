@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef, type ComponentRef } from 'react';
 import { Platform, Pressable, RefreshControl, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AppCard } from '../components/app-card';
@@ -49,6 +49,7 @@ function RangePicker({
   return (
     <AppCard title={title} delay={delay}>
       <DateRangeField
+        periodLabel={title}
         start={start}
         end={end}
         onChange={onChange}
@@ -61,6 +62,9 @@ function RangePicker({
 }
 
 export function ComparisonScreen() {
+  const titleRef = useRef<ComponentRef<typeof View>>(null);
+  const dateRangeTriggerRef = useRef<ComponentRef<typeof Pressable>>(null);
+  const focusRangeAfterReset = useRef(false);
   const styles = useAppStyles();
   const { t } = useTranslation();
   const { entries, isLoading, isRefreshing, error, refreshEntries } = useSharedWeightEntries();
@@ -75,6 +79,13 @@ export function ComparisonScreen() {
     t,
   });
 
+  useLayoutEffect(() => {
+    if (comparison.isDefaultRange && focusRangeAfterReset.current) {
+      focusRangeAfterReset.current = false;
+      dateRangeTriggerRef.current?.focus();
+    }
+  }, [comparison.isDefaultRange]);
+
   const customKindOptions = useMemo<SegmentedOption<CustomCompareKind>[]>(
     () => [
       { value: 'period', label: t('comparison.customKind.period') },
@@ -87,6 +98,7 @@ export function ComparisonScreen() {
     <View style={styles.screen}>
       <ContentFrame>
         <ScreenHeader
+          titleRef={titleRef}
           title={t('comparison.title')}
           subtitle={t('comparison.subtitle')}
           scrollY={scrollY}
@@ -105,9 +117,13 @@ export function ComparisonScreen() {
             )
           }
         >
-        {error && !isLoading ? (
-          <ErrorCard message={error} onRetry={() => void refreshEntries().catch(() => undefined)} />
-        ) : null}
+        <ErrorCard
+          message={error}
+          isLoading={isLoading}
+          isRefreshing={isRefreshing}
+          recoveryFocusRef={titleRef}
+          onRetry={() => refreshEntries().catch(() => undefined)}
+        />
 
         <AppCard delay={0}>
           <View style={styles.comparisonFilterSection}>
@@ -120,6 +136,7 @@ export function ComparisonScreen() {
             {isTrendMode(comparison.mode) ? (
               <>
                 <DateRangeField
+                  triggerRef={dateRangeTriggerRef}
                   start={comparison.fromDate}
                   end={comparison.toDate}
                   onChange={comparison.handleRangeChange}
@@ -133,7 +150,15 @@ export function ComparisonScreen() {
                 />
                 {!comparison.isDefaultRange ? (
                   <View style={styles.filterActionsRow}>
-                    <Pressable onPress={comparison.resetRange} hitSlop={8} {...webFocusTarget('text-button')}>
+                    <Pressable
+                      onPress={() => {
+                        focusRangeAfterReset.current = Platform.OS === 'web';
+                        comparison.resetRange();
+                      }}
+                      accessibilityRole="button"
+                      hitSlop={8}
+                      {...webFocusTarget('text-button')}
+                    >
                       <Text style={styles.linkText}>{t('history.clearAll')}</Text>
                     </Pressable>
                   </View>

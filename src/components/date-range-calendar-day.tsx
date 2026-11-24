@@ -1,6 +1,9 @@
 import { ComponentProps } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Platform, Pressable, Text } from 'react-native';
 import { CalendarProps } from 'react-native-calendars';
+import { getCalendarDayLabel } from '../i18n/calendar-labels';
+import { useLanguage } from '../i18n/language-context';
+import { toggleButtonA11y } from '../theme/selection-a11y';
 import { useAppStyles } from '../theme/styles';
 
 type CalendarDayProps = ComponentProps<NonNullable<CalendarProps['dayComponent']>>;
@@ -13,16 +16,23 @@ export function DateRangeCalendarDay({
   onLongPress,
   accessibilityLabel,
   testID,
+  markingType,
 }: CalendarDayProps) {
   const styles = useAppStyles();
+  const { locale } = useLanguage();
+  const isRange = markingType === 'period';
   const disabled = marking?.disabled ?? (state === 'disabled' || state === 'inactive');
-  const selected = Boolean(marking?.color);
-  const endpoint = Boolean(marking?.startingDay || marking?.endingDay);
+  const selected = Boolean(isRange ? marking?.color : marking?.selected);
+  const endpoint = isRange ? Boolean(marking?.startingDay || marking?.endingDay) : selected;
+  const label =
+    Platform.OS === 'web' && date
+      ? getCalendarDayLabel(locale, date.dateString, marking?.accessibilityLabel)
+      : accessibilityLabel;
 
   return (
     <Pressable
       style={({ pressed }) => [
-        styles.dateRangeCalendarDay,
+        isRange ? styles.dateRangeCalendarDay : styles.datePickerSingleDay,
         selected && styles.dateRangeCalendarDaySelected,
         endpoint && styles.dateRangeCalendarDayEndpoint,
         marking?.startingDay && styles.dateRangeCalendarDayStart,
@@ -33,8 +43,9 @@ export function DateRangeCalendarDay({
       onLongPress={() => onLongPress?.(date)}
       disabled={disabled}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ disabled, selected }}
+      accessibilityLabel={label}
+      aria-current={state === 'today' ? 'date' : undefined}
+      {...toggleButtonA11y(selected)}
       testID={testID}
     >
       <Text

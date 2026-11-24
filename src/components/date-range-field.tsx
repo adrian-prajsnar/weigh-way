@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, type ComponentRef, type Ref } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { formatDateRange, toDateKey } from '../format';
 import { useTranslation } from '../i18n/language-context';
@@ -9,6 +9,8 @@ import { webFocusTarget } from '../theme/web-focus-target';
 import { DatePickerSheet } from './date-picker-sheet';
 
 type DateRangeFieldProps = {
+  periodLabel?: string;
+  triggerRef?: Ref<ComponentRef<typeof Pressable>>;
   start: Date | null;
   end: Date | null;
   onChange: (start: Date, end: Date) => void | Promise<void>;
@@ -20,6 +22,8 @@ type DateRangeFieldProps = {
 };
 
 export function DateRangeField({
+  periodLabel,
+  triggerRef,
   start,
   end,
   onChange,
@@ -37,11 +41,14 @@ export function DateRangeField({
     start && end
       ? formatDateRange({ start: toDateKey(start), end: toDateKey(end) })
       : t('dateRange.selectRange');
+  const label = t('dateRange.label');
+  const selectRange = t('dateRange.selectRange');
 
   return (
     <View style={styles.rangeRow}>
-      <Text style={styles.fieldLabel}>{t('dateRange.label')}</Text>
+      <Text style={styles.fieldLabel}>{label}</Text>
       <Pressable
+        ref={triggerRef}
         style={({ pressed }) => [
           styles.dateButton,
           invalid && styles.dateButtonInvalid,
@@ -49,8 +56,10 @@ export function DateRangeField({
         ]}
         onPress={() => setShowPicker(true)}
         accessibilityRole="button"
-        accessibilityLabel={`${t('dateRange.label')}: ${value}`}
-        accessibilityState={{ expanded: showPicker }}
+        accessibilityLabel={
+          periodLabel ? `${label} (${periodLabel}): ${value}` : `${label}: ${value}`
+        }
+        aria-expanded={showPicker}
         {...webFocusTarget('text-button')}
       >
         <View style={styles.filterFieldHeader}>
@@ -62,7 +71,7 @@ export function DateRangeField({
         mode="range"
         visible={showPicker}
         value={{ start, end }}
-        title={t('dateRange.selectRange')}
+        title={periodLabel ? `${selectRange}: ${periodLabel}` : selectRange}
         minimumDate={minimumDate}
         maximumDate={maximumDate}
         validateRange={validateRange}

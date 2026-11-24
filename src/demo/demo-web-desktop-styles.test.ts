@@ -18,7 +18,27 @@ describe('buildDemoWebDesktopCss', () => {
       '[role="button"]:not([aria-disabled="true"]):not([data-ww-modal-dismiss="true"]):hover',
     );
     expect(css).toContain('prefers-reduced-motion: reduce');
-    expect(css).not.toContain('outline-offset');
+    const normalCss = css.split('@media (forced-colors: active)')[0];
+    expect(
+      normalCss.replace(/\[role="region"\]:focus-visible\s*\{[^}]*\}/, ''),
+    ).not.toContain('outline-offset');
+  });
+
+  it('uses a system-color focus outline when forced colors suppress shadows', () => {
+    const css = buildDemoWebDesktopCss(palettes.light);
+    const forcedColors = css.split('@media (forced-colors: active)')[1];
+
+    expect(forcedColors).toMatch(/\[role="switch"\].*:focus-visible\s*\{/);
+    expect(forcedColors).toContain('outline: 0.125rem solid Highlight;');
+    expect(forcedColors).toContain('outline-offset: -0.125rem;');
+  });
+
+  it('marks hovered buttons without changing their text or background colors', () => {
+    const css = buildDemoWebDesktopCss(palettes.light);
+    const hoverRule = css.match(/button:not\(:disabled\)[^{]*:hover\s*\{([^}]*)\}/)?.[1] ?? '';
+
+    expect(hoverRule).toContain('outline: 0.125rem solid var(--ww-accent);');
+    expect(hoverRule).not.toMatch(/opacity|background|filter|color:/);
   });
 
   it('uses the active palette accent color', () => {
@@ -46,8 +66,14 @@ describe('buildDemoWebDesktopCss', () => {
     expect(css).toContain('[data-ww-confirm-dismiss="true"]:focus-visible::after');
     expect(css).toContain('inset: 0.5rem');
     expect(css).toContain('border-radius: 1.25rem');
-    expect(css).toContain('[data-ww-confirm-dialog="true"]');
-    expect(css).toContain('overflow: visible');
+  });
+
+  it('draws a visible inset outline on keyboard-focusable scroll regions', () => {
+    const css = buildDemoWebDesktopCss(palettes.dark);
+    const rule = css.match(/\[role="region"\]:focus-visible\s*\{([^}]*)\}/)?.[1];
+
+    expect(rule).toContain('outline: 2px solid var(--ww-accent)');
+    expect(rule).toContain('outline-offset: -2px');
   });
 
   it('uses compact inset rings for stepper buttons', () => {
@@ -64,7 +90,7 @@ describe('buildDemoWebDesktopCss', () => {
     expect(css).toContain('[data-ww-text-button="true"]:focus-visible');
     expect(css).toContain('box-shadow: var(--ww-focus-ring-text)');
     expect(css).toContain('[data-ww-segmented-item="true"]:focus-visible');
-    expect(css).toContain('[data-ww-switch="true"]:focus-within');
+    expect(css).toContain('[data-ww-switch="true"]:has([role="switch"]:focus-visible)');
     expect(css).toContain('box-shadow: var(--ww-focus-ring-switch)');
   });
 

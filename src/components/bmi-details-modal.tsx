@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, Text, View } from 'react-native';
+import { useId, useLayoutEffect, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { ModalSheetDismissArea } from './modal-sheet-dismiss-area';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { formatAgeDetailed, getAgeOnDate } from '../age';
@@ -19,9 +20,11 @@ import { TranslationKey } from '../i18n/translation-keys';
 import { getBmiStatsForRange, getHeightAtDate } from '../height';
 import { useTranslation } from '../i18n/language-context';
 import { useSheetContainerStyle } from '../hooks/use-sheet-container-style';
+import { useAppWindowDimensions } from '../hooks/use-app-window-dimensions';
 import { DateRange, WeightEntry } from '../types';
 import { useAppStyles } from '../theme/styles';
 import { useColors } from '../theme/theme-context';
+import { layoutWidth, spacing } from '../theme/tokens';
 import { BmiBadge } from './bmi-badge';
 
 export type WeighInBmiDetails = {
@@ -231,12 +234,59 @@ function PeriodDetails({ metric, range, entries }: Omit<PeriodBmiDetails, 'type'
   );
 }
 
+function BmiDetailsScroll({ children }: { children: ReactNode }) {
+  const styles = useAppStyles();
+  const { t } = useTranslation();
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const [bodyOverflows, setBodyOverflows] = useState(false);
+  const [bodyFocused, setBodyFocused] = useState(false);
+
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const viewport: unknown = scrollRef.current?.getNativeScrollRef();
+    const content: unknown = scrollRef.current?.getInnerViewRef();
+    if (!(viewport instanceof HTMLElement) || !(content instanceof HTMLElement)) return;
+
+    const measure = () => setBodyOverflows(viewport.scrollHeight > viewport.clientHeight);
+    const observer = new ResizeObserver(measure);
+    observer.observe(viewport);
+    observer.observe(content);
+    measure();
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <ScrollView
+      ref={scrollRef}
+      style={styles.bmiDetailsScroll}
+      contentContainerStyle={styles.bmiDetailsContent}
+      {...(Platform.OS === 'web'
+        ? {
+            // Keep existing focus when removing the region from the Tab order. After blur,
+            // remove tabindex entirely so the web modal's focus trap cannot focus it again.
+            tabIndex: bodyOverflows ? 0 : bodyFocused ? -1 : undefined,
+            onFocus: () => setBodyFocused(true),
+            onBlur: () => setBodyFocused(false),
+            // Keep the DOM element stable while the region moves in and out of the Tab order.
+            role: 'region' as const,
+            'aria-label': t('bmi.scrollArea'),
+          }
+        : {})}
+    >
+      {children}
+    </ScrollView>
+  );
+}
+
 export function BmiDetailsModal({ details, onClose }: BmiDetailsModalProps) {
+  const titleId = useId();
   const styles = useAppStyles();
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { width, height } = useAppWindowDimensions();
   const sheetContainerStyle = useSheetContainerStyle({
     paddingBottom: Math.max(insets.bottom, 16),
+    maxHeight: height - insets.top - (width > layoutWidth.sheet ? spacing.lg : 0),
   });
   const { t } = useTranslation();
 
@@ -248,35 +298,46 @@ export function BmiDetailsModal({ details, onClose }: BmiDetailsModalProps) {
     details.type === 'period' ? t(periodTitleKey(details.metric)) : t('bmi.detailsTitle');
 
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible
+      transparent
+      animationType={Platform.OS === 'web' ? 'none' : 'slide'}
+      aria-labelledby={titleId}
+      onRequestClose={onClose}
+    >
       <View style={styles.modalSheetBackdrop}>
-        <ModalSheetDismissArea onPress={onClose} />
+        <ModalSheetDismissArea onPress={onClose} pointerOnlyOnWeb />
         <View style={sheetContainerStyle}>
           <View style={styles.datePickerSheetHeader}>
-            <Text style={styles.datePickerSheetTitle}>{title}</Text>
+            <Text nativeID={titleId} style={styles.datePickerSheetTitle}>
+              {title}
+            </Text>
             <Pressable
               style={({ pressed }) => [styles.iconButton, pressed && styles.buttonPressed]}
               onPress={onClose}
               hitSlop={8}
+              accessibilityRole="button"
               accessibilityLabel={t('common.cancel')}
             >
               <Ionicons name="close" size={20} color={colors.textMuted} />
             </Pressable>
           </View>
-          {details.type === 'weighIn' ? (
-            <WeighInDetails
-              date={details.date}
-              weightKg={details.weightKg}
-              createdAt={details.createdAt}
-              updatedAt={details.updatedAt}
-            />
-          ) : (
-            <PeriodDetails
-              metric={details.metric}
-              range={details.range}
-              entries={details.entries}
-            />
-          )}
+          <BmiDetailsScroll>
+            {details.type === 'weighIn' ? (
+              <WeighInDetails
+                date={details.date}
+                weightKg={details.weightKg}
+                createdAt={details.createdAt}
+                updatedAt={details.updatedAt}
+              />
+            ) : (
+              <PeriodDetails
+                metric={details.metric}
+                range={details.range}
+                entries={details.entries}
+              />
+            )}
+          </BmiDetailsScroll>
         </View>
       </View>
     </Modal>
